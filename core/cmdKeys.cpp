@@ -9,11 +9,11 @@ keySequences::id keySequences::toID(const std::vector<CmdKey> &keys)
 		id thisLevelsBits = thisKey; 
 
 		// Subtract this level's first cmd's value to get a relative value
-		const uint cmdLevelBase = keyNumOffsets[i]; 
+		const uint cmdLevelBase = helpers::keyNumOffsets[i]; 
 		thisLevelsBits -= cmdLevelBase;
 
 		// The amount this level has to be lshifted by
-		const uint amountToShift = keyLevelBitOffset(i);
+		const uint amountToShift = helpers::keyLevelBitOffset(i);
 		thisLevelsBits <<= amountToShift;
 
 		// OR it to the full ID

@@ -10,11 +10,11 @@ constexpr keySequences::id keySequences::toID(const CmdKey (&keys)[SIZE])
 	id thisLevelsBits = thisKey; 
 
 	// Subtract this level's first cmd's value to get a relative value
-	const uint cmdLevelBase = keyNumOffsets[(SIZE - 1) - I]; 
+	const uint cmdLevelBase = helpers::keyNumOffsets[(SIZE - 1) - I]; 
 	thisLevelsBits -= cmdLevelBase;
 
 	// The amount this level has to be lshifted by
-	const uint amountToShift = keyLevelBitOffset((SIZE - 1) - I);
+	const uint amountToShift = helpers::keyLevelBitOffset((SIZE - 1) - I);
 	thisLevelsBits <<= amountToShift;
 
 	if constexpr(I == SIZE - 1)
@@ -31,9 +31,9 @@ constexpr keySequences::id keySequences::toID(const CmdKey (&keys)[SIZE])
 }
 
 constexpr uint keySequences::largestPossibleBit()
-{ return 1 << keySequences::keyLevelBitOffset(MAX_CMDKEY_LEVELS - 1); }
+{ return 1 << keySequences::helpers::keyLevelBitOffset(MAX_CMDKEY_LEVELS - 1); }
 
-constexpr uint keySequences::keyLevelBitOffset(const uint I) 
+constexpr uint keySequences::helpers::keyLevelBitOffset(const uint I) 
 { 
 	if(I == 0)
 	{ 

@@ -45,8 +45,10 @@ where amount of vals in level 2 = 5
 id = 0b01 | 0b11000 = 0b11001 = 25 => done! */
 class keySequences
 {
-	using id = uint64;
+private:
 	friend class Locator;
+
+	using id = uint64;
 
 	//// Main Functions ////
 	template<size_t SIZE, size_t I>
@@ -56,17 +58,22 @@ class keySequences
 	// The largest bit a key sequence can contain.
 	static constexpr uint largestPossibleBit();
 
-	//// Helpers ////
-	// For calculating how many bits each level of keys has to be lshfted by.
-	static constexpr uint keyLevelBitOffset(const uint I);
+	struct helpers
+	{
+	private:
+		friend keySequences;
 
-	// The value at which each key level starts.
-	constexpr static uint keyNumOffsets[MAX_CMDKEY_LEVELS] = 
-	{ 
-		0,
-		static_cast<uint>(CmdKey::PRIMARY_MAX),
-		static_cast<uint>(CmdKey::SECONDARY_MAX),
-		static_cast<uint>(CmdKey::TERTIARY_MAX) 
+		// For calculating how many bits each level of keys has to be lshfted by.
+		static constexpr uint keyLevelBitOffset(const uint I);
+
+		// The value at which each key level starts.
+		constexpr static uint keyNumOffsets[MAX_CMDKEY_LEVELS] = 
+		{ 
+			0,
+			static_cast<uint>(CmdKey::PRIMARY_MAX),
+			static_cast<uint>(CmdKey::SECONDARY_MAX),
+			static_cast<uint>(CmdKey::TERTIARY_MAX) 
+		};
 	};
 };
 

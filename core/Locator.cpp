@@ -4,19 +4,31 @@ Locator::CmdNode::CmdNode(CmdKey cmd, const CmdNode &inner) : levelKey(cmd)
 { nodes.push_back(inner); }
 
 
-struct Locator::keySequenceInfo
-{ std::vector<CmdKey> Keys; const LeafFunc Func; };
-
-std::vector<Locator::keySequenceInfo> Locator::traverseTree(CmdNode &node)
+struct Locator::CmdNode::nodePath
 {
-	if(node.nodes.size() == 0) { return {{ { node.levelKey }, node.leafFunc }}; }
-	std::vector<keySequenceInfo> cmdPaths;
-	for(auto &currNode : node.nodes)
+	std::vector<CmdKey> Keys; 
+	const LeafFunc Func; 
+
+	nodePath(CmdKey key, LeafFunc func) 
+		: Keys({key}), Func(func) 
+	{}
+};
+
+std::vector<Locator::CmdNode::nodePath> Locator::CmdNode::dissectTree()
+{
+	if(nodes.size() == 0) 
+	{ 
+		nodePath path(levelKey, leafFunc);
+		return { path }; 
+	}
+
+	std::vector<nodePath> cmdPaths;
+	for(auto &currNode : nodes)
 	{
-		std::vector<keySequenceInfo> newPaths = traverseTree(currNode);
+		std::vector<nodePath> newPaths = currNode.dissectTree();
 		for(auto &path : newPaths)
 		{
-			keySequenceInfo pathStart = { { node.levelKey }, path.Func };
+			nodePath pathStart(levelKey, path.Func);
 			pathStart.Keys.insert(pathStart.Keys.end(), path.Keys.begin(), path.Keys.end());
 			cmdPaths.push_back(pathStart);
 		}
@@ -27,7 +39,7 @@ std::vector<Locator::keySequenceInfo> Locator::traverseTree(CmdNode &node)
 
 void Locator::Add(CmdNode &tree)
 {
-	auto cmdPaths = traverseTree(tree);
+	auto cmdPaths = tree.dissectTree();
 	for(size_t i = 0; i < cmdPaths.size(); i++)
 	{
 		keySequences::id id = keySequences::toID(cmdPaths[i].Keys);

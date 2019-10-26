@@ -11,6 +11,7 @@ Locator::CmdNode::CmdNode(CmdKey cmd, const Args &...inners) : levelKey(cmd)
 template<typename Signature, typename ...FuncArgs>
 void Locator::CmdNode::variableFunctionSignature(void *args, const type_info &info, Signature func) 
 { 
+	//TODO: Check for correct arguments.
 	//const type_info &correctInfo1 = typeid(std::tuple<SDL_Event&>);
 	//const type_info &correctInfo = typeid(std::tuple<FuncArgs&...>);
 	//assert(info == correctInfo1);

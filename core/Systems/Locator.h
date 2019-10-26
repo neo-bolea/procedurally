@@ -13,16 +13,31 @@
 #include <tuple>
 #include <vector>
 
-using LeafFunc = std::function<void(void *, const type_info &)>;
-
-#define CNTREE(...) { using namespace CmdKeys; Locator::Get().Add(__VA_ARGS__); }0
-#define CNTREE_END );
-#define CNSTR Locator::CmdNode {
-#define CNEND }
-
+// A static service locator that stores services through sequences of command keys (CmdKey).
+//
+// Services are added by passing a "tree", where each branch is accessed by the corresponding
+// command key. Clients can then call the appropiate service by passing the correct sequence
+// of command keys that reaches the expected leaf. 
+// NOTE: The client has to be aware of the trees for the services to be able to use them.
+// EXAMPLE:
+//	CNTREE
+//	(
+//		CNSTR Input, 
+//			Locator::CmdNode(SetKey,      this, &Inputs::keyPress),
+//			Locator::CmdNode(SetButton,   this, &Inputs::mousePress),
+//			Locator::CmdNode(SetMousePos, this, &Inputs::mouseMove),
+//		CNEND
+//	);
+//
+// Creates the following sequences:
+// Input-SetKey => Inputs::keyPress()
+// Input-SetButton => Inputs::mousePress()
+// Input-SetMousePos => Inputs::mouseMove()
 
 class Locator : public Singleton<Locator>
 {
+	using LeafFunc = std::function<void(void *, const type_info &)>;
+
 public:
 	// Helper class to construct a tree of functions that fit certain key sequences,
 	// passed to the Locator.
@@ -36,16 +51,13 @@ public:
 	template<size_t SIZE, typename ...Args>
 	constexpr void Call(const CmdKey (&keys)[SIZE], Args &&...args);
 
-	// Runtime
+	// Runtime, see above
 	template<typename ...Args>
 	void Call(const keySequences::id id, Args &&...args);
 
 private:
 	friend Singleton<Locator>;
 	Locator() {}
-
-	struct keySequenceInfo;
-	std::vector<keySequenceInfo> traverseTree(CmdNode &node);
 
 	std::vector<LeafFunc> cmds[keySequences::largestPossibleBit()];
 };
@@ -69,6 +81,18 @@ public:
 	template<typename Member, typename ...FuncArgs>
 	CmdNode(CmdKey cmd, Member *toBind, void(Member::*cb)(FuncArgs...));
 
+private:
+	friend Locator;
+
+	struct nodePath;
+
+	// Enables the use of a vector for functions with different signatures,
+	// by bottlenecking to void *.
+	template<typename Signature, typename ...FuncArgs>
+	static void variableFunctionSignature(void *args, const type_info &info, Signature func);
+
+	// Converts a tree of CmdNodes (nested) into a list of separate paths to every node in the tree.
+	std::vector<nodePath> dissectTree();
 
 	// Either contains nested objects or a callable
 	LeafFunc leafFunc;
@@ -76,13 +100,13 @@ public:
 
 	// The key that fits the current tree branch, to create the key sequence.
 	CmdKey levelKey;
-
-private:
-	// Enables the use of a vector for functions with different signatures,
-	// by bottlenecking to void *.
-	template<typename Signature, typename ...FuncArgs>
-	static void variableFunctionSignature(void *args, const type_info &info, Signature func);
 };
+
+// Makes the interface for creating trees look more pleasant.
+#define CNTREE(...) { using namespace CmdKeys; Locator::Get().Add(__VA_ARGS__); }0
+#define CNTREE_END );
+#define CNSTR Locator::CmdNode {
+#define CNEND }
 
 #include "cmdNode.inc"
 #include "Locator.inc"
