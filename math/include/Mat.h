@@ -4,8 +4,8 @@
 
 #include <array>
 #include <assert.h>
-#include <type_traits>
 #include <vector>
+#include <type_traits>
 #include <xmmintrin.h>
 
 namespace Math

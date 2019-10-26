@@ -5,7 +5,6 @@
 #include "DesignPatterns.h"
 #include "MathHelpers.h"
 #include "Preprocessor.h"
-#include "Templates.h"
 
 #include <assert.h>
 #include <functional>
