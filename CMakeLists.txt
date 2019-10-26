@@ -1,3 +1,6 @@
+# TODO:
+# Include *.inc in source files OR structure by actual file structure
+
 cmake_minimum_required(VERSION 3.14.4)
 
 include(cmake/extras.cmake)
