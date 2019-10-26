@@ -1,5 +1,3 @@
-#pragma once
-
 template<size_t SIZE, typename ...Args>
 constexpr void Locator::Call(const CmdKey (&keys)[SIZE], Args &&...args)
 { Call(keySequences::toID<SIZE, 0>(keys), args...); }

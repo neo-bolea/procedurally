@@ -1,5 +1,3 @@
-#pragma once
-
 template<size_t SIZE, size_t I>
 constexpr keySequences::id keySequences::toID(const CmdKey (&keys)[SIZE])
 { 

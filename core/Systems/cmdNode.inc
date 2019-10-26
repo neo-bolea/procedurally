@@ -1,5 +1,3 @@
-#pragma once
-
 template<typename ...Args>
 Locator::CmdNode::CmdNode(CmdKey cmd, const Args &...inners) : levelKey(cmd)
 {
