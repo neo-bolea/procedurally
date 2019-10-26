@@ -13,8 +13,6 @@ void Inputs::keyPress(SDL_Event &sdlEvent)
 	{ 
 		if(state == Pressed || state == Held) { state = Released; }
 	}
-
-	std::cout << key.keysym.scancode << std::endl;
 }
 
 void Inputs::mousePress(SDL_Event &sdlEvent)
@@ -38,10 +36,8 @@ void Inputs::mouseMove(SDL_Event sdlEvent)
 	mouseChange.y += sdlEvent.motion.yrel;
 	mousePos.x = sdlEvent.motion.x;
 	mousePos.y = sdlEvent.motion.y;
-	std::cout << mousePos.ToString() << std::endl;
 }
 
-//TODO: Add SYSTEMS_FUNC_START with no arguments
 void Inputs::update()
 {
 	mouseChange = dVec2(0.0); 
