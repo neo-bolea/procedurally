@@ -1,5 +1,3 @@
-#include "Vec.h"
-
 //// Constructors ////
 template<typename T, size_t N>
 Vec<T, N>::Vec() 

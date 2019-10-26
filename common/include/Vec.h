@@ -101,6 +101,35 @@ struct Vec : public VecData<T, N>
 	static T Dot(const Vec<T, N> &a, const Vec<T, N> &b);
 };
 
+
+//// Non-arithmetic operators ////
+template<typename T, size_t N>
+bool operator ==(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N>
+bool operator !=(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+
+//// Arithmetic operators ////
+template<typename T, size_t N>
+Vec<T, N> operator +(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N>
+Vec<T, N> operator -(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N>
+Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N, typename U>
+Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs);
+
+template<typename T, size_t N, typename U>
+Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N, typename U>
+Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs);
+
+
 //// Typedefs ////
 template<typename T = float>
 using Vec2 = Vec<T, 2>;
@@ -128,3 +157,5 @@ using uVec4 = Vec4<size_t>;
 using bVec2 = Vec2<bool>;
 using bVec3 = Vec3<bool>;
 using bVec4 = Vec4<bool>;
+
+#include "Vec.inc"

@@ -1,5 +1,3 @@
-#include "Mat.h"
-
 //// Constructors ////
 template<typename T, size_t ROWS, size_t COLS>
 Mat<T, ROWS, COLS>::Mat() 
@@ -18,7 +16,7 @@ template<class... Args>
 Mat<T, ROWS, COLS>::Mat(Args... args)
 {
 	static_assert(sizeof...(Args) == ROWS * COLS, 
-					  "Invalid number of arguments for matrix.");
+						"Invalid number of arguments for matrix.");
 
 	std::initializer_list<T> initList{ static_cast<T>(args)... };
 	std::vector<T> elems = { initList };
@@ -86,7 +84,7 @@ template<typename T, size_t N, size_t M, size_t O>
 Mat<T, N, O> operator *(const Mat<T, N, M> &lhs, const Mat<T, M, O> &rhs)
 {
 	static_assert(std::is_default_constructible_v<T>, 
-					  "The matrix type must be default constructible \
+						"The matrix type must be default constructible \
 							for matrix multiplication to be used.");
 
 	Mat<T, N, O> result;
@@ -114,7 +112,7 @@ template<typename T, size_t ROWS, size_t COLS>
 Mat<T, ROWS, COLS> Mat<T, ROWS, COLS>::Identity()
 {
 	static_assert(std::is_arithmetic_v<T>, 
-					  "The identity matrix is only defined for arithmetic types.");
+						"The identity matrix is only defined for arithmetic types.");
 
 	Mat<T, ROWS, COLS> result;
 	for(size_t i = 0; i < std::min(ROWS, COLS); i++) { result[i][i] = T(1.f); }

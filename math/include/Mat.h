@@ -41,7 +41,28 @@ namespace Math
 		};
 	};
 
+	//// Non-arithmetic Operators ////
+	template<typename T, size_t ROWS, size_t COLS>
+	void Mat<T, ROWS, COLS>::operator =(const Mat<T, ROWS, COLS> &other);
+
+	template<typename T, size_t ROWS, size_t COLS>
+	bool operator ==(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs);
+
+	template<typename T, size_t ROWS, size_t COLS>
+	bool operator !=(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs);
+
+
+	//// Arithmetic Operators ////
+	template<typename T, size_t N, size_t M, size_t O, size_t P>
+	void operator *(const Mat<T, N, M> &lhs, const Mat<T, O, P> &rhs);
+
+	template<typename T, size_t N, size_t M, size_t O>
+	Mat<T, N, O> operator *(const Mat<T, N, M> &lhs, const Mat<T, M, O> &rhs);
+
+
 	//// Typedefs ////
 	template<size_t ROWS, size_t COLS>
 	using fMat = Mat<real32, ROWS, COLS>;
+
+#include "Mat.inc"
 }
