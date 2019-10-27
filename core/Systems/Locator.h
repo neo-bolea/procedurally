@@ -4,6 +4,7 @@
 
 #include "DesignPatterns.h"
 #include "MathHelpers.h"
+#include "Templates.h"
 
 #include <assert.h>
 #include <functional>
@@ -75,8 +76,8 @@ public:
 	CmdNode(CmdKey cmd, void(*cb)(FuncArgs...));
 
 	// Link a member function to this object
-	template<typename Member, typename ...FuncArgs>
-	CmdNode(CmdKey cmd, Member *toBind, void(Member::*cb)(FuncArgs...));
+	template<typename ToBind, typename ...FuncArgs>
+	CmdNode(CmdKey cmd, ToBind *toBind, void(ToBind::*cb)(FuncArgs...));
 
 private:
 	friend Locator;

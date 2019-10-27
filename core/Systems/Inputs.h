@@ -1,29 +1,29 @@
 #pragma once
 
-#include "Systems/Locator.h"
+#include "Locator.h"
 #include "Vec.h"
 
 #include "SDL.h"
 
 class Inputs
 {
-	enum State
-	{
-		Pressed,
-		Held,
-		Released,
-		Free
-	};
-
+private:
 	enum NewState
 	{
 		WasPressed = SDL_PRESSED,
 		WasReleased = SDL_RELEASED
 	};
 
-	void test() {}
-
 public:
+	enum State
+	{
+		Undefined = 0,
+		Pressed,
+		Held,
+		Released,
+		Free
+	};
+
 	Inputs()
 	{ 
 		for(size_t i = 0; i < SDL_NUM_SCANCODES; i++) { keyStates[i] = Free; }
@@ -35,9 +35,7 @@ public:
 				Locator::CmdNode(SetKey,      this, &Inputs::keyPress),
 				Locator::CmdNode(SetButton,   this, &Inputs::mousePress),
 				Locator::CmdNode(SetMousePos, this, &Inputs::mouseMove),
-				//CmdNode(GetKey,      this, &Inputs::getKeyUp),
-				//CmdNode(GetButton,   this, &Inputs::isButtonUp),
-				//CmdNode(GetMousePos, this, &Inputs::getMousePos),
+				Locator::CmdNode(GetButton, this, &Inputs::getButton),
 			CNEND
 		);
 	}
@@ -48,9 +46,9 @@ private:
 	void mouseMove(SDL_Event );
 	void update();
 
-	State getKey(SDL_Scancode code), getButton(byte button);
+	void getKey(SDL_Scancode code, State &state);
+	void getButton(byte button, State &state);
 	dVec2 getMousePos();
-	bool getKeyUp(void *), getKeyDown(void *), isButtonUp(void *), isButtonDown(void *);
 
 	State keyStates[SDL_NUM_SCANCODES];
 	State buttonStates[5];

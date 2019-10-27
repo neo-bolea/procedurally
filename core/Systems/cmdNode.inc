@@ -29,12 +29,13 @@ Locator::CmdNode::CmdNode(CmdKey cmd, void(*cb)(FuncArgs...))
 								cb);
 }
 
-template<typename Member, typename ...FuncArgs>
-Locator::CmdNode::CmdNode(CmdKey cmd, Member *toBind, void(Member::*cb)(FuncArgs...)) : levelKey(cmd) 
+template<typename ToBind, typename ...FuncArgs>
+Locator::CmdNode::CmdNode(CmdKey cmd, ToBind *toBind, void(ToBind::*cb)(FuncArgs...)) 
+	: levelKey(cmd) 
 {
 	using Signature = std::function<void(FuncArgs...)>;
 
-	Signature boundFunc = std::bind(cb, toBind, std::placeholders::_1);
+	Signature boundFunc = BindFirst(cb, toBind);
 	leafFunc = std::bind(variableFunctionSignature<Signature, FuncArgs...>, 
 								std::placeholders::_1, 
 								std::placeholders::_2, 
