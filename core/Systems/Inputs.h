@@ -37,10 +37,15 @@ public:
 				Locator::CmdNode(SetMousePos, this, &Inputs::mouseMove),
 				Locator::CmdNode(GetButton, this, &Inputs::getButton),
 			CNEND
+		);		
+		
+		CNTREE
+		(
+			Locator::CmdNode(Update, this, &Inputs::update)
 		);
 	}
 
-private:
+public:
 	void keyPress(SDL_Event &);
 	void mousePress(SDL_Event &);
 	void mouseMove(SDL_Event );
@@ -50,8 +55,8 @@ private:
 	void getButton(byte button, State &state);
 	dVec2 getMousePos();
 
-	State keyStates[SDL_NUM_SCANCODES];
-	State buttonStates[5];
+	std::array<State, SDL_NUM_SCANCODES> keyStates;
+	std::array<State, 5> buttonStates;
 	dVec2 mouseChange;
 	dVec2 mousePos;
 };

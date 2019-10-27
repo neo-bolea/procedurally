@@ -111,13 +111,6 @@ int main(int argc, char *argv[])
 
 		sys.Call({CmdKey::Update});
 
-		Inputs::State button = (Inputs::State)5;
-		sys.Call({CmdKey::Input, CmdKey::GetButton}, 1, button);
-		if(button == Inputs::Pressed)
-		{
-			std::cout << "Pressed!" << std::endl;
-		}
-
 		while(SDL_PollEvent(&event))
 		{
 			switch(event.type)
