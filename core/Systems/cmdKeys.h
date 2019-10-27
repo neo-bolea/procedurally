@@ -43,7 +43,7 @@ where amount of vals in level 2 = 5
 1 = 0b1, 3 = 0b10 
 0b01 << 0 = 0b01, 0b10 << (MSB of 5 = 3) = 0b11000, 
 id = 0b01 | 0b11000 = 0b11001 = 25 => done! */
-class keySequences
+class cmdKeySequenceHelper
 {
 private:
 	friend class Locator;
@@ -56,12 +56,12 @@ private:
 	static id toID(const std::vector<CmdKey> &keys);
 
 	// The largest bit a key sequence can contain.
-	static constexpr uint largestPossibleBit();
+	static constexpr uint largestPossibleValue();
 
 	struct helpers
 	{
 	private:
-		friend keySequences;
+		friend cmdKeySequenceHelper;
 
 		// For calculating how many bits each level of keys has to be lshfted by.
 		static constexpr uint keyLevelBitOffset(const uint I);

@@ -1,6 +1,6 @@
 #include "Systems\cmdKeys.h"
 
-keySequences::id keySequences::toID(const std::vector<CmdKey> &keys)
+cmdKeySequenceHelper::id cmdKeySequenceHelper::toID(const std::vector<CmdKey> &keys)
 { 
 	id sequenceID = 0;
 	for(size_t i = 0; i < keys.size(); i++)

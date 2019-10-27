@@ -1,5 +1,5 @@
 template<size_t SIZE, size_t I>
-constexpr keySequences::id keySequences::toID(const CmdKey (&keys)[SIZE])
+constexpr cmdKeySequenceHelper::id cmdKeySequenceHelper::toID(const CmdKey (&keys)[SIZE])
 { 
 	static_assert(SIZE <= MAX_CMDKEY_LEVELS, 
 					  "The amount of commands cannot be greater than MAX_CMDKEY_LEVELS.");
@@ -28,10 +28,10 @@ constexpr keySequences::id keySequences::toID(const CmdKey (&keys)[SIZE])
 	}
 }
 
-constexpr uint keySequences::largestPossibleBit()
-{ return 1 << keySequences::helpers::keyLevelBitOffset(MAX_CMDKEY_LEVELS - 1); }
+constexpr uint cmdKeySequenceHelper::largestPossibleValue()
+{ return 1 << cmdKeySequenceHelper::helpers::keyLevelBitOffset(MAX_CMDKEY_LEVELS - 1); }
 
-constexpr uint keySequences::helpers::keyLevelBitOffset(const uint I) 
+constexpr uint cmdKeySequenceHelper::helpers::keyLevelBitOffset(const uint I) 
 { 
 	if(I == 0)
 	{ 
