@@ -39,8 +39,6 @@ class Locator : public Singleton<Locator>
 	public:
 		using FuncType = std::function<void(void *, const type_info &)>;
 
-		operator FuncType() { return func; }
-
 		LeafFunc() {}
 		LeafFunc(FuncType func, void *funcPtr) : func(func), funcPtr(funcPtr) 
 		{}
@@ -48,9 +46,7 @@ class Locator : public Singleton<Locator>
 	public:
 		void *funcPtr;
 		FuncType func;
-
 	};
-	//using LeafFunc = std::function<void(void *, const type_info &)>;
 
 public:
 	// Helper class to construct a tree of functions that fit certain key sequences,

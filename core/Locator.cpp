@@ -63,21 +63,16 @@ size_t getAddress(std::function<T(U...)> f) {
 void Locator::Remove(CmdNode &tree)
 {
 	auto cmdPaths = tree.dissectTree();
-	Restart:
 	for(size_t i = 0; i < cmdPaths.size(); i++)
 	{
-		std::vector<decltype(cmds)::iterator> itToErase;
 		std::string joined = Strings::Join(cmdPaths[i].Keys, "/");
 		locatorHasher::id id = locatorHasher::toID(joined.c_str(), joined.size());
 		
-		auto range = cmds.equal_range(id);
-		for(auto it = range.first; it != range.second; it++)
+		auto it = cmds.find(id);
+		while(it != cmds.end())
 		{
-			if((it->second.funcPtr) == (cmdPaths[i].Func.funcPtr))
-			{
-				cmds.erase(it);
-				goto Restart;
-			}
+			cmds.erase(it);
+			it = cmds.find(id);
 		}
 	}
 }
