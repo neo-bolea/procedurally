@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-Inputs::Inputs()
+Inputs::Inputs() : logger(new Logger(*this))
 { 
 	for(size_t i = 0; i < keyStates.size(); i++) { keyStates[i] = Free; }
 	for(size_t i = 0; i < buttonStates.size(); i++) { buttonStates[i] = Free; }
@@ -10,10 +10,12 @@ Inputs::Inputs()
 	CNTREE
 	(
 		CNSTR "Inputs", 
-		Locator::CmdNode("SetKey", this, &Inputs::keyPress),
-		Locator::CmdNode("SetButton", this, &Inputs::mousePress),
-		Locator::CmdNode("SetMousePos", this, &Inputs::mouseMove),
-		Locator::CmdNode("GetButton", this, &Inputs::getButton),
+		Locator::CmdNode("SetKey", this, &Inputs::setKey),
+		Locator::CmdNode("GetKey", this, &Inputs::getKey),
+		Locator::CmdNode("SetMouseButton", this, &Inputs::setMouseButton),
+		Locator::CmdNode("GetMouseButton", this, &Inputs::getMouseButton),
+		Locator::CmdNode("SetMousePos", this, &Inputs::setMousePos),
+		Locator::CmdNode("GetMousePos", this, &Inputs::getMousePos),
 		CNEND
 	);		
 
@@ -23,14 +25,15 @@ Inputs::Inputs()
 	);
 }
 
-void Inputs::StartDebug() { Logger::Get().Start(); }
-void Inputs::StopDebug() { Logger::Get().Stop(); }
+Inputs::~Inputs() { delete logger; }
 
-void Inputs::keyPress(SDL_Event &sdlEvent)
+void Inputs::StartDebug() { logger->start(); }
+void Inputs::StopDebug() { logger->stop(); }
+
+void Inputs::setKey(SDL_Event &sdlEvent)
 {
 	SDL_KeyboardEvent key = sdlEvent.key;
-	State state;
-	getKey(key.keysym.scancode, state);
+	State &state = keyStates[key.keysym.scancode];
 
 	if(key.state == WasPressed)
 	{
@@ -42,10 +45,10 @@ void Inputs::keyPress(SDL_Event &sdlEvent)
 	}
 }
 
-void Inputs::mousePress(SDL_Event &sdlEvent)
+void Inputs::setMouseButton(SDL_Event &sdlEvent)
 {
 	SDL_MouseButtonEvent button = sdlEvent.button;
-	State &state = buttonStates[button.button];
+	State &state = buttonStates[button.button - 1];
 
 	if(button.state == WasPressed)
 	{
@@ -57,7 +60,7 @@ void Inputs::mousePress(SDL_Event &sdlEvent)
 	}
 }
 
-void Inputs::mouseMove(SDL_Event sdlEvent)
+void Inputs::setMousePos(SDL_Event sdlEvent)
 {
 	mouseChange.x += sdlEvent.motion.xrel;
 	mouseChange.y += sdlEvent.motion.yrel;
@@ -85,18 +88,26 @@ void Inputs::update()
 }
 
 void Inputs::getKey(SDL_Scancode code, State &state)
-{ state = keyStates[code]; }
+{ 
+	state = keyStates[code];
+}
 
-void Inputs::getButton(byte button, State &state)
+void Inputs::getMouseButton(byte button, State &state)
 { state = buttonStates[button]; }
 
-dVec2 Inputs::getMousePos()
-{ return mousePos; }
+void Inputs::getMousePos(dVec2 &v)
+{ v = mousePos; }
 
+
+void Inputs::Logger::start()
+{ Locator::Get().Add(tree); }
+
+void Inputs::Logger::stop()
+{ Locator::Get().Remove(tree); }
 
 void Inputs::Logger::setKey(SDL_Event &event)
 { std::cout << "Key changed: " << event.key.keysym.scancode << std::endl; }
-void Inputs::Logger::mousePress(SDL_Event &event)
+void Inputs::Logger::setMouseButton(SDL_Event &event)
 { std::cout << "Button changed: " << (int)event.button.button << std::endl; }
-void Inputs::Logger::mouseMove(SDL_Event &event)
+void Inputs::Logger::setMousePos(SDL_Event &event)
 { std::cout << "Mouse moved: (" << event.motion.x << ", " << event.motion.y << ")" << std::endl; }

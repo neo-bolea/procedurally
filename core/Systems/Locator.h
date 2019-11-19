@@ -9,7 +9,7 @@
 //	(
 //		CNSTR "Input", 
 //			Locator::CmdNode("SetKey",      this, &Inputs::keyPress),
-//			Locator::CmdNode("SetButton",   this, &Inputs::mousePress),
+//			Locator::CmdNode("SetMouseButton",   this, &Inputs::mousePress),
 //			Locator::CmdNode("SetMousePos", this, &Inputs::mouseMove),
 //		CNEND
 //	);

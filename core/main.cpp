@@ -90,7 +90,6 @@ int main(int argc, char *argv[])
 	Locator &sys = Locator::Get();
 	Inputs inputs;
 	inputs.StartDebug();
-	inputs.StopDebug();
 
 	bool quit = false;
 	SDL_Event event;
@@ -119,7 +118,7 @@ int main(int argc, char *argv[])
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEWHEEL:
-			{ sys.Call("Inputs/SetButton", event); } break;
+			{ sys.Call("Inputs/SetMouseButton", event); } break;
 			}
 		}
 

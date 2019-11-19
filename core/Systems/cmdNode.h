@@ -10,6 +10,8 @@ private:
 	struct nodePath;
 
 public:
+	CmdNode();
+
 	// Nest another object inside this one
 	CmdNode(const char *cmd, const CmdNode &inner);
 
