@@ -3,16 +3,16 @@
 
 #include "StringUtils.h"
 
-Locator::CmdNode::CmdNode(CmdKey cmd, const CmdNode &inner) : levelKey(cmd)
+Locator::CmdNode::CmdNode(const char *cmd, const CmdNode &inner) : levelKey(cmd)
 { nodes.push_back(inner); }
 
 
 struct Locator::CmdNode::nodePath
 {
-	std::vector<CmdKey> Keys; 
+	std::vector<const char *> Keys; 
 	const LeafFunc Func; 
 
-	nodePath(CmdKey key, LeafFunc func) 
+	nodePath(const char *key, LeafFunc func) 
 		: Keys({key}), Func(func) 
 	{}
 };
@@ -46,7 +46,7 @@ void Locator::Add(CmdNode &tree)
 	for(size_t i = 0; i < cmdPaths.size(); i++)
 	{
 		std::string joined = Strings::Join(cmdPaths[i].Keys, "/");
-		cmdKeySequenceHelper::id id = cmdKeySequenceHelper::toID(joined.c_str(), joined.size());
+		locatorHasher::id id = locatorHasher::toID(joined.c_str(), joined.size());
 		cmds.insert({id, cmdPaths[i].Func});
 	}
 }

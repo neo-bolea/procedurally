@@ -1,13 +1,14 @@
 template<size_t N, typename ...Args>
 constexpr void Locator::Call(const char (&key)[N], Args &&...args)
 { 
-	Call(cmdKeySequenceHelper::toID(&key[0], N), args...);
+	Call(locatorHasher::toID(&key[0], N - 1), args...);
 }
 
 template<typename ...Args>
-void Locator::Call(const cmdKeySequenceHelper::id id, Args &&...args)
+void Locator::Call(const locatorHasher::id id, Args &&...args)
 { 
 	std::tuple<Args&...> tuple(args...);
-	for(auto it = cmds.find(id); it != cmds.end(); it++) 
+	auto funcs = cmds.equal_range(id);
+	for (auto it = funcs.first; it != funcs.second; it++)
 	{ it->second(&tuple, typeid(std::tuple<Args...>)); } 
 }

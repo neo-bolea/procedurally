@@ -11,19 +11,19 @@ private:
 
 public:
 	// Nest another object inside this one
-	CmdNode(CmdKey cmd, const CmdNode &inner);
+	CmdNode(const char *cmd, const CmdNode &inner);
 
 	// Nest multiple objects inside this one
 	template<typename ...Args>
-	CmdNode(CmdKey cmd, const Args &...inners);
+	CmdNode(const char *cmd, const Args &...inners);
 
 	// Link a free function to this object
 	template<typename ...FuncArgs>
-	CmdNode(CmdKey cmd, void(*cb)(FuncArgs...));
+	CmdNode(const char *cmd, void(*cb)(FuncArgs...));
 
 	// Link a member function to this object
 	template<typename ToBind, typename ...FuncArgs>
-	CmdNode(CmdKey cmd, ToBind *toBind, void(ToBind::*cb)(FuncArgs...));
+	CmdNode(const char *cmd, ToBind *toBind, void(ToBind::*cb)(FuncArgs...));
 
 	// Converts a tree of CmdNodes (nested) into a list of separate paths to every node in the tree.
 	std::vector<nodePath> dissectTree();
@@ -33,7 +33,7 @@ public:
 	std::vector<CmdNode> nodes;
 
 	// The key that fits the current tree branch, to create the key sequence.
-	CmdKey levelKey;
+	const char *levelKey;
 
 private:
 	// Enables the use of a vector for functions with different signatures,
@@ -43,7 +43,7 @@ private:
 };
 
 // Makes the interface for creating trees look more pleasant.
-#define CNTREE(...) { using namespace CmdKeys; Locator::Get().Add(__VA_ARGS__); }0
+#define CNTREE(...) { Locator::Get().Add(__VA_ARGS__); }0
 #define CNTREE_END );
 #define CNSTR Locator::CmdNode {
 #define CNEND }

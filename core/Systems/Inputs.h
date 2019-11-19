@@ -8,6 +8,8 @@
 class Inputs
 {
 private:
+	class Logger;
+
 	enum NewState
 	{
 		WasPressed = SDL_PRESSED,
@@ -24,26 +26,8 @@ public:
 		Free
 	};
 
-	Inputs()
-	{ 
-		for(size_t i = 0; i < SDL_NUM_SCANCODES; i++) { keyStates[i] = Free; }
-		for(size_t i = 0; i < 5; i++) { buttonStates[i] = Free; }
-
-		//CNTREE
-		//(
-		//	CNSTR Input, 
-		//		Locator::CmdNode(SetKey,      this, &Inputs::keyPress),
-		//		Locator::CmdNode(SetButton,   this, &Inputs::mousePress),
-		//		Locator::CmdNode(SetMousePos, this, &Inputs::mouseMove),
-		//		Locator::CmdNode(GetButton, this, &Inputs::getButton),
-		//	CNEND
-		//);		
-		//
-		//CNTREE
-		//(
-		//	Locator::CmdNode(Update, this, &Inputs::update)
-		//);
-	}
+	Inputs();
+	void InitDebug();
 
 public:
 	void keyPress(SDL_Event &);
@@ -56,7 +40,28 @@ public:
 	dVec2 getMousePos();
 
 	std::array<State, SDL_NUM_SCANCODES> keyStates;
-	std::array<State, 5> buttonStates;
+	std::array<State, 6> buttonStates;
 	dVec2 mouseChange;
 	dVec2 mousePos;
+};
+
+class Inputs::Logger
+{
+public:
+	Logger()
+	{ 
+		CNTREE
+		(
+			CNSTR "Inputs", 
+			Locator::CmdNode("SetKey", this, &Logger::setKey),
+			Locator::CmdNode("SetButton", this, &Logger::mousePress),
+			Locator::CmdNode("SetMousePos", this, &Logger::mouseMove),
+			CNEND
+		);		
+	}
+
+private:
+	void setKey(SDL_Event &event);
+	void mousePress(SDL_Event &event);
+	void mouseMove(SDL_Event &event);
 };

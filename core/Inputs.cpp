@@ -2,6 +2,29 @@
 
 #include <iostream>
 
+Inputs::Inputs()
+{ 
+	for(size_t i = 0; i < keyStates.size(); i++) { keyStates[i] = Free; }
+	for(size_t i = 0; i < buttonStates.size(); i++) { buttonStates[i] = Free; }
+
+	CNTREE
+	(
+		CNSTR "Inputs", 
+		Locator::CmdNode("SetKey", this, &Inputs::keyPress),
+		Locator::CmdNode("SetButton", this, &Inputs::mousePress),
+		Locator::CmdNode("SetMousePos", this, &Inputs::mouseMove),
+		Locator::CmdNode("GetButton", this, &Inputs::getButton),
+		CNEND
+	);		
+
+	CNTREE
+	(
+		Locator::CmdNode("Update", this, &Inputs::update)
+	);
+}
+
+void Inputs::InitDebug() { Logger(); }
+
 void Inputs::keyPress(SDL_Event &sdlEvent)
 {
 	SDL_KeyboardEvent key = sdlEvent.key;
@@ -16,8 +39,6 @@ void Inputs::keyPress(SDL_Event &sdlEvent)
 	{ 
 		if(state == Pressed || state == Held) { state = Released; }
 	}
-	sdlEvent.button.button = 100;
-	//std::cout<< key.keysym.scancode << std::endl;
 }
 
 void Inputs::mousePress(SDL_Event &sdlEvent)
@@ -33,8 +54,6 @@ void Inputs::mousePress(SDL_Event &sdlEvent)
 	{ 
 		if(state == Pressed || state == Held) { state = Released; }
 	}
-
-	//std::cout << (int)button.button << std::endl;
 }
 
 void Inputs::mouseMove(SDL_Event sdlEvent)
@@ -43,8 +62,6 @@ void Inputs::mouseMove(SDL_Event sdlEvent)
 	mouseChange.y += sdlEvent.motion.yrel;
 	mousePos.x = sdlEvent.motion.x;
 	mousePos.y = sdlEvent.motion.y;
-
-	//std::cout << mousePos.ToString() << std::endl;
 }
 
 void Inputs::update()
@@ -74,3 +91,11 @@ void Inputs::getButton(byte button, State &state)
 
 dVec2 Inputs::getMousePos()
 { return mousePos; }
+
+
+void Inputs::Logger::setKey(SDL_Event &event)
+{ std::cout << "Key changed: " << event.key.keysym.scancode << std::endl; }
+void Inputs::Logger::mousePress(SDL_Event &event)
+{ std::cout << "Button changed: " << (int)event.button.button << std::endl; }
+void Inputs::Logger::mouseMove(SDL_Event &event)
+{ std::cout << "Mouse moved: (" << event.motion.x << ", " << event.motion.y << ")" << std::endl; }

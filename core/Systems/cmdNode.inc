@@ -1,5 +1,5 @@
 template<typename ...Args>
-Locator::CmdNode::CmdNode(CmdKey cmd, const Args &...inners) : levelKey(cmd)
+Locator::CmdNode::CmdNode(const char *cmd, const Args &...inners) : levelKey(cmd)
 {
 	std::vector<CmdNode> innersV = { inners... };
 	for(size_t i = 0; i < innersV.size(); i++)
@@ -18,7 +18,7 @@ void Locator::CmdNode::variableFunctionSignature(void *args, const type_info &in
 }
 
 template<typename ...FuncArgs>
-Locator::CmdNode::CmdNode(CmdKey cmd, void(*cb)(FuncArgs...)) 
+Locator::CmdNode::CmdNode(const char *cmd, void(*cb)(FuncArgs...)) 
 	: levelKey(cmd) 
 {
 	using Signature = std::function<void(FuncArgs...)>;
@@ -30,7 +30,7 @@ Locator::CmdNode::CmdNode(CmdKey cmd, void(*cb)(FuncArgs...))
 }
 
 template<typename ToBind, typename ...FuncArgs>
-Locator::CmdNode::CmdNode(CmdKey cmd, ToBind *toBind, void(ToBind::*cb)(FuncArgs...)) 
+Locator::CmdNode::CmdNode(const char *cmd, ToBind *toBind, void(ToBind::*cb)(FuncArgs...)) 
 	: levelKey(cmd) 
 {
 	using Signature = std::function<void(FuncArgs...)>;
