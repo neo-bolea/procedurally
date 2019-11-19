@@ -9,6 +9,7 @@ class Inputs
 {
 private:
 	class Logger;
+	Logger *logger;
 
 	enum NewState
 	{
@@ -27,7 +28,7 @@ public:
 	};
 
 	Inputs();
-	void InitDebug();
+	void StartDebug(), StopDebug();
 
 public:
 	void keyPress(SDL_Event &);
@@ -45,12 +46,14 @@ public:
 	dVec2 mousePos;
 };
 
-class Inputs::Logger
+static class Inputs::Logger : public Singleton<Logger>
 {
 public:
-	Logger()
+	Locator::CmdNode *tree;
+
+	void Start()
 	{ 
-		CNTREE
+		tree = new Locator::CmdNode
 		(
 			CNSTR "Inputs", 
 			Locator::CmdNode("SetKey", this, &Logger::setKey),
@@ -58,9 +61,20 @@ public:
 			Locator::CmdNode("SetMousePos", this, &Logger::mouseMove),
 			CNEND
 		);		
+
+		Locator::Get().Add(*tree);
+	}
+
+	void Stop()
+	{ 
+		Locator::Get().Remove(*tree); 
+		delete tree;
 	}
 
 private:
+	friend Singleton<Logger>;
+	Logger() {}
+
 	void setKey(SDL_Event &event);
 	void mousePress(SDL_Event &event);
 	void mouseMove(SDL_Event &event);

@@ -3,6 +3,8 @@
 
 #include "StringUtils.h"
 
+#include <algorithm>
+
 Locator::CmdNode::CmdNode(const char *cmd, const CmdNode &inner) : levelKey(cmd)
 { nodes.push_back(inner); }
 
@@ -48,5 +50,34 @@ void Locator::Add(CmdNode &tree)
 		std::string joined = Strings::Join(cmdPaths[i].Keys, "/");
 		locatorHasher::id id = locatorHasher::toID(joined.c_str(), joined.size());
 		cmds.insert({id, cmdPaths[i].Func});
+	}
+}
+
+template<typename T, typename... U>
+size_t getAddress(std::function<T(U...)> f) {
+	typedef T(fnType)(U...);
+	fnType ** fnPointer = f.template target<fnType*>();
+	return (size_t) *fnPointer;
+}
+
+void Locator::Remove(CmdNode &tree)
+{
+	auto cmdPaths = tree.dissectTree();
+	Restart:
+	for(size_t i = 0; i < cmdPaths.size(); i++)
+	{
+		std::vector<decltype(cmds)::iterator> itToErase;
+		std::string joined = Strings::Join(cmdPaths[i].Keys, "/");
+		locatorHasher::id id = locatorHasher::toID(joined.c_str(), joined.size());
+		
+		auto range = cmds.equal_range(id);
+		for(auto it = range.first; it != range.second; it++)
+		{
+			if((it->second.funcPtr) == (cmdPaths[i].Func.funcPtr))
+			{
+				cmds.erase(it);
+				goto Restart;
+			}
+		}
 	}
 }

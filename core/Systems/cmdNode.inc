@@ -36,8 +36,10 @@ Locator::CmdNode::CmdNode(const char *cmd, ToBind *toBind, void(ToBind::*cb)(Fun
 	using Signature = std::function<void(FuncArgs...)>;
 
 	Signature boundFunc = BindFirst(cb, toBind);
-	leafFunc = std::bind(variableFunctionSignature<Signature, FuncArgs...>, 
-								std::placeholders::_1, 
-								std::placeholders::_2, 
-								boundFunc);
+	LeafFunc::FuncType 
+		func = std::bind(variableFunctionSignature<Signature, FuncArgs...>, 
+							  std::placeholders::_1, 
+							  std::placeholders::_2, 
+							  boundFunc);
+	leafFunc = LeafFunc(func, toBind);
 }

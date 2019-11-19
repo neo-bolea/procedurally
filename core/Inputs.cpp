@@ -23,7 +23,8 @@ Inputs::Inputs()
 	);
 }
 
-void Inputs::InitDebug() { Logger(); }
+void Inputs::StartDebug() { Logger::Get().Start(); }
+void Inputs::StopDebug() { Logger::Get().Stop(); }
 
 void Inputs::keyPress(SDL_Event &sdlEvent)
 {

@@ -89,7 +89,8 @@ int main(int argc, char *argv[])
 
 	Locator &sys = Locator::Get();
 	Inputs inputs;
-	inputs.InitDebug();
+	inputs.StartDebug();
+	inputs.StopDebug();
 
 	bool quit = false;
 	SDL_Event event;
