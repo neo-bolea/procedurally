@@ -1,11 +1,13 @@
-template<size_t SIZE, typename ...Args>
-constexpr void Locator::Call(const CmdKey (&keys)[SIZE], Args &&...args)
-{ Call(cmdKeySequenceHelper::toID<SIZE, 0>(keys), args...); }
+template<size_t N, typename ...Args>
+constexpr void Locator::Call(const char (&key)[N], Args &&...args)
+{ 
+	Call(cmdKeySequenceHelper::toID(&key[0], N), args...);
+}
 
 template<typename ...Args>
 void Locator::Call(const cmdKeySequenceHelper::id id, Args &&...args)
 { 
 	std::tuple<Args&...> tuple(args...);
-	for(size_t i = 0; i < cmds[id].size(); i++) 
-	{ cmds[id][i](&tuple, typeid(std::tuple<Args...>)); } 
+	for(auto it = cmds.find(id); it != cmds.end(); it++) 
+	{ it->second(&tuple, typeid(std::tuple<Args...>)); } 
 }

@@ -1,6 +1,8 @@
 #include "Systems/Locator.h"
 #include "Systems/cmdNode.h"
 
+#include "StringUtils.h"
+
 Locator::CmdNode::CmdNode(CmdKey cmd, const CmdNode &inner) : levelKey(cmd)
 { nodes.push_back(inner); }
 
@@ -43,7 +45,8 @@ void Locator::Add(CmdNode &tree)
 	auto cmdPaths = tree.dissectTree();
 	for(size_t i = 0; i < cmdPaths.size(); i++)
 	{
-		cmdKeySequenceHelper::id id = cmdKeySequenceHelper::toID(cmdPaths[i].Keys);
-		cmds[id].push_back(cmdPaths[i].Func);
+		std::string joined = Strings::Join(cmdPaths[i].Keys, "/");
+		cmdKeySequenceHelper::id id = cmdKeySequenceHelper::toID(joined.c_str(), joined.size());
+		cmds.insert({id, cmdPaths[i].Func});
 	}
 }

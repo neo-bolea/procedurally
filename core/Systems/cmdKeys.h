@@ -1,9 +1,12 @@
 #pragma once
 
 #include "MathHelpers.h"
+#include "Hash.h"
+
+#include "StaticStr.h"
 
 #include <functional>
-
+/*
 namespace CmdKeys
 {
 	enum CmdKey
@@ -32,17 +35,28 @@ namespace CmdKeys
 };
 
 const uint MAX_CMDKEY_LEVELS = 4;
-using CmdKey = CmdKeys::CmdKey;
+
+//namespace sstr = ak_toolkit::static_str;
+//
+//template<size_t T>
+//using CmdKey = sstr::string<T, sstr::char_array>;
+//
+//constexpr CmdKey xd = "xd" + sstr::literal("nigga");
+
+using CmdKey = CmdKeys::CmdKey;*/
 
 
-/* ORs all levels of keys together, after they have been lshfted to the correct level.
-This guarantees uniqueness of all combination of keys (as long as they are inserted in 
-the correct level).
-Example: { <first val in level 1>, <third val in level 2>}, 
-where amount of vals in level 2 = 5 
-1 = 0b1, 3 = 0b10 
-0b01 << 0 = 0b01, 0b10 << (MSB of 5 = 3) = 0b11000, 
-id = 0b01 | 0b11000 = 0b11001 = 25 => done! */
+// ORs all levels of keys together, after they have been lshfted to the correct level.
+//This guarantees uniqueness of all combination of keys (as long as they are inserted in 
+//the correct level).
+//Example: { <first val in level 1>, <third val in level 2>}, 
+//where amount of vals in level 2 = 5 
+//1 = 0b1, 3 = 0b10 
+//0b01 << 0 = 0b01, 0b10 << (MSB of 5 = 3) = 0b11000, 
+//id = 0b01 | 0b11000 = 0b11001 = 25 => done!
+
+using CmdKey = char *;
+
 class cmdKeySequenceHelper
 {
 private:
@@ -51,11 +65,11 @@ private:
 	using id = uint64;
 
 	//// Main Functions ////
-	template<size_t SIZE, size_t I>
-	static constexpr id toID(const CmdKey (&keys)[SIZE]);
-	static id toID(const std::vector<CmdKey> &keys);
+	template<size_t SIZE>
+	static constexpr id toID(const char *key);
+	static id toID(const char *key, size_t size);
 
-	// The largest bit a key sequence can contain.
+	/*// The largest bit a key sequence can contain.
 	static constexpr uint largestPossibleValue();
 
 	struct helpers
@@ -74,7 +88,7 @@ private:
 			static_cast<uint>(CmdKey::SECONDARY_MAX),
 			static_cast<uint>(CmdKey::TERTIARY_MAX) 
 		};
-	};
+	};*/
 };
 
 #include "cmdKeys.inc"

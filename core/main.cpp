@@ -97,9 +97,10 @@ int main(int argc, char *argv[])
 
 	Watch watch(Watch::ms);
 	watch.Start();
-	for(size_t i = 0; i < 1'000'000; i++)
+	//StaticStr xd[2] = { "Inputs", "GetMousePos" };
+	for(size_t i = 0; i < 1'000'000'0; i++)
 	{
-		sys.Call({ CmdKey::Input, CmdKey::GetMousePos }, 1);
+		sys.Call("Inputs", 1);
 	}
 	watch.Stop();
 	std::cout << watch.sTime() << std::endl;
@@ -109,28 +110,28 @@ int main(int argc, char *argv[])
 		glClearColor(0.f, 1.f, 0.7f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		sys.Call({CmdKey::Update});
-
-		while(SDL_PollEvent(&event))
-		{
-			switch(event.type)
-			{
-			case SDL_QUIT:
-				quit = true;
-				break;
-
-			case SDL_KEYDOWN:
-			case SDL_KEYUP:
-			{  sys.Call({ CmdKey::Input, CmdKey::SetKey }, event); } break;
-
-			case SDL_MOUSEMOTION:
-			{ sys.Call({ CmdKey::Input, CmdKey::SetMousePos }, event); } break;
-			case SDL_MOUSEBUTTONDOWN:
-			case SDL_MOUSEBUTTONUP:
-			case SDL_MOUSEWHEEL:
-			{ sys.Call({ CmdKey::Input, CmdKey::SetButton }, event); } break;
-			}
-		}
+		//sys.Call({CmdKey::Update});
+		//
+		//while(SDL_PollEvent(&event))
+		//{
+		//	switch(event.type)
+		//	{
+		//	case SDL_QUIT:
+		//		quit = true;
+		//		break;
+		//
+		//	case SDL_KEYDOWN:
+		//	case SDL_KEYUP:
+		//	{  sys.Call({ CmdKey::Input, CmdKey::SetKey }, event); } break;
+		//
+		//	case SDL_MOUSEMOTION:
+		//	{ sys.Call({ CmdKey::Input, CmdKey::SetMousePos }, event); } break;
+		//	case SDL_MOUSEBUTTONDOWN:
+		//	case SDL_MOUSEBUTTONUP:
+		//	case SDL_MOUSEWHEEL:
+		//	{ sys.Call({ CmdKey::Input, CmdKey::SetButton }, event); } break;
+		//	}
+		//}
 
 		SDL_GL_SwapWindow(window);
 	}

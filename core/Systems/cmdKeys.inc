@@ -1,4 +1,10 @@
-template<size_t SIZE, size_t I>
+template<size_t SIZE>
+constexpr cmdKeySequenceHelper::id cmdKeySequenceHelper::toID(const char *key)
+{ 
+	return CRC32::Get(key);
+}
+
+/*template<size_t SIZE, size_t I>
 constexpr cmdKeySequenceHelper::id cmdKeySequenceHelper::toID(const CmdKey (&keys)[SIZE])
 { 
 	static_assert(SIZE <= MAX_CMDKEY_LEVELS, 
@@ -46,4 +52,4 @@ constexpr uint cmdKeySequenceHelper::helpers::keyLevelBitOffset(const uint I)
 		const uint lastLevelsShift = keyLevelBitOffset(I - 1); 
 		return thisLevelsLShift + lastLevelsShift;
 	}
-}
+}*/

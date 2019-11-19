@@ -46,8 +46,8 @@ public:
 
 	// Call all functions that fit the given key sequence, passing args as arguments.
 	// Compile time
-	template<size_t SIZE, typename ...Args>
-	constexpr void Call(const CmdKey (&keys)[SIZE], Args &&...args);
+	template<size_t N, typename ...Args>
+	constexpr void Call(const char (&key)[N], Args &&...args);
 
 	// Runtime, see above
 	template<typename ...Args>
@@ -57,7 +57,8 @@ private:
 	friend Singleton<Locator>;
 	Locator() {}
 
-	std::vector<LeafFunc> cmds[cmdKeySequenceHelper::largestPossibleValue()];
+	//std::vector<LeafFunc> cmds[cmdKeySequenceHelper::largestPossibleValue()];
+	std::unordered_multimap<cmdKeySequenceHelper::id, LeafFunc> cmds;
 };
 
 #include "cmdNode.h"

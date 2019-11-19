@@ -29,20 +29,20 @@ public:
 		for(size_t i = 0; i < SDL_NUM_SCANCODES; i++) { keyStates[i] = Free; }
 		for(size_t i = 0; i < 5; i++) { buttonStates[i] = Free; }
 
-		CNTREE
-		(
-			CNSTR Input, 
-				Locator::CmdNode(SetKey,      this, &Inputs::keyPress),
-				Locator::CmdNode(SetButton,   this, &Inputs::mousePress),
-				Locator::CmdNode(SetMousePos, this, &Inputs::mouseMove),
-				Locator::CmdNode(GetButton, this, &Inputs::getButton),
-			CNEND
-		);		
-		
-		CNTREE
-		(
-			Locator::CmdNode(Update, this, &Inputs::update)
-		);
+		//CNTREE
+		//(
+		//	CNSTR Input, 
+		//		Locator::CmdNode(SetKey,      this, &Inputs::keyPress),
+		//		Locator::CmdNode(SetButton,   this, &Inputs::mousePress),
+		//		Locator::CmdNode(SetMousePos, this, &Inputs::mouseMove),
+		//		Locator::CmdNode(GetButton, this, &Inputs::getButton),
+		//	CNEND
+		//);		
+		//
+		//CNTREE
+		//(
+		//	Locator::CmdNode(Update, this, &Inputs::update)
+		//);
 	}
 
 public:
