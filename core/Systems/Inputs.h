@@ -28,54 +28,50 @@ public:
 	};
 
 	Inputs();
+	~Inputs();
 	void StartDebug(), StopDebug();
 
 public:
-	void keyPress(SDL_Event &);
-	void mousePress(SDL_Event &);
-	void mouseMove(SDL_Event );
+	void setKey(SDL_Event &);
+	void setMouseButton(SDL_Event &);
+	void setMousePos(SDL_Event );
 	void update();
 
 	void getKey(SDL_Scancode code, State &state);
-	void getButton(byte button, State &state);
-	dVec2 getMousePos();
+	void getMouseButton(byte button, State &state);
+	void getMousePos(dVec2 &v);
 
 	std::array<State, SDL_NUM_SCANCODES> keyStates;
-	std::array<State, 6> buttonStates;
+	std::array<State, 5> buttonStates;
 	dVec2 mouseChange;
 	dVec2 mousePos;
 };
 
-static class Inputs::Logger : public Singleton<Logger>
+class Inputs::Logger
 {
-public:
-	Locator::CmdNode *tree;
+private:
+	friend Singleton<Logger>;
+	friend Inputs;
 
-	void Start()
-	{ 
-		tree = new Locator::CmdNode
+	Logger(Inputs &inputs) : inputs(inputs)
+	{
+		tree =
 		(
 			CNSTR "Inputs", 
 			Locator::CmdNode("SetKey", this, &Logger::setKey),
-			Locator::CmdNode("SetButton", this, &Logger::mousePress),
-			Locator::CmdNode("SetMousePos", this, &Logger::mouseMove),
+			Locator::CmdNode("SetMouseButton", this, &Logger::setMouseButton),
+			Locator::CmdNode("SetMousePos", this, &Logger::setMousePos),
 			CNEND
-		);		
-
-		Locator::Get().Add(*tree);
+		);
 	}
 
-	void Stop()
-	{ 
-		Locator::Get().Remove(*tree); 
-		delete tree;
-	}
-
-private:
-	friend Singleton<Logger>;
-	Logger() {}
+	void start(), stop();
 
 	void setKey(SDL_Event &event);
-	void mousePress(SDL_Event &event);
-	void mouseMove(SDL_Event &event);
+	void setMouseButton(SDL_Event &event);
+	void setMousePos(SDL_Event &event);
+
+private:
+	Locator::CmdNode tree;
+	Inputs &inputs;
 };

@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+Locator::CmdNode::CmdNode() {}
+
 Locator::CmdNode::CmdNode(const char *cmd, const CmdNode &inner) : levelKey(cmd)
 { nodes.push_back(inner); }
 
