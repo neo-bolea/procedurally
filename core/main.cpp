@@ -93,6 +93,7 @@ int main(int argc, char *argv[])
 
 	Locator &sys = Locator::Get();
 	Inputs inputs;
+	inputs.StartDebug();
 	inputs.StartRecording();
 
 	bool quit = false;
@@ -108,8 +109,7 @@ int main(int argc, char *argv[])
 		static bool stoppedRecording = false;
 		Inputs::State state;
 		sys.Call("Inputs/GetKey", SDL_SCANCODE_A, state);
-		std::cout << state << std::endl;
-		if(state == Inputs::Pressed)
+		if(!stoppedRecording && Time::ProgramTime > 5.0)
 		{
 			std::cout << "STARTED REPLAYING" << std::endl;
 			stoppedRecording = true;

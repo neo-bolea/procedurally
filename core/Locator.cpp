@@ -70,14 +70,22 @@ void Locator::Remove(const CmdNode &tree)
 		std::string joined = Strings::Join(cmdPaths[i].Keys, "/");
 		locatorHasher::id id = locatorHasher::toID(joined.c_str(), joined.size());
 		
-		Reset:
-		for(auto it = cmds.find(id); it != cmds.end(); it++)
+		auto itRange = cmds.equal_range(id);
+		for(auto it = itRange.first; it != itRange.second; it++)
 		{
 			if(it->second.funcPtr == cmdPaths[i].Func.funcPtr)
 			{
-				cmds.erase(it);
-				goto Reset;
+				cmdsToRemove.push_back(it);
 			}
 		}
 	}
+}
+
+void Locator::cleanRemoves()
+{
+	for(size_t i = 0; i < cmdsToRemove.size(); i++)
+	{
+		cmds.erase(cmdsToRemove[i]);
+	}
+	cmdsToRemove.clear();
 }

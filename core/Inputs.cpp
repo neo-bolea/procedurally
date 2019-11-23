@@ -194,6 +194,8 @@ void Inputs::Recorder::stopRecording()
 
 void Inputs::Recorder::startReplaying()
 {
+	inputs.ignoreInputs(true);
+
 	if(isReplaying) { stopReplaying(); }
 	if(isRecording) { stopRecording(); }
 
@@ -206,6 +208,8 @@ void Inputs::Recorder::startReplaying()
 
 void Inputs::Recorder::stopReplaying()
 {
+	inputs.ignoreInputs(false);
+
 	if(isRecording)
 	{ stopRecording(); }
 
@@ -240,19 +244,18 @@ void Inputs::Recorder::whileRecording(SDL_Event &event)
 
 void Inputs::Recorder::whileReplaying()
 { 
-	if(replayCurrentInput <= recordedInputs.size())
+	if(replayCurrentInput >= recordedInputs.size())
 	{
 		stopReplaying();
 		return;
 	}
-	std::cout << "D" << std::endl;
 
 	while(Time::ProgramTime - actionStartTime > recordedInputs[replayCurrentInput].Time)
 	{
 		simulateNextInput();
 
 		replayCurrentInput++;
-		if(replayCurrentInput <= recordedInputs.size())
+		if(replayCurrentInput >= recordedInputs.size())
 		{
 			stopReplaying();
 			return;
@@ -262,40 +265,32 @@ void Inputs::Recorder::whileReplaying()
 
 void Inputs::Recorder::simulateNextInput()
 {
-	SDL_Event event1 = {};
-	event1.type = SDL_KEYDOWN;
-
-	event1.key.keysym.sym = SDL_SCANCODE_A;
-
-	SDL_PushEvent(&event1);
-	std::cout << "XD" << std::endl;
-
-	//InputInfo nextInput = recordedInputs[replayCurrentInput];
-	//SDL_Event event = {};
-	//event.type = nextInput.Type;
-	//
-	//switch(nextInput.Type)
-	//{
-	//case SDL_KEYUP:
-	//case SDL_KEYDOWN:
-	//{ event.key.keysym.sym = std::any_cast<SDL_Scancode>(nextInput.Value); } break;
-	//
-	//case SDL_MOUSEBUTTONUP:
-	//case SDL_MOUSEBUTTONDOWN:
-	//{ event.button.button = std::any_cast<Uint8>(nextInput.Value); } break;
-	//
-	//case SDL_MOUSEMOTION:
-	//{ 
-	//	event.motion.x = std::any_cast<dVec2>(nextInput.Value).x;
-	//	event.motion.y = std::any_cast<dVec2>(nextInput.Value).y;
-	//} break;
-	//
-	//case SDL_MOUSEWHEEL:
-	//{
-	//	event.wheel.x = std::any_cast<dVec2>(nextInput.Value).x;
-	//	event.wheel.y = std::any_cast<dVec2>(nextInput.Value).y;
-	//} break;
-	//}
-	//
-	//SDL_PushEvent(&event);
+	InputInfo nextInput = recordedInputs[replayCurrentInput];
+	SDL_Event event = {};
+	event.type = nextInput.Type;
+	
+	switch(nextInput.Type)
+	{
+	case SDL_KEYUP:
+	case SDL_KEYDOWN:
+	{ event.key.keysym.sym = std::any_cast<SDL_Scancode>(nextInput.Value); } break;
+	
+	case SDL_MOUSEBUTTONUP:
+	case SDL_MOUSEBUTTONDOWN:
+	{ event.button.button = std::any_cast<Uint8>(nextInput.Value); } break;
+	
+	case SDL_MOUSEMOTION:
+	{ 
+		event.motion.x = std::any_cast<dVec2>(nextInput.Value).x;
+		event.motion.y = std::any_cast<dVec2>(nextInput.Value).y;
+	} break;
+	
+	case SDL_MOUSEWHEEL:
+	{
+		event.wheel.x = std::any_cast<dVec2>(nextInput.Value).x;
+		event.wheel.y = std::any_cast<dVec2>(nextInput.Value).y;
+	} break;
+	}
+	
+	SDL_PushEvent(&event);
 }

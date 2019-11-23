@@ -11,13 +11,20 @@ void Locator::Call(const locatorHasher::id id, Args &&...args)
 	auto funcs = cmds.equal_range(id);
 	for (auto it = funcs.first; it != funcs.second; it++)
 	{ 
+		callStackSize++;
+
 		const type_info &givenArgsInfo = typeid(std::tuple<std::decay_t<Args>...>);
 		it->second.func(&tuple, givenArgsInfo.hash_code(), givenArgsInfo.name());
-	}
-}
 
-template<size_t N>
-void Locator::Remove(const char (&key)[N], LeafFunc func)
-{
-	//TODO: Implement
+		callStackSize--;
+		assert(callStackSize >= 0);
+	}
+
+	// Erase all functions that were noted down by Remove().
+	// Those functions can only be removed when the map isn't being accessed
+	// as otherwise errors will be thrown.
+	if(callStackSize == 0 && !cmdsToRemove.empty())
+	{
+		cleanRemoves();
+	}
 }

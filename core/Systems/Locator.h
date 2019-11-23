@@ -74,7 +74,12 @@ private:
 	friend Singleton<Locator>;
 	Locator() {}
 
+	// Erase all functions that where noted down by Remove().
+	void cleanRemoves();
+
+	int callStackSize = 0;
 	std::unordered_multimap<locatorHasher::id, LeafFunc> cmds;
+	std::vector<decltype(cmds)::iterator> cmdsToRemove;
 };
 
 #include "cmdNode.h"
