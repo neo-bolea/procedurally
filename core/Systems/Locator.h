@@ -37,7 +37,7 @@ class Locator : public Singleton<Locator>
 	class LeafFunc
 	{
 	public:
-		using FuncType = std::function<void(void *, const type_info &)>;
+		using FuncType = std::function<void(void *, size_t, const char *)>;
 
 		LeafFunc() {}
 		LeafFunc(FuncType func, void *funcPtr) : func(func), funcPtr(funcPtr) 
@@ -54,10 +54,10 @@ public:
 	struct CmdNode;
 
 	// Add functions to a given hash.
-	void Add(CmdNode &tree);
+	void Add(const CmdNode &tree);
 
 	// Remove functions with a given hash.
-	void Remove(CmdNode &tree);
+	void Remove(const CmdNode &tree);
 	template<size_t N>
 	void Remove(const char (&key)[N], LeafFunc func);
 

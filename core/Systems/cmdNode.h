@@ -28,7 +28,7 @@ public:
 	CmdNode(const char *cmd, ToBind *toBind, void(ToBind::*cb)(FuncArgs...));
 
 	// Converts a tree of CmdNodes (nested) into a list of separate paths to every node in the tree.
-	std::vector<nodePath> dissectTree();
+	std::vector<nodePath> dissectTree() const;
 
 	// Either contains nested objects or a callable
 	LeafFunc leafFunc;
@@ -38,16 +38,20 @@ public:
 	const char *levelKey;
 
 private:
+	class TypeInfoExt;
+
 	// Enables the use of a vector for functions with different signatures,
 	// by bottlenecking to void *.
 	template<typename Signature, typename ...FuncArgs>
-	static void variableFunctionSignature(void *args, const type_info &info, Signature func);
+	static void variableFunctionSignature(
+		void *args, 
+		size_t givenArgsInfo, const char *givenArgsName, 
+		size_t expectedArgsInfo, const char *expectedArgsName, 
+		Signature func);
 };
 
 // Makes the interface for creating trees look more pleasant.
-#define CNTREE(...) { Locator::Get().Add(__VA_ARGS__); }0
-#define CNTREE_END );
-#define CNSTR Locator::CmdNode {
+#define CNSTART Locator::CmdNode {
 #define CNEND }
 
 #include "cmdNode.inc"

@@ -9,12 +9,14 @@
 #include "Hash.h"
 #include "Mat.h"
 #include "StringUtils.h"
+#include "Time.h"
 #include "Vec.h"
 #include "Watch.h"
 
 #include "GL/glew.h"
 #include "SDL.h"
 
+#include <chrono>
 #include <iostream>
 
 #define __WINDOWS_WASAPI__
@@ -26,6 +28,8 @@
 
 int main(int argc, char *argv[])
 {
+	Time::StartTime = std::chrono::steady_clock::now();
+
 #pragma region SDL
 	//SDL
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -90,17 +94,29 @@ int main(int argc, char *argv[])
 	Locator &sys = Locator::Get();
 	Inputs inputs;
 	inputs.StartDebug();
+	inputs.StartRecording();
 
 	bool quit = false;
 	SDL_Event event;
 
 	while(!quit)
 	{
+		Time::ProgramTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - Time::StartTime).count() / 1'000'000'000.0;
+
 		glClearColor(0.f, 1.f, 0.7f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		sys.Call("Update");
 		
+		//static bool stoppedRecording = false;
+		//if(!stoppedRecording && Time::ProgramTime > 1.0)
+		//{
+		//	std::cout << "STARTED REPLAYING" << std::endl;
+		//	stoppedRecording = true;
+		//	inputs.StopRecording();
+		//	inputs.StartReplaying();
+		//}
+
 		while(SDL_PollEvent(&event))
 		{
 			switch(event.type)
@@ -117,8 +133,9 @@ int main(int argc, char *argv[])
 			{ sys.Call("Inputs/SetMousePos", event); } break;
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
-			case SDL_MOUSEWHEEL:
 			{ sys.Call("Inputs/SetMouseButton", event); } break;
+			case SDL_MOUSEWHEEL:
+			{ std::cout << "Mouse wheel has not been implemented yet." << std::endl; } break;
 			}
 		}
 

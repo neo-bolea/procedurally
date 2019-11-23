@@ -6,15 +6,18 @@ constexpr void Locator::Call(const char (&key)[N], Args &&...args)
 
 template<typename ...Args>
 void Locator::Call(const locatorHasher::id id, Args &&...args)
-{ 
+{
 	std::tuple<Args&...> tuple(args...);
 	auto funcs = cmds.equal_range(id);
 	for (auto it = funcs.first; it != funcs.second; it++)
-	{ it->second.func(&tuple, typeid(std::tuple<Args...>)); } 
+	{ 
+		const type_info &givenArgsInfo = typeid(std::tuple<std::decay_t<Args>...>);
+		it->second.func(&tuple, givenArgsInfo.hash_code(), givenArgsInfo.name());
+	}
 }
 
 template<size_t N>
 void Locator::Remove(const char (&key)[N], LeafFunc func)
 {
-
+	//TODO: Implement
 }

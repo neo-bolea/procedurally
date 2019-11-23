@@ -21,7 +21,7 @@ struct Locator::CmdNode::nodePath
 	{}
 };
 
-std::vector<Locator::CmdNode::nodePath> Locator::CmdNode::dissectTree()
+std::vector<Locator::CmdNode::nodePath> Locator::CmdNode::dissectTree() const
 {
 	if(nodes.size() == 0) 
 	{ 
@@ -44,7 +44,7 @@ std::vector<Locator::CmdNode::nodePath> Locator::CmdNode::dissectTree()
 	return cmdPaths;
 }
 
-void Locator::Add(CmdNode &tree)
+void Locator::Add(const CmdNode &tree)
 {
 	auto cmdPaths = tree.dissectTree();
 	for(size_t i = 0; i < cmdPaths.size(); i++)
@@ -62,7 +62,7 @@ size_t getAddress(std::function<T(U...)> f) {
 	return (size_t) *fnPointer;
 }
 
-void Locator::Remove(CmdNode &tree)
+void Locator::Remove(const CmdNode &tree)
 {
 	auto cmdPaths = tree.dissectTree();
 	for(size_t i = 0; i < cmdPaths.size(); i++)
@@ -70,11 +70,14 @@ void Locator::Remove(CmdNode &tree)
 		std::string joined = Strings::Join(cmdPaths[i].Keys, "/");
 		locatorHasher::id id = locatorHasher::toID(joined.c_str(), joined.size());
 		
-		auto it = cmds.find(id);
-		while(it != cmds.end())
+		Reset:
+		for(auto it = cmds.find(id); it != cmds.end(); it++)
 		{
-			cmds.erase(it);
-			it = cmds.find(id);
+			if(it->second.funcPtr == cmdPaths[i].Func.funcPtr)
+			{
+				cmds.erase(it);
+				goto Reset;
+			}
 		}
 	}
 }
