@@ -13,17 +13,7 @@ void Locator::CmdNode::variableFunctionSignature(
 	size_t expectedArgsInfo, const char *expectedArgsName, 
 	Signature func)
 { 
-	//TODO: Check for correct arguments.
-	//const type_info &correctInfo1 = typeid(std::tuple<SDL_Event&>);
-	//const type_info &correctInfo = typeid(std::tuple<FuncArgs&...>);
-	//assert(info == correctInfo1);
 	std::tuple<FuncArgs&...> tupledArgs = *static_cast<std::tuple<FuncArgs&...> *>(args);
-	//const type_info &t1 = typeid(tupledArgs);
-	////const type_info &t2 = typeid(&func.target_type());
-	//std::cout << t1.name << " vs " << std::endl;
-
-	//const type_info &argInfo = typeid(std::decay_t<FuncArgs>...);
-	//std::cout << argInfo.name() << " vs " << givenArgsInfo.name() << std::endl;
 	if(givenArgsInfo == expectedArgsInfo)
 	{
 		std::apply(func, tupledArgs);
