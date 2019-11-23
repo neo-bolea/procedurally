@@ -43,17 +43,20 @@ private:
 
 	void setKey(SDL_Event &);
 	void setMouseButton(SDL_Event &);
-	void setMousePos(SDL_Event );
+	void setMousePos(SDL_Event &);
+	void setMouseWheel(SDL_Event &);
 	void update();
 
 	void getKey(SDL_Scancode code, State &state);
-	void getMouseButton(byte button, State &state) ;
-	void getMousePos(dVec2 &v) ;
+	void getMouseButton(byte button, State &state);
+	void getMousePos(dVec2 &v);
+	void getMouseWheel(dVec2 &v);
 
 	std::array<State, SDL_NUM_SCANCODES> keyStates;
 	std::array<State, 5> buttonStates;
-	dVec2 mouseChange;
+	dVec2 mouseMove;
 	dVec2 mousePos;
+	dVec2 mouseWheelMove;
 	bool isIgnored;
 
 	Locator::CmdNode tree;
@@ -68,9 +71,10 @@ private:
 
 	void start(), stop();
 
-	void setKey(SDL_Event &event);
-	void setMouseButton(SDL_Event &event);
-	void setMousePos(SDL_Event &event);
+	void setKey(SDL_Event &);
+	void setMouseButton(SDL_Event &);
+	void setMousePos(SDL_Event &);
+	void setMouseWheel(SDL_Event &);
 
 private:
 	Locator::CmdNode tree;
@@ -87,7 +91,7 @@ private:
 	void startRecording(), stopRecording();
 	void startReplaying(), stopReplaying();
 
-	void whileRecording(SDL_Event &event);
+	void whileRecording(SDL_Event &);
 	void whileReplaying();
 
 	void simulateNextInput();

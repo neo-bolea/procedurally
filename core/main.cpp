@@ -93,7 +93,6 @@ int main(int argc, char *argv[])
 
 	Locator &sys = Locator::Get();
 	Inputs inputs;
-	inputs.StartDebug();
 	inputs.StartRecording();
 
 	bool quit = false;
@@ -106,16 +105,19 @@ int main(int argc, char *argv[])
 		glClearColor(0.f, 1.f, 0.7f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		static bool stoppedRecording = false;
+		Inputs::State state;
+		sys.Call("Inputs/GetKey", SDL_SCANCODE_A, state);
+		std::cout << state << std::endl;
+		if(state == Inputs::Pressed)
+		{
+			std::cout << "STARTED REPLAYING" << std::endl;
+			stoppedRecording = true;
+			inputs.StopRecording();
+			inputs.StartReplaying();
+		}
+
 		sys.Call("Update");
-		
-		//static bool stoppedRecording = false;
-		//if(!stoppedRecording && Time::ProgramTime > 1.0)
-		//{
-		//	std::cout << "STARTED REPLAYING" << std::endl;
-		//	stoppedRecording = true;
-		//	inputs.StopRecording();
-		//	inputs.StartReplaying();
-		//}
 
 		while(SDL_PollEvent(&event))
 		{
@@ -135,7 +137,7 @@ int main(int argc, char *argv[])
 			case SDL_MOUSEBUTTONUP:
 			{ sys.Call("Inputs/SetMouseButton", event); } break;
 			case SDL_MOUSEWHEEL:
-			{ std::cout << "Mouse wheel has not been implemented yet." << std::endl; } break;
+			{ sys.Call("Inputs/SetMouseWheel", event); } break;
 			}
 		}
 
