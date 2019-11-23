@@ -28,8 +28,6 @@
 
 int main(int argc, char *argv[])
 {
-	Time::StartTime = std::chrono::steady_clock::now();
-
 #pragma region SDL
 	//SDL
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -95,21 +93,20 @@ int main(int argc, char *argv[])
 	Inputs inputs;
 	inputs.StartDebug();
 	inputs.StartRecording();
+	Time time;
 
 	bool quit = false;
 	SDL_Event event;
 
 	while(!quit)
 	{
-		Time::ProgramTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - Time::StartTime).count() / 1'000'000'000.0;
-
 		glClearColor(0.f, 1.f, 0.7f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		static bool stoppedRecording = false;
 		Inputs::State state;
 		sys.Call("Inputs/GetKey", SDL_SCANCODE_A, state);
-		if(!stoppedRecording && Time::ProgramTime > 5.0)
+		if(!stoppedRecording && Time::ProgramTime() > 5.0)
 		{
 			std::cout << "STARTED REPLAYING" << std::endl;
 			stoppedRecording = true;

@@ -180,7 +180,7 @@ void Inputs::Recorder::startRecording()
 
 	Locator::Get().Add(recordTree); 
 
-	actionStartTime = Time::ProgramTime;
+	actionStartTime = Time::ProgramTime();
 	isRecording = true;
 }
 
@@ -201,7 +201,7 @@ void Inputs::Recorder::startReplaying()
 
 	Locator::Get().Add(replayTree); 
 
-	actionStartTime = Time::ProgramTime;
+	actionStartTime = Time::ProgramTime();
 	replayCurrentInput = 0;
 	isReplaying = true;
 }
@@ -220,7 +220,7 @@ void Inputs::Recorder::stopReplaying()
 void Inputs::Recorder::whileRecording(SDL_Event &event)
 { 
 	InputInfo info;
-	info.Time = Time::ProgramTime - actionStartTime;
+	info.Time = Time::ProgramTime() - actionStartTime;
 	info.Type = static_cast<SDL_EventType>(event.type);
 
 	switch(event.type)
@@ -250,7 +250,7 @@ void Inputs::Recorder::whileReplaying()
 		return;
 	}
 
-	while(Time::ProgramTime - actionStartTime > recordedInputs[replayCurrentInput].Time)
+	while(Time::ProgramTime() - actionStartTime > recordedInputs[replayCurrentInput].Time)
 	{
 		simulateNextInput();
 
