@@ -91,30 +91,39 @@ int main(int argc, char *argv[])
 
 	Locator &sys = Locator::Get();
 	Inputs inputs;
-	inputs.StartDebug();
-	inputs.StartRecording();
 	Time time;
 
 	bool quit = false;
 	SDL_Event event;
 
+	float vertices[] = {
+    -0.5f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+	};  
+
+	uint VAO, VBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
+	{
+		glBindVertexArray(VAO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+		//glVertexArrayVertexBuffer(VAO, )
+
+		glBindVertexArray(0);
+	}
+
 	while(!quit)
 	{
-		glClearColor(0.f, 1.f, 0.7f, 1.f);
+		glClearColor(0.f, 0.f, 0.f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		static bool stoppedRecording = false;
-		Inputs::State state;
-		sys.Call("Inputs/GetKey", SDL_SCANCODE_A, state);
-		if(!stoppedRecording && Time::ProgramTime() > 5.0)
-		{
-			std::cout << "STARTED REPLAYING" << std::endl;
-			stoppedRecording = true;
-			inputs.StopRecording();
-			inputs.StartReplaying();
-		}
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
-		sys.Call("Update");
+		sys.Call("Update"); 
 
 		while(SDL_PollEvent(&event))
 		{
@@ -127,7 +136,6 @@ int main(int argc, char *argv[])
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
 			{  sys.Call("Inputs/SetKey", event); } break;
-		
 			case SDL_MOUSEMOTION:
 			{ sys.Call("Inputs/SetMousePos", event); } break;
 			case SDL_MOUSEBUTTONDOWN:

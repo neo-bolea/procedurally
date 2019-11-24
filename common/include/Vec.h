@@ -158,4 +158,8 @@ using bVec2 = Vec2<bool>;
 using bVec3 = Vec3<bool>;
 using bVec4 = Vec4<bool>;
 
+using Vector2 = fVec2;
+using Vector3 = fVec3;
+using Vector4 = fVec4;
+
 #include "Vec.inc"

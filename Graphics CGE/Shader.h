@@ -1,17 +1,14 @@
 #pragma once
 
-#include "Debug.h"
+#include "Array2D.h"
 #include "GLTypes.h"
 #include "MathGL.h"
-#include "Mat.h"
 #include "Pool.h"
-#include "Vec.h"
+#include "Types.h"
 
 #include "GL/glew.h"
 
 #include <any>
-#include <unordered_map>
-#include <vector>
 
 #undef GetProp
 
@@ -191,7 +188,7 @@ namespace GL
 		}
 
 	
-		//glDispatchCompute()
+		glDispatchCompute()
 	}
 
 	inline DataType Program::GetProp(const std::string &name) const
@@ -244,13 +241,13 @@ namespace GL
 		case DataType::UInt:  { auto v = value.Uint_   ; glUniform1ui(unif.ID, v							); break; }
 		case DataType::Bool:  { auto v = value.Bool_   ; glUniform1i (unif.ID, v							); break; }
 
-		case DataType::Mat2:  { auto v = value.Mat_; assert(v->Rows == 2 && v->Cols == 2);
+		case DataType::Mat2:  { auto v = value.Mat_; assert(v->Length[0] == 2 && v->Length[1] == 2);
 			glUniformMatrix2fv(unif.ID, 1, false, &v->v[0]); break; }
 
-		case DataType::Mat3:  { auto v = value.Mat_; assert(v->Rows == 3 && v->Cols == 3);
+		case DataType::Mat3:  { auto v = value.Mat_; assert(v->Length[0] == 3 && v->Length[1] == 3);
 			glUniformMatrix3fv(unif.ID, 1, false, &v->v[0]); break; }
 
-		case DataType::Mat4:  { auto v = value.Mat_; assert(v->Rows == 4 && v->Cols == 4);
+		case DataType::Mat4:  { auto v = value.Mat_; assert(v->Length[0] == 4 && v->Length[1] == 4);
 			glUniformMatrix4fv(unif.ID, 1, false, &v->v[0]); break; }
 		default: UNDEFINED_CODE_PATH
 		}

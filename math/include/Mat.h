@@ -37,6 +37,7 @@ namespace Math
 		union
 		{
 			std::array<T, ROWS * COLS> e{};
+			std::array<T, ROWS * COLS> v;
 			std::array<Vec<T, COLS>, ROWS> vecs;
 		};
 	};
@@ -66,3 +67,6 @@ namespace Math
 
 #include "Mat.inc"
 }
+
+template<typename T>
+using Array2D = Math::Mat<float, 4, 4>;
