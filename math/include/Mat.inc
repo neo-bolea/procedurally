@@ -27,16 +27,15 @@ Mat<T, ROWS, COLS>::Mat(Args... args)
 }
 
 template<typename T, size_t ROWS, size_t COLS>
+Mat<T, ROWS, COLS>::Mat<T, ROWS, COLS>(const Mat<T, ROWS, COLS> &other)
+{ for(size_t i = 0; i < other.e.size(); i++) { e[i] = other.e[i]; } }
+
+template<typename T, size_t ROWS, size_t COLS>
 template<typename TT>
 Mat<T, ROWS, COLS>::Mat(const Mat<TT, ROWS, COLS> &other)
 {
-	for(size_t row = 0; row < ROWS; row++)
-	{
-		for(size_t col = 0; col < COLS; col++)
-		{
-			this->operator[](row, col) = static_cast<T>(other[row][col]);
-		}
-	}
+	for(size_t i = 0; i < other.e.size(); i++)
+	{ e[i] = static_cast<T>(other.e[i]); }
 }
 
 
@@ -72,6 +71,15 @@ Vec<T, COLS>& Mat<T, ROWS, COLS>::operator [](size_t row)
 	assert(row < ROWS); 
 	return vecs[row]; 
 }
+
+template<typename T, size_t ROWS, size_t COLS>
+Mat<T, ROWS, COLS> Mat<T, ROWS, COLS>::operator *(float value)
+{
+	Mat<T, ROWS, COLS> result(*this);
+	//for(size_t i = 0; i < result.v.size(); i++) { result.v[i] *= value; }
+	return result;
+}
+
 
 
 //// Arithmetic Operators ////

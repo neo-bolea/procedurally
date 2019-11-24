@@ -12,10 +12,14 @@ Vec<T, N>::Vec(const T *d)
 { for(size_t i = 0; i < N; i++) { this->e[i] = d[i]; } }
 
 template<typename T, size_t N>
+Vec<T, N>::Vec<T, N>(const Vec<T, N> &other)
+{ for(size_t i = 0; i < N; i++) { this->e[i] = other[i]; } }
+
+template<typename T, size_t N>
 template<class... Args>
 Vec<T, N>::Vec(Args... args)
 {
-	static_assert(sizeof...(Args) == N, "Invalid number of arguments for vector.");
+	static_assert(sizeof...(Args) == N, "Invalid number of arguments for vector constructor.");
 
 	std::initializer_list<T> initList{ static_cast<T>(args)... };
 	std::vector<T> elems = { initList };
@@ -31,7 +35,6 @@ template<typename T, size_t N>
 template<typename TT>
 Vec<T, N>::Vec(const Vec<TT, N> &other)
 { for(size_t i = 0; i < N; i++) { this->e[i] = static_cast<T>(other[i]); } }
-
 
 template<typename T, size_t N>
 template<typename TT, size_t NN>
@@ -161,8 +164,8 @@ std::string Vec<T, N>::ToString() const
 template<typename T, size_t N>
 T Vec<T, N>::Len() const
 { 
-	static_assert(std::is_arithmetic_v<DotType>, 
-					  "The square root of the given vector type is undefined.");
+	static_assert(std::is_arithmetic_v<T>, 
+					  "The square root undefined for non-arithmetic types.");
 	return sqrt(LenSqr()); 
 }
 
@@ -174,11 +177,27 @@ template<typename T, size_t N>
 T Vec<T, N>::Dot(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 {
 	static_assert(std::is_default_constructible_v<T>, 
-					  "The vector type must be default constructible \
-						for the dot product to be used.");
+					  "The vector type must be default constructible for the dot product to be used.");
 
 	T sum{};
 	{ for(size_t i = 0; i < N; i++) { sum += lhs[i] * rhs[i]; } }
 
 	return sum;
 }
+
+template<typename T, size_t N>
+Vec<T, N> Vec<T, N>::Cross(const Vec<T, N> &a, const Vec<T, N> &b)
+{
+	static_assert(N == 3, "The cross product is only supported for vectors with 3 elements.");
+	static_assert(std::is_arithmetic_v<T>, 
+					  "The cross product is undefined for non-arithmetic types.");
+
+	return Vec<T, N>(
+		a.y * b.z - b.y * a.z,
+		a.z * b.x - b.z * a.x,
+		a.x * b.y - b.x * a.y);
+}
+
+template<typename T, size_t N>
+Vec<T, N> Vec<T, N>::Normalize() const
+{ return Vec<T, N>(&e[0]) / Len(); }

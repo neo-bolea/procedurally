@@ -70,6 +70,8 @@ struct Vec : public VecData<T, N>
 	//// Constructors ////
 	Vec(), Vec(T n), Vec(const T *d);
 
+	Vec<T, N>(const Vec<T, N> &other);
+
 	template<class... Args>
 	explicit Vec(Args... args);
 
@@ -99,6 +101,8 @@ struct Vec : public VecData<T, N>
 	T Len() const;
 	T LenSqr() const;
 	static T Dot(const Vec<T, N> &a, const Vec<T, N> &b);
+	static Vec<T, N> Cross(const Vec<T, N> &a, const Vec<T, N> &b);
+	Vec<T, N> Normalize() const;
 };
 
 

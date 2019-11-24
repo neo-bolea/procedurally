@@ -22,6 +22,8 @@ namespace Math
 		template<class... Args>
 		explicit Mat(Args... args);
 
+		Mat<T, ROWS, COLS>(const Mat<T, ROWS, COLS> &other);
+
 		template<typename TT>
 		explicit Mat<T, ROWS, COLS>(const Mat<TT, ROWS, COLS> &other);
 
@@ -29,6 +31,11 @@ namespace Math
 		void operator =(const Mat<T, ROWS, COLS> &other);
 		Vec<T, COLS> operator [](size_t row) const;
 		Vec<T, COLS>& operator [](size_t row);
+
+		// Arithmetic
+	#define REQUIRES(...) typename = typename std::enable_if_t<__VA_ARGS__>
+
+		Mat<T, ROWS, COLS> operator *(float value);
 
 		//// Functions ////
 		Mat<T, ROWS, COLS> Identity();
@@ -69,4 +76,4 @@ namespace Math
 }
 
 template<typename T>
-using Array2D = Math::Mat<float, 4, 4>;
+using Array2D = Math::Mat<T, 4, 4>;
