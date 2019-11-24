@@ -7,10 +7,7 @@ namespace Math
 {
 	namespace GL
 	{
-		Vector3 Cross(const Vector3 &v1, const Vector3 &v2);
-		float Dot(const Vector3 &v1, const Vector3 &v2);
-
-		Array2D<float> Identity(uint size);
+		extern const Array2D<float> Identity;
 		Array2D<float> Inverse(const Array2D<float> &m);
 		Array2D<float> LookAt(Vector3 const &eye, Vector3 const &center, Vector3 const &up);
 		Array2D<float> Orthogonal(float left, float right, float bottom, float top, float near, float far);

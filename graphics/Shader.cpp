@@ -1,6 +1,5 @@
-#include "Shader.h"
+/*#include "Shader.h"
 
-#include "CGE.h"
 #include "GLTypes.h"
 
 #include <fstream>
@@ -200,4 +199,4 @@ namespace GL
 
 		return Load(paths);
 	}
-}
+}*/

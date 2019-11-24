@@ -1,21 +1,9 @@
 #include "MathGL.h"
 
-Vector3 Math::GL::Cross(const Vector3 &v1, const Vector3 &v2)
-{
-	return Vector3(
-		v1.y * v2.z - v2.y * v1.z,
-		v1.z * v2.x - v2.z * v1.x,
-		v1.x * v2.y - v2.x * v1.y);
-}
-
-float Math::GL::Dot(const Vector3 &v1, const Vector3 &v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
-
-Array2D<float> Math::GL::Identity(uint size)
-{
-	Array2D<float> result(size, size);
-	for(uint i = 0; i < size; i++) { result[i][i] = 1.f; }
-	return result;
-}
+const Array2D<float> Math::GL::Identity(1, 0, 0, 0,
+													 0, 1, 0, 0,
+													 0, 0, 1, 0,
+													 0, 0, 0, 1);
 
 Array2D<float> Math::GL::Inverse(const Array2D<float> &m)
 {
@@ -88,11 +76,11 @@ Array2D<float> Math::GL::Inverse(const Array2D<float> &m)
 
 Array2D<float> Math::GL::LookAt(Vector3 const &eye, Vector3 const &center, Vector3 const &up)
 {
-	Vector3 const f((center - eye).Normalize());
-	Vector3 const s((Cross(f, up)).Normalize());
-	Vector3 const u(Cross(s, f));
-
-	Array2D<float> result = Identity(4);
+	Vector3 f((center - eye).Normalize());
+	Vector3 const s((Vector3::Cross(f, up)).Normalize());
+	Vector3 const u(Vector3::Cross(s, f));
+	
+	Array2D<float> result = Identity;
 	result[0][0] = s.x;
 	result[0][1] = s.y;
 	result[0][2] = s.z;
@@ -102,15 +90,15 @@ Array2D<float> Math::GL::LookAt(Vector3 const &eye, Vector3 const &center, Vecto
 	result[2][0] = -f.x;
 	result[2][1] = -f.y;
 	result[2][2] = -f.z;
-	result[0][3] = -Dot(s, eye);
-	result[1][3] = -Dot(u, eye);
-	result[2][3] = Dot(f, eye);
+	result[0][3] = -Vector3::Dot(s, eye);
+	result[1][3] = -Vector3::Dot(u, eye);
+	result[2][3] = Vector3::Dot(f, eye);
 	return result;
 }
 
 Array2D<float> Math::GL::Orthogonal(float left, float right, float bottom, float top, float near, float far)
 {
-	Array2D<float> Result = Math::GL::Identity(4);
+	Array2D<float> Result = Math::GL::Identity;
 	Result[0][0] = 2.f / (right - left);
 	Result[1][1] = 2.f / (top - bottom);
 	Result[2][2] = 1.f / (far - near);
