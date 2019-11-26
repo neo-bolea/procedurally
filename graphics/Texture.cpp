@@ -228,7 +228,7 @@ namespace GL
 
 		//Load texture
 		int nrChannels, height;
-		uchar *texData = Load(path.c_str(), &Size, &height, &nrChannels);
+		uchar *texData;// = SOIL_load_image(path.c_str(), &Size, &height, &nrChannels, SOIL_LOAD_AUTO);
 
 		if(height != 1)
 		{
@@ -248,7 +248,7 @@ namespace GL
 		}
 
 		glTexImage1D(type, 0, Format, Size, 0, basedFormat, (GLenum)Data, texData);
-		Free(texData);
+		//SOIL_free_image_data(texData);
 
 		//Generate mipmaps
 		if(GenerateMipmaps)
@@ -313,7 +313,7 @@ namespace GL
 
 		//Load texture
 		int nrChannels;
-		uchar *texData = Load(path.c_str(), &Size.x, &Size.y, &nrChannels, forcedNrChannels);
+		uchar *texData;// = SOIL_load_image(path.c_str(), &Size.x, &Size.y, &nrChannels, forcedNrChannels);
 			
 		int maxSize = GL::TextureMaxSize();
 		if(Size.x > maxSize || Size.y > maxSize)
@@ -325,7 +325,7 @@ namespace GL
 		InitFormat(forcedFormat ? forcedFormat : nrToChannel[nrChannels]);
 
 		glTexImage2D(type, 0, Format, Size.x, Size.y, 0, basedFormat, (GLenum)Data, (void *)texData);
-		Free(texData);
+		//SOIL_free_image_data(texData);
 
 		//Generate mipmaps
 		if(GenerateMipmaps)
@@ -424,7 +424,7 @@ namespace GL
 		int width, height, origWidth, origHeight, nrChannels;
 		for(uint i = 0; i < 6; i++)
 		{
-			uchar *texData = Load(faces[i].c_str(), (int *)&width, (int *)&height, (int *)&nrChannels, forcedNrChannels);
+			uchar *texData;// = SOIL_load_image(faces[i].c_str(), (int *)&width, (int *)&height, (int *)&nrChannels, forcedNrChannels);
 
 			if(i == 0)
 			{
@@ -440,7 +440,7 @@ namespace GL
 			}
 
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, Format, width, height, 0, basedFormat, Data, texData);
-			Free(texData);
+			//SOIL_free_image_data(texData);
 		}
 
 		Size = iVec2(width, height);

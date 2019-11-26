@@ -682,7 +682,7 @@ namespace GLHelper
 		using T = typename std::decay<decltype(*data.begin())>::type;
 		glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), drawType);
 
-		glVertexAttribPointer(index, dataSize, dataType, normalized, dataSize * sizeof(T), 0);
+		glVertexAttribPointer(index, dataSize, dataType, normalized, sizeof(T), 0);
 		glEnableVertexAttribArray(index);
 	}
 

@@ -7,32 +7,12 @@
 #include <vector>
 #include <type_traits>
 #include <xmmintrin.h>
-#define COLUMN_MAJOR
-
-#if !defined ROW_MAJOR && !defined COLUMN_MAJOR
-#define ROW_MAJOR
-#endif
-
-#if defined ROW_MAJOR && defined COLUMN_MAJOR
-#error Only row-major or column-major matrices should be enabled!
-#endif
 
 namespace Math
 {
 	template<typename T, size_t ROWS, size_t COLS>
 	struct Mat
 	{
-		struct MatProxy
-		{
-			const T &operator [](size_t i) const;
-			T &operator [](size_t i);
-
-		private:
-			friend Mat;
-			MatProxy(T *ptr);
-			T *ptr;
-		};
-
 		//// Constants ////
 		static const size_t Rows = ROWS, Cols = COLS;
 
@@ -49,8 +29,13 @@ namespace Math
 
 		//// Operators ////
 		void operator =(const Mat<T, ROWS, COLS> &other);
-		const MatProxy operator [](size_t row) const;
-		MatProxy operator [](size_t row);
+		Vec<T, COLS> operator [](size_t row) const;
+		Vec<T, COLS>& operator [](size_t row);
+
+		// Arithmetic
+	#define REQUIRES(...) typename = typename std::enable_if_t<__VA_ARGS__>
+
+		Mat<T, ROWS, COLS> operator *(float value);
 
 		//// Functions ////
 		Mat<T, ROWS, COLS> Identity();
@@ -58,9 +43,9 @@ namespace Math
 		//// Data ////
 		union
 		{
-			std::array<Vec<T, COLS>, ROWS> vecs;
 			std::array<T, ROWS * COLS> e{};
 			std::array<T, ROWS * COLS> v;
+			std::array<Vec<T, COLS>, ROWS> vecs;
 		};
 	};
 
@@ -82,28 +67,13 @@ namespace Math
 	template<typename T, size_t N, size_t M, size_t O>
 	Mat<T, N, O> operator *(const Mat<T, N, M> &lhs, const Mat<T, M, O> &rhs);
 
-	template<typename T, size_t N, size_t M, size_t O>
-	Vec<T, N> operator *(const Mat<T, N, M> &lhs, const Vec<T, M> &rhs);
-
-	template<typename T, size_t ROWS, size_t COLS>
-	Mat<T, ROWS, COLS> operator *(Mat<T, ROWS, COLS> &lhs, T rhs);
-
-	template<typename T, size_t ROWS, size_t COLS>
-	Mat<T, ROWS, COLS> operator *(T lhs, Mat<T, ROWS, COLS> &rhs);
 
 	//// Typedefs ////
 	template<size_t ROWS, size_t COLS>
 	using fMat = Mat<real32, ROWS, COLS>;
-	using fMat3x3 = Mat<real32, 3, 3>;
-	using fMat4 = Mat<real32, 4, 4>;
-
-	template<size_t ROWS, size_t COLS>
-	using dMat = Mat<real64, ROWS, COLS>;
-	using dMat3x3 = Mat<real64, 3, 3>;
-	using dMat4 = Mat<real64, 4, 4>;
-
-	using Mat3x3 = fMat3x3;
-	using Mat4 = fMat4;
 
 #include "Mat.inc"
 }
+
+template<typename T>
+using Array2D = Math::Mat<T, 4, 4>;

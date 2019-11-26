@@ -16,7 +16,6 @@ Inputs::Inputs() : logger(new Logger(*this)), recorder(new Recorder(*this))
 		Locator::CmdNode("GetMouseButton", this, &Inputs::getMouseButton),
 		Locator::CmdNode("SetMousePos", this, &Inputs::setMousePos),
 		Locator::CmdNode("GetMousePos", this, &Inputs::getMousePos),
-		Locator::CmdNode("GetMouseMove", this, &Inputs::getMouseMove),
 		Locator::CmdNode("SetMouseWheel", this, &Inputs::setMouseWheel),
 		Locator::CmdNode("GetMouseWheel", this, &Inputs::getMouseWheel),
 		CNEND
@@ -128,9 +127,6 @@ void Inputs::getMouseButton(byte button, State &state)
 
 void Inputs::getMousePos(dVec2 &v)
 { v = mousePos; }
-
-void Inputs::getMouseMove(dVec2 &v)
-{ v = mouseMove; }
 
 void Inputs::getMouseWheel(dVec2 &v)
 { v = mouseWheelMove; }

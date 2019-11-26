@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Preprocessor.h"
-
 #include <array>
 #include <numeric>
 #include <sstream>
@@ -20,8 +18,8 @@ struct VecData<T, N, std::enable_if_t<N == 1>>
 {
 	union
 	{
-		struct { T x; };
 		std::array<T, N> e{};
+		struct { T x; };
 	};
 };
 
@@ -30,11 +28,9 @@ struct VecData<T, N, std::enable_if_t<N == 2>>
 {
 	union
 	{
-		struct { T x, y; };
 		std::array<T, N> e{};
+		struct { T x, y; };
 	};
-
-	static const VecData<T, N> Up, Down, Left, Right;
 };
 
 template<typename T, size_t N>
@@ -42,11 +38,9 @@ struct VecData<T, N, std::enable_if_t<N == 3>>
 {
 	union
 	{
-		struct { T x, y, z; };
 		std::array<T, N> e{};
+		struct { T x, y, z; };
 	};
-
-	static const VecData<T, N> Up, Down, Left, Right, Forward, Backward;
 };
 
 template<typename T, size_t N>
@@ -54,8 +48,8 @@ struct VecData<T, N, std::enable_if_t<N == 4>>
 {
 	union
 	{
-		struct { T x, y, z, w; };
 		std::array<T, N> e{};
+		struct { T x, y, z, w; };
 	};
 };
 
@@ -76,7 +70,6 @@ struct Vec : public VecData<T, N>
 	//// Constructors ////
 	Vec(), Vec(T n), Vec(const T *d);
 
-	Vec<T, N>(const VecData<T, N> &other);
 	Vec<T, N>(const Vec<T, N> &other);
 
 	template<class... Args>
@@ -131,10 +124,10 @@ Vec<T, N> operator -(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
 template<typename T, size_t N>
 Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
 
-template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+template<typename T, size_t N, typename U>
 Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs);
 
-template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+template<typename T, size_t N, typename U>
 Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs);
 
 template<typename T, size_t N, typename U>
