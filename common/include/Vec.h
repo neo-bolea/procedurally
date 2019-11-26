@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Preprocessor.h"
+
 #include <array>
 #include <numeric>
 #include <sstream>
@@ -18,8 +20,8 @@ struct VecData<T, N, std::enable_if_t<N == 1>>
 {
 	union
 	{
-		std::array<T, N> e{};
 		struct { T x; };
+		std::array<T, N> e{};
 	};
 };
 
@@ -28,9 +30,11 @@ struct VecData<T, N, std::enable_if_t<N == 2>>
 {
 	union
 	{
-		std::array<T, N> e{};
 		struct { T x, y; };
+		std::array<T, N> e{};
 	};
+
+	static const VecData<T, N> Up, Down, Left, Right;
 };
 
 template<typename T, size_t N>
@@ -38,9 +42,11 @@ struct VecData<T, N, std::enable_if_t<N == 3>>
 {
 	union
 	{
-		std::array<T, N> e{};
 		struct { T x, y, z; };
+		std::array<T, N> e{};
 	};
+
+	static const VecData<T, N> Up, Down, Left, Right, Forward, Backward;
 };
 
 template<typename T, size_t N>
@@ -48,8 +54,8 @@ struct VecData<T, N, std::enable_if_t<N == 4>>
 {
 	union
 	{
-		std::array<T, N> e{};
 		struct { T x, y, z, w; };
+		std::array<T, N> e{};
 	};
 };
 
@@ -69,6 +75,9 @@ struct Vec : public VecData<T, N>
 
 	//// Constructors ////
 	Vec(), Vec(T n), Vec(const T *d);
+
+	Vec<T, N>(const VecData<T, N> &other);
+	Vec<T, N>(const Vec<T, N> &other);
 
 	template<class... Args>
 	explicit Vec(Args... args);
@@ -99,6 +108,8 @@ struct Vec : public VecData<T, N>
 	T Len() const;
 	T LenSqr() const;
 	static T Dot(const Vec<T, N> &a, const Vec<T, N> &b);
+	static Vec<T, N> Cross(const Vec<T, N> &a, const Vec<T, N> &b);
+	Vec<T, N> Normalize() const;
 };
 
 
@@ -120,10 +131,10 @@ Vec<T, N> operator -(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
 template<typename T, size_t N>
 Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
 
-template<typename T, size_t N, typename U>
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
 Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs);
 
-template<typename T, size_t N, typename U>
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
 Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs);
 
 template<typename T, size_t N, typename U>
@@ -157,5 +168,9 @@ using uVec4 = Vec4<size_t>;
 using bVec2 = Vec2<bool>;
 using bVec3 = Vec3<bool>;
 using bVec4 = Vec4<bool>;
+
+using Vector2 = fVec2;
+using Vector3 = fVec3;
+using Vector4 = fVec4;
 
 #include "Vec.inc"

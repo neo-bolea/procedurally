@@ -4,10 +4,15 @@
 #include "framework.h"
 #include "Core.h"
 
+#include "MathExt.h"
+#include "Camera.h"
 #include "IOUtil.h"
+#include "Shader.h"
+#include "GL.h"
 #include "Systems/Inputs.h"
 #include "Hash.h"
 #include "Mat.h"
+#include "MathGL.h"
 #include "StringUtils.h"
 #include "Time.h"
 #include "Vec.h"
@@ -15,6 +20,12 @@
 
 #include "GL/glew.h"
 #include "SDL.h"
+#include "external/glm/glm.hpp"
+#include "external/glm/gtc/matrix_transform.hpp"
+#include "external/glm/gtc/type_ptr.hpp"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 #include <chrono>
 #include <iostream>
@@ -23,8 +34,8 @@
 #define __WINDOWS_DS__
 #define __WINDOWS_ASIO__
 
-#define WIDTH (1920/2)
-#define HEIGHT (1080/2)
+#define WIDTH (2560/2)
+#define HEIGHT (1440/2)
 
 int main(int argc, char *argv[])
 {
@@ -54,8 +65,6 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	SDL_GL_SetSwapInterval(0);
-
 	auto context = SDL_GL_CreateContext(window);
 #pragma endregion
 
@@ -73,7 +82,7 @@ int main(int argc, char *argv[])
 	//Culling
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 	
 	//Blending
 	glEnable(GL_BLEND);
@@ -87,34 +96,121 @@ int main(int argc, char *argv[])
 	
 	//Errors
 	glEnable(GL_DEBUG_OUTPUT);
+
+	//VSync
+	SDL_GL_SetSwapInterval(1);
 #pragma endregion
 
 	Locator &sys = Locator::Get();
 	Inputs inputs;
-	inputs.StartDebug();
-	inputs.StartRecording();
 	Time time;
 
 	bool quit = false;
 	SDL_Event event;
 
+	GL::ProgRef prog = GL::Programs.Load({"basic.vert", "basic.frag"});
+
+	std::array<float, 18> vertices = {
+		// positions         
+		1.0f,  1.0f, 0.0f,   
+		1.0f, -1.0f, 0.0f,   
+		-1.0f, -1.0f, 0.0f,  
+
+		1.0f,  1.0f, 0.0f,   
+		-1.0f, -1.0f, 0.0f,  
+		-1.0f,  1.0f, 0.0f,  
+	};
+
+	std::array<float, 12> uv = {
+		1.0f, 1.0f,
+		1.0f, 0.0f,
+		0.0f, 0.0f,
+	
+		1.0f, 1.0f,
+		0.0f, 0.0f,
+		0.0f, 1.0f 
+	};
+
+	unsigned int VBO[2], VAO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(2, VBO);
+
+	glBindVertexArray(VAO);
+
+	GLHelper::SetVBOData(VBO[0], vertices, 3, 0);
+	GLHelper::SetVBOData(VBO[1], uv, 2, 1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0); 
+	glBindVertexArray(0); 
+
+	GL::Tex2D tex;
+	tex.Setup("DS.jpg");
+
+	Camera cam(Vector3(0.f, 0.f, -5.f), Vector3::Forward);
+
+	Inputs::State state;
+
 	while(!quit)
 	{
-		glClearColor(0.f, 1.f, 0.7f, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClearColor(0.1f, 0.1f, 0.1f, 1.f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		static bool stoppedRecording = false;
-		Inputs::State state;
+		//void Camera::Update(float speed, float lockView, float horizMove, float vertMove, float horizMouse, float vertMouse, float scroll, float deltaTime)
+		float horizMove = 0.f, vertMove = 0.f, horizMouse = 0.f, vertMouse = 0.f, scroll = 0.f;
+		dVec2 mouseMove;
+		sys.Call("Inputs/GetMouseMove", mouseMove);
+		horizMouse = mouseMove.x;
+		vertMouse = mouseMove.y;
+
 		sys.Call("Inputs/GetKey", SDL_SCANCODE_A, state);
-		if(!stoppedRecording && Time::ProgramTime() > 5.0)
-		{
-			std::cout << "STARTED REPLAYING" << std::endl;
-			stoppedRecording = true;
-			inputs.StopRecording();
-			inputs.StartReplaying();
-		}
+		horizMove -= (state == Inputs::Held);
+		sys.Call("Inputs/GetKey", SDL_SCANCODE_D, state);
+		horizMove += (state == Inputs::Held);
 
-		sys.Call("Update");
+		sys.Call("Inputs/GetKey", SDL_SCANCODE_W, state);
+		vertMove += (state == Inputs::Held);
+		sys.Call("Inputs/GetKey", SDL_SCANCODE_S, state);
+		vertMove -= (state == Inputs::Held);
+		cam.Update(1.f, false, horizMove, vertMove, horizMouse, vertMouse, scroll, Time::DeltaTime());
+
+		Math::Mat4 mat;
+		//mat = Math::GL::Translate(mat, fVec3(sinf(Time::ProgramTime()) * 0.1f,0.f, 0.f));
+		//mat = Math::GL::Rotate(mat, Time::ProgramTime() * 0.5f, Vector3(0.f, 0.f, 1.f));
+		//mat = Math::GL::Scale(mat, Vector3(1.f, tex.Ratio(), 1.f));
+		//mat = Math::GL::Scale(mat, Vector3(1.f, ((float)WIDTH / HEIGHT), 1.f));
+		//Math::Mat4 proj = Math::GL::Orthographic(-2.f, 2.f, 2.f*-((float)WIDTH / HEIGHT), 2.f*((float)WIDTH / HEIGHT), -1.f, 1000.f);
+		//Mat4 Perspective(float fovy, float aspect, float zNear, float zFar);
+		//Math::Mat4 proj = Math::GL::Perspective(65.f, ((float)WIDTH / HEIGHT), -0.01f, 1000.f);
+
+		Math::Mat4 proj = Math::GL::Perspective(Math::Deg2Rad * 80.f, ((float)WIDTH / HEIGHT), 0.01f, 1000.f);
+		Math::Mat4 view = Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front, Vector3::Up);
+		prog->Use();
+		prog->Set("model", mat);
+		prog->Set("view", view);
+		prog->Set("projection", proj);
+
+		//glm::mat4 model = glm::identity<glm::mat4>();
+		//glm::vec2 position(0.f, Time::ProgramTime());
+		//glm::vec2 size(1.f, 1.f);
+		//float rotate = 0.f;//= Time::ProgramTime();
+		//model = glm::translate(model, glm::vec3(position, 0.0f));  
+		//
+		//model = glm::translate(model, glm::vec3(0.5f * size.x, 0.5f * size.y, 0.0f)); 
+		//model = glm::rotate(model, rotate, glm::vec3(0.0f, 0.0f, 1.0f)); 
+		//model = glm::translate(model, glm::vec3(-0.5f * size.x, -0.5f * size.y, 0.0f));
+		//
+		//model = glm::scale(model, glm::vec3(size, 1.0f));
+		//
+		////mat = Math::GL::Orthographic(-1.f, 1.f, -1.f, 1.f, 0.f, 1000.f) * mat;
+		//prog->Use();	
+		//glm::mat4 projection = glm::ortho(-1.f, 1.f, -1.f, 1.f, -1.0f, 100.0f);
+		//glUniformMatrix4fv(glGetUniformLocation(prog->ID, "mat"), 1, GL_FALSE, glm::value_ptr(model));
+
+		tex.Bind();
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		sys.Call("Update"); 
 
 		while(SDL_PollEvent(&event))
 		{
@@ -127,7 +223,6 @@ int main(int argc, char *argv[])
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
 			{  sys.Call("Inputs/SetKey", event); } break;
-		
 			case SDL_MOUSEMOTION:
 			{ sys.Call("Inputs/SetMousePos", event); } break;
 			case SDL_MOUSEBUTTONDOWN:

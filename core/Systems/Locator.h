@@ -34,19 +34,9 @@
 
 class Locator : public Singleton<Locator>
 {
-	class LeafFunc
-	{
-	public:
-		using FuncType = std::function<void(void *, size_t, const char *)>;
-
-		LeafFunc() {}
-		LeafFunc(FuncType func, void *funcPtr) : func(func), funcPtr(funcPtr) 
-		{}
-
-	public:
-		void *funcPtr;
-		FuncType func;
-	};
+	// Helper class to wrap functions with different signatures under the same signature,
+	// using void * and type_info &. That way multiple functions can be saved in the same container.
+	class LeafFunc;
 
 public:
 	// Helper class to construct a tree of functions that fit certain key sequences,
@@ -58,8 +48,6 @@ public:
 
 	// Remove functions with a given hash.
 	void Remove(const CmdNode &tree);
-	template<size_t N>
-	void Remove(const char (&key)[N], LeafFunc func);
 
 	// Call all functions that fit the given hash, passing args as arguments.
 	// Compile time
@@ -80,6 +68,20 @@ private:
 	int callStackSize = 0;
 	std::unordered_multimap<locatorHasher::id, LeafFunc> cmds;
 	std::vector<decltype(cmds)::iterator> cmdsToRemove;
+};
+
+class Locator::LeafFunc
+{
+public:
+	using FuncType = std::function<void(void *, size_t, const char *)>;
+
+	LeafFunc() {}
+	LeafFunc(FuncType func, void *funcPtr) : func(func), funcPtr(funcPtr) 
+	{}
+
+public:
+	void *funcPtr;
+	FuncType func;
 };
 
 #include "cmdNode.h"
