@@ -5,9 +5,6 @@
 #include "Shader.h"
 
 #include "GL/glew.h"
-#include "stb_image.h"
-
-#include <iostream>
 
 //Enums
 namespace GL
@@ -155,24 +152,6 @@ namespace GL
 	protected:
 		void Gen(uint type), InitFormat(Channel format);
 		void PushBind(), PopBind();
-
-
-		uchar *Load(const char *path, int *width, int *height, int *nrChannels, int forcedNrChannels = 0)
-		{
-			stbi_set_flip_vertically_on_load(true);
-			unsigned char *data = stbi_load(path, width, height, nrChannels, forcedNrChannels);
-			if (!data)
-			{
-				std::cout << "Failed to load texture" << std::endl;
-			}
-
-			return data;
-		}
-
-		void Free(uchar *data)
-		{
-			stbi_image_free(data);
-		}
 
 		uint type;
 		Channel basedFormat;

@@ -1,9 +1,9 @@
-#include "Shader.h"
+/*#include "Shader.h"
 
 #include "GLTypes.h"
 
 #include <fstream>
-#include <stack>
+
 
 //Program
 namespace GL
@@ -160,43 +160,43 @@ namespace GL
 	}
 }
 
-////Default Programs
-//namespace GL
-//{
-//	std::string libShaderPath()
-//	{
-//		static std::string path = CGE::LibRscsLoc + "shaders\\";
-//		return path;
-//	}
-//
-//	const ShaderPaths Solid3DShader{ { "Min3D.vert" }, { "Solid.frag" } };
-//	const ShaderPaths Tex3DShader{ { "Min3D.vert" }, { "Tex.frag" } };
-//
-//	const ShaderPaths ScreenShader{ { "PassThrough.vert" }, { "Solid.frag" } };
-//	const ShaderPaths SolidTexShader{ { "Texture.vert" }, { "Solid.frag" } };
-//	const ShaderPaths DefaultTexShader{ { "Texture.vert" }, { "Tex.frag" } };
-//	const ShaderPaths ScreenTexShader{ { "ScreenPos.vert" }, { "Tex.frag" } };
-//	const ShaderPaths TexRampShader{ { "Texture.vert" }, { "TexRamp.frag" } };
-//
-//	const std::array<ShaderPaths, ProgramPool::MAX> ProgramPool::LibShaders =
-//	{
-//		Solid3DShader,
-//		Tex3DShader,
-//
-//		ScreenShader,
-//		SolidTexShader,
-//		DefaultTexShader,
-//		ScreenTexShader,
-//		TexRampShader,
-//	};
-//
-//	ProgRef ProgramPool::LoadDefaultProgram(ProgramPool::DefaultProgram libShader)
-//	{
-//		ShaderPaths paths = ProgramPool::LibShaders[(uint)libShader];
-//
-//		for(size_t i = 0; i < paths.size(); i++)
-//		{ paths[i] = CGE::LibRscsLoc + "shaders\\" + paths[i]; }
-//
-//		return Load(paths);
-//	}
-//}
+//Default Programs
+namespace GL
+{
+	std::string libShaderPath()
+	{
+		static std::string path = CGE::LibRscsLoc + "shaders\\";
+		return path;
+	}
+
+	const ShaderPaths Solid3DShader{ { "Min3D.vert" }, { "Solid.frag" } };
+	const ShaderPaths Tex3DShader{ { "Min3D.vert" }, { "Tex.frag" } };
+
+	const ShaderPaths ScreenShader{ { "PassThrough.vert" }, { "Solid.frag" } };
+	const ShaderPaths SolidTexShader{ { "Texture.vert" }, { "Solid.frag" } };
+	const ShaderPaths DefaultTexShader{ { "Texture.vert" }, { "Tex.frag" } };
+	const ShaderPaths ScreenTexShader{ { "ScreenPos.vert" }, { "Tex.frag" } };
+	const ShaderPaths TexRampShader{ { "Texture.vert" }, { "TexRamp.frag" } };
+
+	const std::array<ShaderPaths, ProgramPool::MAX> ProgramPool::LibShaders =
+	{
+		Solid3DShader,
+		Tex3DShader,
+
+		ScreenShader,
+		SolidTexShader,
+		DefaultTexShader,
+		ScreenTexShader,
+		TexRampShader,
+	};
+
+	ProgRef ProgramPool::LoadDefaultProgram(ProgramPool::DefaultProgram libShader)
+	{
+		ShaderPaths paths = ProgramPool::LibShaders[(uint)libShader];
+
+		for(size_t i = 0; i < paths.size(); i++)
+		{ paths[i] = CGE::LibRscsLoc + "shaders\\" + paths[i]; }
+
+		return Load(paths);
+	}
+}*/
