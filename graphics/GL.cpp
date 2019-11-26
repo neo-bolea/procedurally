@@ -1,4 +1,4 @@
-/*#include "GL.h"
+#include "GL.h"
 
 #include "Debug.h"
 #include "MathGL.h"
@@ -18,22 +18,22 @@ namespace GL
 
 	void GLAPIENTRY
 		ErrorCallback( GLenum source,
-			GLenum type,
-			GLuint id,
-			GLenum severity,
-			GLsizei length,
-			const GLchar* message,
-			const void* userParam )
+						  GLenum type,
+						  GLuint id,
+						  GLenum severity,
+						  GLsizei length,
+						  const GLchar* message,
+						  const void* userParam )
 	{
 		if(type != GL_DEBUG_TYPE_ERROR) { return; }
 		Debug::Log(std::string("OpenGL: ") 
-			+ "Type = " + std::to_string(type) 
-			+ ", Severity = " + std::to_string(severity)
-			+ ", " + (char *)message, Debug::Error, { "Graphics" });
+					  + "Type = " + std::to_string(type) 
+					  + ", Severity = " + std::to_string(severity)
+					  + ", " + (char *)message, Debug::Error, { "Graphics" });
 	}
 
-	#undef StaticGLGetInteger
-	#define StaticGLGetInteger(name, handle) \
+#undef StaticGLGetInteger
+#define StaticGLGetInteger(name, handle) \
 		int name()									  \
 		{												  \
 			static int name = -1;				  \
@@ -43,7 +43,7 @@ namespace GL
 		}
 
 	StaticGLGetInteger(TextureMaxSize, GL_MAX_TEXTURE_SIZE)
-	StaticGLGetInteger(Texture3DMaxSize, GL_MAX_3D_TEXTURE_SIZE)
+		StaticGLGetInteger(Texture3DMaxSize, GL_MAX_3D_TEXTURE_SIZE)
 }
 
 namespace GLHelper
@@ -75,28 +75,28 @@ namespace GLHelper
 		case GL::LineLoop: glLineWidth(size); break;
 		default:	UNDEFINED_CODE_PATH("The given OpenGL mode is not supported.");
 		}
-		
+
 		glDisable(GL_DEPTH_TEST);
-		
+
 		//Generate buffers
 		uint VAO, VBO;
 		glGenVertexArrays(1, &VAO);
 		glGenBuffers(1, &VBO);
-		
+
 		//Bind buffers and data
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		GLHelper::SetVBOData<std::vector<Vector2>>(arr, 2, 0);
-		
+
 		//Draw
 		glBindVertexArray(VAO);
 		glDrawArrays(mode, 0, (int)arr.size());
 		glBindVertexArray(0);
-		
+
 		//Delete
 		glDeleteVertexArrays(1, &VAO);
 		glDeleteBuffers(1, &VBO);
-		
+
 		glEnable(GL_DEPTH_TEST);
 	}
 
@@ -109,4 +109,4 @@ namespace GLHelper
 		}
 		DebugDrawDC(dcArr, size, mode);
 	}
-}*/
+}

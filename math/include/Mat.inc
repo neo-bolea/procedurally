@@ -1,7 +1,32 @@
+template<typename T, size_t ROWS, size_t COLS>
+const T &Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i) const
+{
+#ifdef ROW_MAJOR
+	return ptr[i];
+#elif defined COLUMN_MAJOR
+	return ptr[i * ROWS];
+#endif
+}
+
+template<typename T, size_t ROWS, size_t COLS>
+T &Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i)
+{
+#ifdef ROW_MAJOR
+	return ptr[i];
+#elif defined COLUMN_MAJOR
+	return ptr[i * ROWS];
+#endif
+}
+
+template<typename T, size_t ROWS, size_t COLS>
+Mat<T, ROWS, COLS>::MatProxy::MatProxy(T *ptr) : ptr(ptr)
+{ }
+
+
 //// Constructors ////
 template<typename T, size_t ROWS, size_t COLS>
 Mat<T, ROWS, COLS>::Mat() 
-{ for(size_t i = 0; i < ROWS * COLS; i++) { e[i] = T(); } }
+{ *this = Identity(); }
 
 template<typename T, size_t ROWS, size_t COLS>
 Mat<T, ROWS, COLS>::Mat(T n) 
@@ -16,7 +41,7 @@ template<class... Args>
 Mat<T, ROWS, COLS>::Mat(Args... args)
 {
 	static_assert(sizeof...(Args) == ROWS * COLS, 
-						"Invalid number of arguments for matrix.");
+					  "Invalid number of arguments for matrix.");
 
 	std::initializer_list<T> initList{ static_cast<T>(args)... };
 	std::vector<T> elems = { initList };
@@ -42,7 +67,7 @@ Mat<T, ROWS, COLS>::Mat(const Mat<TT, ROWS, COLS> &other)
 //// Non-arithmetic Operators ////
 template<typename T, size_t ROWS, size_t COLS>
 void Mat<T, ROWS, COLS>::operator =(const Mat<T, ROWS, COLS> &other)
-{ for(size_t i = 0; i < ROWS * COLS; i++) { e[i] = other[i]; } }
+{ for(size_t i = 0; i < e.size(); i++) { e[i] = other.e[i]; } }
 
 template<typename T, size_t ROWS, size_t COLS>
 bool operator ==(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs)
@@ -59,27 +84,24 @@ bool operator !=(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs)
 { return !(lhs == rhs); }
 
 template<typename T, size_t ROWS, size_t COLS>
-Vec<T, COLS> Mat<T, ROWS, COLS>::operator [](size_t row) const
+const typename Mat<T, ROWS, COLS>::MatProxy Mat<T, ROWS, COLS>::operator [](size_t i) const
 { 
-	assert(row < ROWS); 
-	return vecs[row]; 
+#ifdef ROW_MAJOR
+	return MatProxy(&static_cast<T>(e[i * COLS])); 
+#elif defined COLUMN_MAJOR
+	return MatProxy(&static_cast<T>(e[i])); 
+#endif
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-Vec<T, COLS>& Mat<T, ROWS, COLS>::operator [](size_t row) 
+typename Mat<T, ROWS, COLS>::MatProxy Mat<T, ROWS, COLS>::operator [](size_t i)
 { 
-	assert(row < ROWS); 
-	return vecs[row]; 
+#ifdef ROW_MAJOR
+	return MatProxy(&static_cast<T>(e[i * COLS])); 
+#elif defined COLUMN_MAJOR
+	return MatProxy(&static_cast<T>(e[i])); 
+#endif
 }
-
-template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS> Mat<T, ROWS, COLS>::operator *(float value)
-{
-	Mat<T, ROWS, COLS> result(*this);
-	//for(size_t i = 0; i < result.v.size(); i++) { result.v[i] *= value; }
-	return result;
-}
-
 
 
 //// Arithmetic Operators ////
@@ -92,7 +114,7 @@ template<typename T, size_t N, size_t M, size_t O>
 Mat<T, N, O> operator *(const Mat<T, N, M> &lhs, const Mat<T, M, O> &rhs)
 {
 	static_assert(std::is_default_constructible_v<T>, 
-						"The matrix type must be default constructible \
+					  "The matrix type must be default constructible \
 							for matrix multiplication to be used.");
 
 	Mat<T, N, O> result;
@@ -114,15 +136,50 @@ Mat<T, N, O> operator *(const Mat<T, N, M> &lhs, const Mat<T, M, O> &rhs)
 	return result;
 }
 
+template<typename T, size_t ROWS, size_t COLS>
+Vec<T, ROWS> operator *(const Mat<T, ROWS, COLS> &lhs, const Vec<T, COLS> &rhs)
+{
+	static_assert(std::is_default_constructible_v<T>, 
+					  "The matrix type must be default constructible \
+							for matrix multiplication to be used.");
+
+	Vec<T, ROWS> result;
+	for(size_t i = 0; i < ROWS; i++)
+	{
+		T sum = T(0.f);
+		for(size_t k = 0; k < COLS; k++)
+		{
+			auto v1 = lhs[i];
+			T first = v1[k];
+			T sec = rhs[k];
+			sum += first * sec;
+		}
+		result[i] = sum;
+	}
+	return result;
+}
+
+template<typename T, size_t ROWS, size_t COLS>
+Mat<T, ROWS, COLS> operator *(Mat<T, ROWS, COLS> &lhs, T rhs)
+{
+	Mat<T, ROWS, COLS> result(lhs);
+	for(size_t i = 0; i < result.v.size(); i++) { result.v[i] *= rhs; }
+	return result;
+}
+
+template<typename T, size_t ROWS, size_t COLS>
+Mat<T, ROWS, COLS> operator *(T lhs, Mat<T, ROWS, COLS> &rhs)
+{ return rhs * lhs; }
+
 
 //// Functions ////
 template<typename T, size_t ROWS, size_t COLS>
 Mat<T, ROWS, COLS> Mat<T, ROWS, COLS>::Identity()
 {
 	static_assert(std::is_arithmetic_v<T>, 
-						"The identity matrix is only defined for arithmetic types.");
+					  "The identity matrix is only defined for arithmetic types.");
 
-	Mat<T, ROWS, COLS> result;
-	for(size_t i = 0; i < std::min(ROWS, COLS); i++) { result[i][i] = T(1.f); }
+	Mat<T, ROWS, COLS> result(0.f);
+	for(size_t i = 0; i < std::min(ROWS, COLS); i++) { result[i][i] = T(1.0); }
 	return result;
 }

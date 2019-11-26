@@ -8,18 +8,19 @@ Inputs::Inputs() : logger(new Logger(*this)), recorder(new Recorder(*this))
 	for(size_t i = 0; i < buttonStates.size(); i++) { buttonStates[i] = Free; }
 
 	tree =
-	(
-		CNSTART "Inputs", 
-		Locator::CmdNode("SetKey", this, &Inputs::setKey),
-		Locator::CmdNode("GetKey", this, &Inputs::getKey),
-		Locator::CmdNode("SetMouseButton", this, &Inputs::setMouseButton),
-		Locator::CmdNode("GetMouseButton", this, &Inputs::getMouseButton),
-		Locator::CmdNode("SetMousePos", this, &Inputs::setMousePos),
-		Locator::CmdNode("GetMousePos", this, &Inputs::getMousePos),
-		Locator::CmdNode("SetMouseWheel", this, &Inputs::setMouseWheel),
-		Locator::CmdNode("GetMouseWheel", this, &Inputs::getMouseWheel),
-		CNEND
-	);
+		(
+			CNSTART "Inputs", 
+			Locator::CmdNode("SetKey", this, &Inputs::setKey),
+			Locator::CmdNode("GetKey", this, &Inputs::getKey),
+			Locator::CmdNode("SetMouseButton", this, &Inputs::setMouseButton),
+			Locator::CmdNode("GetMouseButton", this, &Inputs::getMouseButton),
+			Locator::CmdNode("SetMousePos", this, &Inputs::setMousePos),
+			Locator::CmdNode("GetMousePos", this, &Inputs::getMousePos),
+			Locator::CmdNode("GetMouseMove", this, &Inputs::getMouseMove),
+			Locator::CmdNode("SetMouseWheel", this, &Inputs::setMouseWheel),
+			Locator::CmdNode("GetMouseWheel", this, &Inputs::getMouseWheel),
+			CNEND
+			);
 
 	Locator::Get().Add(tree);		
 
@@ -128,20 +129,23 @@ void Inputs::getMouseButton(byte button, State &state)
 void Inputs::getMousePos(dVec2 &v)
 { v = mousePos; }
 
+void Inputs::getMouseMove(dVec2 &v)
+{ v = mouseMove; }
+
 void Inputs::getMouseWheel(dVec2 &v)
 { v = mouseWheelMove; }
 
 Inputs::Logger::Logger(Inputs &inputs) : inputs(inputs)
 {
 	tree =
-	(
-		CNSTART "Inputs", 
-		Locator::CmdNode("SetKey", this, &Logger::setKey),
-		Locator::CmdNode("SetMouseButton", this, &Logger::setMouseButton),
-		Locator::CmdNode("SetMousePos", this, &Logger::setMousePos),
-		Locator::CmdNode("SetMouseWheel", this, &Logger::setMouseWheel),
-		CNEND
-	);
+		(
+			CNSTART "Inputs", 
+			Locator::CmdNode("SetKey", this, &Logger::setKey),
+			Locator::CmdNode("SetMouseButton", this, &Logger::setMouseButton),
+			Locator::CmdNode("SetMousePos", this, &Logger::setMousePos),
+			Locator::CmdNode("SetMouseWheel", this, &Logger::setMouseWheel),
+			CNEND
+			);
 }
 
 void Inputs::Logger::start()
@@ -162,14 +166,14 @@ void Inputs::Logger::setMouseWheel(SDL_Event &event)
 Inputs::Recorder::Recorder(Inputs &inputs) : inputs(inputs)
 {
 	recordTree =
-	(
-		CNSTART "Inputs", 
-		Locator::CmdNode("SetKey", this, &Recorder::whileRecording),
-		Locator::CmdNode("SetMouseButton", this, &Recorder::whileRecording),
-		Locator::CmdNode("SetMousePos", this, &Recorder::whileRecording),
-		Locator::CmdNode("SetMouseWheel", this, &Recorder::whileRecording),
-		CNEND
-	);
+		(
+			CNSTART "Inputs", 
+			Locator::CmdNode("SetKey", this, &Recorder::whileRecording),
+			Locator::CmdNode("SetMouseButton", this, &Recorder::whileRecording),
+			Locator::CmdNode("SetMousePos", this, &Recorder::whileRecording),
+			Locator::CmdNode("SetMouseWheel", this, &Recorder::whileRecording),
+			CNEND
+			);
 
 	replayTree = Locator::CmdNode("Update", this, &Recorder::whileReplaying);
 }
@@ -268,29 +272,29 @@ void Inputs::Recorder::simulateNextInput()
 	InputInfo nextInput = recordedInputs[replayCurrentInput];
 	SDL_Event event = {};
 	event.type = nextInput.Type;
-	
+
 	switch(nextInput.Type)
 	{
 	case SDL_KEYUP:
 	case SDL_KEYDOWN:
 	{ event.key.keysym.sym = std::any_cast<SDL_Scancode>(nextInput.Value); } break;
-	
+
 	case SDL_MOUSEBUTTONUP:
 	case SDL_MOUSEBUTTONDOWN:
 	{ event.button.button = std::any_cast<Uint8>(nextInput.Value); } break;
-	
+
 	case SDL_MOUSEMOTION:
 	{ 
 		event.motion.x = std::any_cast<dVec2>(nextInput.Value).x;
 		event.motion.y = std::any_cast<dVec2>(nextInput.Value).y;
 	} break;
-	
+
 	case SDL_MOUSEWHEEL:
 	{
 		event.wheel.x = std::any_cast<dVec2>(nextInput.Value).x;
 		event.wheel.y = std::any_cast<dVec2>(nextInput.Value).y;
 	} break;
 	}
-	
+
 	SDL_PushEvent(&event);
 }

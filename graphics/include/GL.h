@@ -28,38 +28,38 @@ namespace GL
 
 	namespace
 	{
-		#define StaticGLGetInteger(name, handle) \
+	#define StaticGLGetInteger(name, handle) \
 			int name();
 	}
 
 	StaticGLGetInteger(TextureMaxSize, GL_MAX_TEXTURE_SIZE)
-	StaticGLGetInteger(Texture3DMaxSize, GL_MAX_3D_TEXTURE_SIZE)
+		StaticGLGetInteger(Texture3DMaxSize, GL_MAX_3D_TEXTURE_SIZE)
 
-	//dynamic GL_ACTIVE_TEXTURE
-	//static  GL_ALIASED_LINE_WIDTH_RANGE
-	//dynamic GL_ARRAY_BUFFER_BINDING
-	//dynamic GL_BLEND
-	//	     //GL_BLEND_COLOR
-	//	     //GL_BLEND_DST_ALPHA
-	//	     //GL_BLEND_DST_RGB
-	//	     //GL_BLEND_EQUATION_RGB
-	//dynamic GL_BLEND_EQUATION_ALPHA
-	//	     //GL_BLEND_SRC_ALPHA
-	//	     //GL_BLEND_SRC_RGB
-	//dynamic GL_COLOR_CLEAR_VALUE
-	//	     //GL_COLOR_LOGIC_OP
-	//	     //GL_COLOR_WRITEMASK
-	//	     //static GL_COMPRESSED_TEXTURE_FORMATS
-	//static  GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS
-	//static  GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS
-	//static  GL_MAX_COMPUTE_UNIFORM_BLOCKS
-	//static  GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS
-	//static  GL_MAX_COMPUTE_UNIFORM_COMPONENTS
-	//	     //GL_MAX_COMPUTE_ATOMIC_COUNTERS
-	//	     //GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS
-	//	     //GL_MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS
-	//static  GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS
-	//static  array GL_MAX_COMPUTE_WORK_GROUP_COUNT
+		//dynamic GL_ACTIVE_TEXTURE
+		//static  GL_ALIASED_LINE_WIDTH_RANGE
+		//dynamic GL_ARRAY_BUFFER_BINDING
+		//dynamic GL_BLEND
+		//	     //GL_BLEND_COLOR
+		//	     //GL_BLEND_DST_ALPHA
+		//	     //GL_BLEND_DST_RGB
+		//	     //GL_BLEND_EQUATION_RGB
+		//dynamic GL_BLEND_EQUATION_ALPHA
+		//	     //GL_BLEND_SRC_ALPHA
+		//	     //GL_BLEND_SRC_RGB
+		//dynamic GL_COLOR_CLEAR_VALUE
+		//	     //GL_COLOR_LOGIC_OP
+		//	     //GL_COLOR_WRITEMASK
+		//	     //static GL_COMPRESSED_TEXTURE_FORMATS
+		//static  GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS
+		//static  GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS
+		//static  GL_MAX_COMPUTE_UNIFORM_BLOCKS
+		//static  GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS
+		//static  GL_MAX_COMPUTE_UNIFORM_COMPONENTS
+		//	     //GL_MAX_COMPUTE_ATOMIC_COUNTERS
+		//	     //GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS
+		//	     //GL_MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS
+		//static  GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS
+		//static  array GL_MAX_COMPUTE_WORK_GROUP_COUNT
 		//GL_MAX_COMPUTE_WORK_GROUP_SIZE
 		//Accepted by the indexed versions of glGet. data the maximum size of a work groups that may be used during compilation of a compute shader. Indices 0, 1, and 2 correspond to the X, Y and Z dimensions, respectively.
 		//
@@ -665,7 +665,7 @@ namespace GL
 		//GL_MAX_ELEMENT_INDEX
 		//data returns a single value, the maximum index that may be specified during the transfer of generic vertex attributes to the GL.
 
-	Model LoadModel(const std::string &_path);
+		Model LoadModel(const std::string &_path);
 }
 
 namespace GLHelper
@@ -682,7 +682,7 @@ namespace GLHelper
 		using T = typename std::decay<decltype(*data.begin())>::type;
 		glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), drawType);
 
-		glVertexAttribPointer(index, dataSize, dataType, normalized, sizeof(T), 0);
+		glVertexAttribPointer(index, dataSize, dataType, normalized, dataSize * sizeof(T), 0);
 		glEnableVertexAttribArray(index);
 	}
 
