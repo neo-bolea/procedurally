@@ -1,4 +1,4 @@
-/*#include "GL.h"
+#include "GL.h"
 
 #include "Debug.h"
 #include "MathGL.h"
@@ -109,4 +109,4 @@ namespace GLHelper
 		}
 		DebugDrawDC(dcArr, size, mode);
 	}
-}*/
+}
