@@ -1,3 +1,26 @@
+//// Constants ////
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Up{ 0.f, 1.f };
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Down{ 0.f, -1.f };
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Left{ -1.f, 0.f };
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Right{ 1.f, 0.f };
+
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Up{ 0.f, 1.f, 0.f };
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Down{ 0.f, -1.f, 0.f };
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Left{ -1.f, 0.f, 0.f };
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Right{ 1.f, 0.f, 0.f };
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Forward{ 0.f, 0.f, 1.f };
+template<typename T, size_t N>
+const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Backward{ 0.f, 0.f, -1.f };
+
 //// Constructors ////
 template<typename T, size_t N>
 Vec<T, N>::Vec() 
@@ -10,6 +33,10 @@ Vec<T, N>::Vec(T n)
 template<typename T, size_t N>
 Vec<T, N>::Vec(const T *d)
 { for(size_t i = 0; i < N; i++) { this->e[i] = d[i]; } }
+
+template<typename T, size_t N>
+Vec<T, N>::Vec<T, N>(const VecData<T, N> &other)
+{ for(size_t i = 0; i < N; i++) { this->e[i] = other.e[i]; } }
 
 template<typename T, size_t N>
 Vec<T, N>::Vec<T, N>(const Vec<T, N> &other)
@@ -112,7 +139,7 @@ Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 	return result;
 }
 
-template<typename T, size_t N, typename U>
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
 Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs)
 {
 	Vec<T, N> result;
@@ -123,7 +150,7 @@ Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs)
 	return result;
 }
 
-template<typename T, size_t N, typename U>
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
 Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs)
 {
 	Vec<T, N> result;

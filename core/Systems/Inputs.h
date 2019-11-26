@@ -50,6 +50,7 @@ private:
 	void getKey(SDL_Scancode code, State &state);
 	void getMouseButton(byte button, State &state);
 	void getMousePos(dVec2 &v);
+	void getMouseMove(dVec2 &v);
 	void getMouseWheel(dVec2 &v);
 
 	std::array<State, SDL_NUM_SCANCODES> keyStates;

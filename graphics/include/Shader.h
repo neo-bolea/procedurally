@@ -10,6 +10,7 @@
 #include "GL/glew.h"
 
 #include <any>
+#include <assert.h>
 #include <unordered_map>
 #include <vector>
 
@@ -33,27 +34,27 @@ namespace GL
 
 	struct UniformData
 	{
-		UniformData(      float           value) : Float_  (value) {}
-		UniformData(const Vector2        &value) : Vector2_(&value) {}
-		UniformData(const Vector3        &value) : Vector3_(&value) {}
-		UniformData(const Vector4        &value) : Vector4_(&value) {}
-		UniformData(      int             value) : Int_    (value) {}
-		UniformData(      uint            value) : Uint_   (value) {}
-		UniformData(      bool            value) : Bool_   (value) {}
-		UniformData(const Array2D<float> &value) : Mat_    (&value) {}
+		UniformData(float value) : Float_(value) {}
+		UniformData(const Vector2 &value) : Vector2_(&value) {}
+		UniformData(const Vector3 &value) : Vector3_(&value) {}
+		UniformData(const Vector4 &value) : Vector4_(&value) {}
+		UniformData(int value) : Int_(value) {}
+		UniformData(uint value) : Uint_(value) {}
+		UniformData(bool value) : Bool_(value) {}
+		UniformData(const Math::Mat4 &value) : Mat_(&value) {}
 
 		~UniformData() {}
 
 		union
 		{
-			const float          Float_  ;
-			const Vector2        *Vector2_;
-			const Vector3        *Vector3_;
-			const Vector4        *Vector4_;
-			const int            Int_    ;
-			const uint           Uint_   ;
-			const bool           Bool_   ;
-			const Array2D<float> *Mat_    ;
+			const float Float_;
+			const Vector2 *Vector2_;
+			const Vector3 *Vector3_;
+			const Vector4 *Vector4_;
+			const int Int_;
+			const uint Uint_;
+			const bool Bool_;
+			const Math::Mat4 *Mat_;
 		};
 	};
 }
@@ -178,8 +179,6 @@ namespace GL
 
 namespace GL
 {
-
-
 	inline void Program::Use() const { glUseProgram(ID); activeProgram = std::make_shared<Program>(*this); }
 
 	inline void Program::Dispatch() const
@@ -190,7 +189,6 @@ namespace GL
 			return;
 		}
 
-	
 		//glDispatchCompute()
 	}
 
