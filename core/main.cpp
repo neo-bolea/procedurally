@@ -184,6 +184,10 @@ int main(int argc, char *argv[])
 
 		Math::Mat4 proj = Math::GL::Perspective(Math::Deg2Rad * 80.f, ((float)WIDTH / HEIGHT), 0.01f, 1000.f);
 		Math::Mat4 view = Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front, Vector3::Up);
+		glm::mat4 projs = glm::perspective(glm::radians(80.f), ((float)WIDTH / HEIGHT), 0.01f, 1000.f);
+		glm::vec3 camPos(cam.Pos.x, cam.Pos.y, cam.Pos.z), 
+			camPosFront((cam.Pos + cam.Front).x, (cam.Pos + cam.Front).y, (cam.Pos + cam.Front).z);
+		glm::mat4 views = glm::lookAt(camPos, camPosFront, glm::vec3(0.f, 1.f, 0.f));
 		prog->Use();
 		prog->Set("model", mat);
 		prog->Set("view", view);

@@ -168,7 +168,7 @@ Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs)
 	if constexpr(Vec<T, N>::SIMDReady)
 	{ result = _mm_div_ps(lhs, _mm_set1_ps(rhs)); }
 	else
-	{ for(size_t i = 0; i < N; i++) { result[i] = lhs[i] * rhs; } }
+	{ for(size_t i = 0; i < N; i++) { result[i] = lhs[i] / rhs; } }
 	return result;
 }
 
