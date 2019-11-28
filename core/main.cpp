@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 	GL::Tex2D tex;
 	tex.Setup("DS.jpg");
 
-	Camera cam(Vector3(0.f, 0.f, -5.f), Vector3::Forward);
+	Camera cam(Vector3(0.f, 0.f, 0.f), Vector3::Left);
 
 	Inputs::State state;
 
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 		dVec2 mouseMove;
 		sys.Call("Inputs/GetMouseMove", mouseMove);
 		horizMouse = mouseMove.x;
-		vertMouse = mouseMove.y;
+		//vertMouse = mouseMove.y;
 
 		sys.Call("Inputs/GetKey", SDL_SCANCODE_A, state);
 		horizMove -= (state == Inputs::Held);
@@ -173,42 +173,22 @@ int main(int argc, char *argv[])
 		vertMove -= (state == Inputs::Held);
 		cam.Update(1.f, false, horizMove, vertMove, horizMouse, vertMouse, scroll, Time::DeltaTime());
 
-		Math::Mat4 mat;
-		//mat = Math::GL::Translate(mat, fVec3(sinf(Time::ProgramTime()) * 0.1f,0.f, 0.f));
+		//Math::Mat4 mat;
+		//mat = Math::GL::Translate(mat, fVec3(sinf(Time::ProgramTime()) * 1.f,0.f, 0.f));
 		//mat = Math::GL::Rotate(mat, Time::ProgramTime() * 0.5f, Vector3(0.f, 0.f, 1.f));
-		//mat = Math::GL::Scale(mat, Vector3(1.f, tex.Ratio(), 1.f));
-		//mat = Math::GL::Scale(mat, Vector3(1.f, ((float)WIDTH / HEIGHT), 1.f));
-		//Math::Mat4 proj = Math::GL::Orthographic(-2.f, 2.f, 2.f*-((float)WIDTH / HEIGHT), 2.f*((float)WIDTH / HEIGHT), -1.f, 1000.f);
-		//Mat4 Perspective(float fovy, float aspect, float zNear, float zFar);
-		//Math::Mat4 proj = Math::GL::Perspective(65.f, ((float)WIDTH / HEIGHT), -0.01f, 1000.f);
+		//mat = Math::GL::Scale(mat, Vector3(tex.Ratio(), 1.f, 1.f));
 
-		Math::Mat4 proj = Math::GL::Perspective(Math::Deg2Rad * 80.f, ((float)WIDTH / HEIGHT), 0.01f, 1000.f);
-		Math::Mat4 view = Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front, Vector3::Up);
-		glm::mat4 projs = glm::perspective(glm::radians(80.f), ((float)WIDTH / HEIGHT), 0.01f, 1000.f);
-		glm::vec3 camPos(cam.Pos.x, cam.Pos.y, cam.Pos.z), 
-			camPosFront((cam.Pos + cam.Front).x, (cam.Pos + cam.Front).y, (cam.Pos + cam.Front).z);
-		glm::mat4 views = glm::lookAt(camPos, camPosFront, glm::vec3(0.f, 1.f, 0.f));
+		Math::Mat4 mat;
+		mat = Math::GL::Translate(mat, (fVec3)fVec2(sinf(Time::ProgramTime()) * 1.f, 0.f));
+		mat = Math::GL::Rotate(mat, Time::ProgramTime() * 0.5f, Vector3(0.f, 0.f, 1.f));
+		mat = Math::GL::Scale(mat, Vector3(tex.Ratio(), 1.f, 1.f));
+
 		prog->Use();
 		prog->Set("model", mat);
-		prog->Set("view", view);
-		prog->Set("projection", proj);
-
-		//glm::mat4 model = glm::identity<glm::mat4>();
-		//glm::vec2 position(0.f, Time::ProgramTime());
-		//glm::vec2 size(1.f, 1.f);
-		//float rotate = 0.f;//= Time::ProgramTime();
-		//model = glm::translate(model, glm::vec3(position, 0.0f));  
-		//
-		//model = glm::translate(model, glm::vec3(0.5f * size.x, 0.5f * size.y, 0.0f)); 
-		//model = glm::rotate(model, rotate, glm::vec3(0.0f, 0.0f, 1.0f)); 
-		//model = glm::translate(model, glm::vec3(-0.5f * size.x, -0.5f * size.y, 0.0f));
-		//
-		//model = glm::scale(model, glm::vec3(size, 1.0f));
-		//
-		////mat = Math::GL::Orthographic(-1.f, 1.f, -1.f, 1.f, 0.f, 1000.f) * mat;
-		//prog->Use();	
-		//glm::mat4 projection = glm::ortho(-1.f, 1.f, -1.f, 1.f, -1.0f, 100.0f);
-		//glUniformMatrix4fv(glGetUniformLocation(prog->ID, "mat"), 1, GL_FALSE, glm::value_ptr(model));
+		//prog->Set("view", Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front, Vector3::Up));
+		//prog->Set("projection", Math::GL::Perspective(Math::Deg2Rad * 80.f, ((float)WIDTH / HEIGHT), 0.01f, 1000.f));
+		prog->Set("view", Math::Mat4());
+		prog->Set("projection", Math::Mat4());
 
 		tex.Bind();
 		glBindVertexArray(VAO);

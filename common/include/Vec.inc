@@ -23,67 +23,74 @@ const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Backward{ 0.f, 0.f,
 
 //// Constructors ////
 template<typename T, size_t N>
-Vec<T, N>::Vec() 
+constexpr Vec<T, N>::Vec() 
 { for(size_t i = 0; i < N; i++) { this->e[i] = 0.f; } }
 
 template<typename T, size_t N>
-Vec<T, N>::Vec(T n) 
+constexpr Vec<T, N>::Vec(T n) 
 { for(size_t i = 0; i < N; i++) { this->e[i] = n; } }
 
 template<typename T, size_t N>
-Vec<T, N>::Vec(const T *d)
+constexpr Vec<T, N>::Vec(const T *d)
 { for(size_t i = 0; i < N; i++) { this->e[i] = d[i]; } }
 
 template<typename T, size_t N>
-Vec<T, N>::Vec<T, N>(const VecData<T, N> &other)
+constexpr Vec<T, N>::Vec<T, N>(const VecData<T, N> &other)
 { for(size_t i = 0; i < N; i++) { this->e[i] = other.e[i]; } }
 
 template<typename T, size_t N>
-Vec<T, N>::Vec<T, N>(const Vec<T, N> &other)
+constexpr Vec<T, N>::Vec<T, N>(const Vec<T, N> &other)
 { for(size_t i = 0; i < N; i++) { this->e[i] = other[i]; } }
 
 template<typename T, size_t N>
 template<class... Args>
-Vec<T, N>::Vec(Args... args)
+constexpr Vec<T, N>::Vec(Args... args)
 {
 	static_assert(sizeof...(Args) == N, "Invalid number of arguments for vector constructor.");
 
-	std::initializer_list<T> initList{ static_cast<T>(args)... };
-	std::vector<T> elems = { initList };
+	std::array<T, sizeof...(Args)> elems = { args... };
 	for(size_t i = 0; i < N; i++) { this->e[i] = elems[i]; }
 }
 
 template<typename T, size_t N>
 template<size_t NN>
-Vec<T, N>::Vec(const Vec<T, NN> &other)
-{ for(size_t i = 0; i < std::min(N, NN); i++) { this->e[i] = other[i]; } }
+constexpr Vec<T, N>::Vec<T, N>(const Vec<T, NN> &other)
+{ 
+	size_t i = 0;
+	for(; i < std::min(N, NN); i++) { this->e[i] = other[i]; } 
+	for(; i < N; i++) { this->e[i] = T(); } 
+}
 
 template<typename T, size_t N>
 template<typename TT>
-Vec<T, N>::Vec(const Vec<TT, N> &other)
+constexpr Vec<T, N>::Vec(const Vec<TT, N> &other)
 { for(size_t i = 0; i < N; i++) { this->e[i] = static_cast<T>(other[i]); } }
 
 template<typename T, size_t N>
 template<typename TT, size_t NN>
-Vec<T, N>::Vec(const Vec<TT, NN> &other)
-{ for(size_t i = 0; i < std::min(N, NN); i++) { this->e[i] = static_cast<T>(other[i]); } }
+constexpr Vec<T, N>::Vec(const Vec<TT, NN> &other)
+{ 
+	size_t i = 0;
+	for(; i < std::min(N, NN); i++) { this->e[i] = static_cast<T>(other[i]); } 
+	for(; i < N; i++) { this->e[i] = T(); } 
+}
 
 
 //// Non-arithmetic operators ////
 template<typename T, size_t N>
-void Vec<T, N>::operator =(const Vec<T, N> &other)
+constexpr void Vec<T, N>::operator =(const Vec<T, N> &other)
 { for(size_t i = 0; i < N; i++) { this->e[i] = other[i]; } }
 
 template<typename T, size_t N>
-T Vec<T, N>::operator [](size_t i) const 
+constexpr T Vec<T, N>::operator [](size_t i) const 
 { return this->e[i]; }
 
 template<typename T, size_t N>
-T& Vec<T, N>::operator [](size_t i) 
+constexpr T& Vec<T, N>::operator [](size_t i) 
 { return this->e[i]; }
 
 template<typename T, size_t N>
-bool operator ==(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
+constexpr bool operator ==(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
 {
 	for(size_t i = 0; i < N; i++)
 	{ if(lhs[i] != rhs[i]) { return false; } }
@@ -91,23 +98,23 @@ bool operator ==(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N>
-bool operator !=(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
+constexpr bool operator !=(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
 { return !(lhs == rhs); }
 
 template<typename T, size_t N>
 template<typename>
-Vec<T, N>::operator __m128() const
+constexpr Vec<T, N>::operator __m128() const
 { return _mm_load_ps(this->e.data()); }
 
 template<typename T, size_t N>
 template<typename>
-void Vec<T, N>::operator =(const __m128 &n)
+constexpr void Vec<T, N>::operator =(const __m128 &n)
 { _mm_store_ps(this->e.data(), n); }
 
 
 //// Arithmetic operators ////
 template<typename T, size_t N>
-Vec<T, N> operator +(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
+constexpr Vec<T, N> operator +(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 {
 	Vec<T, N> result;
 	if constexpr(Vec<T, N>::SIMDReady)
@@ -118,7 +125,7 @@ Vec<T, N> operator +(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N>
-Vec<T, N> operator -(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
+constexpr Vec<T, N> operator -(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
 {
 	Vec<T, N> result;
 	if constexpr(Vec<T, N>::SIMDReady)
@@ -129,7 +136,7 @@ Vec<T, N> operator -(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N>
-Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
+constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
 {
 	Vec<T, N> result;
 	if constexpr(Vec<T, N>::SIMDReady)
@@ -140,7 +147,7 @@ Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
-Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs)
+constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs)
 {
 	Vec<T, N> result;
 	if constexpr(Vec<T, N>::SIMDReady)
@@ -151,18 +158,22 @@ Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs)
 }
 
 template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
-Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs)
+constexpr Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs)
+{ return rhs * lhs; }
+
+template<typename T, size_t N>
+constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 {
 	Vec<T, N> result;
 	if constexpr(Vec<T, N>::SIMDReady)
-	{ result = _mm_mul_ps(rhs, _mm_set1_ps(lhs)); }
+	{ result = _mm_div_ps(lhs, rhs); }
 	else
-	{ for(size_t i = 0; i < N; i++) { result[i] = lhs * rhs[i]; } }
+	{ for(size_t i = 0; i < N; i++) { result[i] = lhs[i] / rhs[i]; } }
 	return result;
 }
 
-template<typename T, size_t N, typename U>
-Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs)
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs)
 {
 	Vec<T, N> result;
 	if constexpr(Vec<T, N>::SIMDReady)
@@ -175,7 +186,7 @@ Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs)
 
 //// Functions ////
 template<typename T, size_t N>
-std::string Vec<T, N>::ToString() const
+constexpr std::string Vec<T, N>::ToString() const
 {
 	std::stringstream ss;
 	ss << "(";
@@ -189,7 +200,7 @@ std::string Vec<T, N>::ToString() const
 }
 
 template<typename T, size_t N>
-T Vec<T, N>::Len() const
+constexpr T Vec<T, N>::Len() const
 { 
 	static_assert(std::is_arithmetic_v<T>, 
 					  "The square root undefined for non-arithmetic types.");
@@ -197,11 +208,11 @@ T Vec<T, N>::Len() const
 }
 
 template<typename T, size_t N>
-T Vec<T, N>::LenSqr() const
+constexpr T Vec<T, N>::LenSqr() const
 { return Dot(*this, *this); }
 
 template<typename T, size_t N>
-T Vec<T, N>::Dot(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
+constexpr T Vec<T, N>::Dot(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 {
 	static_assert(std::is_default_constructible_v<T>, 
 					  "The vector type must be default constructible for the dot product to be used.");
@@ -213,7 +224,7 @@ T Vec<T, N>::Dot(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N>
-Vec<T, N> Vec<T, N>::Cross(const Vec<T, N> &a, const Vec<T, N> &b)
+constexpr Vec<T, N> Vec<T, N>::Cross(const Vec<T, N> &a, const Vec<T, N> &b)
 {
 	static_assert(N == 3, "The cross product is only supported for vectors with 3 elements.");
 	static_assert(std::is_arithmetic_v<T>, 
@@ -226,5 +237,5 @@ Vec<T, N> Vec<T, N>::Cross(const Vec<T, N> &a, const Vec<T, N> &b)
 }
 
 template<typename T, size_t N>
-Vec<T, N> Vec<T, N>::Normalize() const
+constexpr Vec<T, N> Vec<T, N>::Normalize() const
 { return Vec<T, N>(&e[0]) / Len(); }

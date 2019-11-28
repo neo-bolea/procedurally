@@ -1,5 +1,5 @@
 template<typename T, size_t ROWS, size_t COLS>
-const T &Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i) const
+constexpr const T &Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i) const
 {
 #ifdef ROW_MAJOR
 	return ptr[i];
@@ -9,7 +9,7 @@ const T &Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i) const
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-T &Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i)
+constexpr T &Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i)
 {
 #ifdef ROW_MAJOR
 	return ptr[i];
@@ -19,26 +19,26 @@ T &Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i)
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS>::MatProxy::MatProxy(T *ptr) : ptr(ptr)
+constexpr Mat<T, ROWS, COLS>::MatProxy::MatProxy(T *ptr) : ptr(ptr)
 { }
 
 
 //// Constructors ////
 template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS>::Mat() 
+constexpr Mat<T, ROWS, COLS>::Mat() 
 { *this = Identity(); }
 
 template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS>::Mat(T n) 
+constexpr Mat<T, ROWS, COLS>::Mat(T n) 
 { for(size_t i = 0; i < ROWS * COLS; i++) { e[i] = n; } }
 
 template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS>::Mat(const T *d)
+constexpr Mat<T, ROWS, COLS>::Mat(const T *d)
 { for(size_t i = 0; i < ROWS * COLS; i++) { e[i] = d[i]; } }
 
 template<typename T, size_t ROWS, size_t COLS>
 template<class... Args>
-Mat<T, ROWS, COLS>::Mat(Args... args)
+constexpr Mat<T, ROWS, COLS>::Mat(Args... args)
 {
 	static_assert(sizeof...(Args) == ROWS * COLS, 
 						"Invalid number of arguments for matrix.");
@@ -52,12 +52,12 @@ Mat<T, ROWS, COLS>::Mat(Args... args)
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS>::Mat<T, ROWS, COLS>(const Mat<T, ROWS, COLS> &other)
+constexpr Mat<T, ROWS, COLS>::Mat<T, ROWS, COLS>(const Mat<T, ROWS, COLS> &other)
 { for(size_t i = 0; i < other.e.size(); i++) { e[i] = other.e[i]; } }
 
 template<typename T, size_t ROWS, size_t COLS>
 template<typename TT>
-Mat<T, ROWS, COLS>::Mat(const Mat<TT, ROWS, COLS> &other)
+constexpr Mat<T, ROWS, COLS>::Mat(const Mat<TT, ROWS, COLS> &other)
 {
 	for(size_t i = 0; i < other.e.size(); i++)
 	{ e[i] = static_cast<T>(other.e[i]); }
@@ -66,11 +66,11 @@ Mat<T, ROWS, COLS>::Mat(const Mat<TT, ROWS, COLS> &other)
 
 //// Non-arithmetic Operators ////
 template<typename T, size_t ROWS, size_t COLS>
-void Mat<T, ROWS, COLS>::operator =(const Mat<T, ROWS, COLS> &other)
+constexpr void Mat<T, ROWS, COLS>::operator =(const Mat<T, ROWS, COLS> &other)
 { for(size_t i = 0; i < e.size(); i++) { e[i] = other.e[i]; } }
 
 template<typename T, size_t ROWS, size_t COLS>
-bool operator ==(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs)
+constexpr bool operator ==(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs)
 { 
 	bool equal = true;
 	for(size_t i = 0; i < ROWS * COLS; i++) 
@@ -80,11 +80,11 @@ bool operator ==(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs)
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-bool operator !=(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs)
+constexpr bool operator !=(const Mat<T, ROWS, COLS> &lhs, const Mat<T, ROWS, COLS> &rhs)
 { return !(lhs == rhs); }
 
 template<typename T, size_t ROWS, size_t COLS>
-const typename Mat<T, ROWS, COLS>::MatProxy Mat<T, ROWS, COLS>::operator [](size_t i) const
+constexpr const typename Mat<T, ROWS, COLS>::MatProxy Mat<T, ROWS, COLS>::operator [](size_t i) const
 { 
 #ifdef ROW_MAJOR
 	return MatProxy(&static_cast<T>(e[i * COLS])); 
@@ -94,7 +94,7 @@ const typename Mat<T, ROWS, COLS>::MatProxy Mat<T, ROWS, COLS>::operator [](size
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-typename Mat<T, ROWS, COLS>::MatProxy Mat<T, ROWS, COLS>::operator [](size_t i)
+constexpr typename Mat<T, ROWS, COLS>::MatProxy Mat<T, ROWS, COLS>::operator [](size_t i)
 { 
 #ifdef ROW_MAJOR
 	return MatProxy(&static_cast<T>(e[i * COLS])); 
@@ -106,12 +106,12 @@ typename Mat<T, ROWS, COLS>::MatProxy Mat<T, ROWS, COLS>::operator [](size_t i)
 
 //// Arithmetic Operators ////
 template<typename T, size_t N, size_t M, size_t O, size_t P>
-void operator *(const Mat<T, N, M> &lhs, const Mat<T, O, P> &rhs)
+constexpr void operator *(const Mat<T, N, M> &lhs, const Mat<T, O, P> &rhs)
 { static_assert(N != M, "Matrix multiplication is only defined for \
 									two matrices, where a.cols == b.rows"); }
 
 template<typename T, size_t N, size_t M, size_t O>
-Mat<T, N, O> operator *(const Mat<T, N, M> &lhs, const Mat<T, M, O> &rhs)
+constexpr Mat<T, N, O> operator *(const Mat<T, N, M> &lhs, const Mat<T, M, O> &rhs)
 {
 	static_assert(std::is_default_constructible_v<T>, 
 						"The matrix type must be default constructible \
@@ -137,7 +137,7 @@ Mat<T, N, O> operator *(const Mat<T, N, M> &lhs, const Mat<T, M, O> &rhs)
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-Vec<T, ROWS> operator *(const Mat<T, ROWS, COLS> &lhs, const Vec<T, COLS> &rhs)
+constexpr Vec<T, ROWS> operator *(const Mat<T, ROWS, COLS> &lhs, const Vec<T, COLS> &rhs)
 {
 	static_assert(std::is_default_constructible_v<T>, 
 					  "The matrix type must be default constructible \
@@ -160,7 +160,7 @@ Vec<T, ROWS> operator *(const Mat<T, ROWS, COLS> &lhs, const Vec<T, COLS> &rhs)
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS> operator *(Mat<T, ROWS, COLS> &lhs, T rhs)
+constexpr Mat<T, ROWS, COLS> operator *(Mat<T, ROWS, COLS> &lhs, T rhs)
 {
 	Mat<T, ROWS, COLS> result(lhs);
 	for(size_t i = 0; i < result.v.size(); i++) { result.v[i] *= rhs; }
@@ -168,13 +168,13 @@ Mat<T, ROWS, COLS> operator *(Mat<T, ROWS, COLS> &lhs, T rhs)
 }
 
 template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS> operator *(T lhs, Mat<T, ROWS, COLS> &rhs)
+constexpr Mat<T, ROWS, COLS> operator *(T lhs, Mat<T, ROWS, COLS> &rhs)
 { return rhs * lhs; }
 
 
 //// Functions ////
 template<typename T, size_t ROWS, size_t COLS>
-Mat<T, ROWS, COLS> Mat<T, ROWS, COLS>::Identity()
+constexpr Mat<T, ROWS, COLS> Mat<T, ROWS, COLS>::Identity()
 {
 	static_assert(std::is_arithmetic_v<T>, 
 						"The identity matrix is only defined for arithmetic types.");

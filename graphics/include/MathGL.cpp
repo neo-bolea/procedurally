@@ -73,7 +73,7 @@ namespace Math
 		return inverse * OneOverDeterminant;
 	}
 
-	Mat4 GL::LookAt(const fVec3& eye, const fVec3& center, const fVec3& up) 
+	Mat4 GL::LookAt(const Vector3 &eye, const Vector3 &center, const Vector3 &up)
 	{ 
 		fVec3 forward = (center - eye).Normalize(); 
 		fVec3 right = fVec3::Cross(forward, up).Normalize(); 
@@ -110,18 +110,6 @@ namespace Math
 	
 	Mat4 GL::Perspective(float fovy, float aspect, float zNear, float zFar)
 	{
-		//float const tanHalfFovy = tan(fovy / 2.f);
-		//
-		//Mat4 result;
-		//result[0][0] = 1.f / (aspect * tanHalfFovy);
-		//result[1][1] = 1.f / (tanHalfFovy);
-		//result[2][2] = -(zFar + zNear) / (zFar - zNear);
-		//result[3][2] = -1.f;
-		//result[2][3] = -(2.f * zFar * zNear) / (zFar - zNear);
-		//return result;
-
-		//assert(abs(aspect - std::numeric_limits<T>::epsilon()) > static_cast<T>(0));
-
 		float const tanHalfFovy = tan(fovy / static_cast<float>(2));
 
 		Mat4 result(0.f);
