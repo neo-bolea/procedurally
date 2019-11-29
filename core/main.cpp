@@ -101,7 +101,6 @@ int main(int argc, char *argv[])
 	SDL_GL_SetSwapInterval(1);
 #pragma endregion
 
-	Locator &sys = Locator::Get();
 	Inputs inputs;
 	Time time;
 
@@ -110,7 +109,8 @@ int main(int argc, char *argv[])
 
 	GL::ProgRef prog = GL::Programs.Load({"basic.vert", "basic.frag"});
 
-	std::array<float, 18> vertices = {
+	std::array<float, 18> vertices = 
+	{
 		// positions         
 		1.0f,  1.0f, 0.0f,   
 		1.0f, -1.0f, 0.0f,   
@@ -121,7 +121,8 @@ int main(int argc, char *argv[])
 		-1.0f,  1.0f, 0.0f,  
 	};
 
-	std::array<float, 12> uv = {
+	std::array<float, 12> uv =
+	{
 		1.0f, 1.0f,
 		1.0f, 0.0f,
 		0.0f, 0.0f,
@@ -144,9 +145,7 @@ int main(int argc, char *argv[])
 	glBindVertexArray(0); 
 
 	GL::Tex2D tex;
-	tex.Setup("DS.jpg");
-
-	Camera cam(Vector3(0.f, 0.f, 0.f), Vector3::Left);
+	tex.Setup("WCMan.png");
 
 	Inputs::State state;
 
@@ -154,24 +153,6 @@ int main(int argc, char *argv[])
 	{
 		glClearColor(0.1f, 0.1f, 0.1f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		//void Camera::Update(float speed, float lockView, float horizMove, float vertMove, float horizMouse, float vertMouse, float scroll, float deltaTime)
-		float horizMove = 0.f, vertMove = 0.f, horizMouse = 0.f, vertMouse = 0.f, scroll = 0.f;
-		dVec2 mouseMove;
-		sys.Call("Inputs/GetMouseMove", mouseMove);
-		horizMouse = mouseMove.x;
-		//vertMouse = mouseMove.y;
-
-		sys.Call("Inputs/GetKey", SDL_SCANCODE_A, state);
-		horizMove -= (state == Inputs::Held);
-		sys.Call("Inputs/GetKey", SDL_SCANCODE_D, state);
-		horizMove += (state == Inputs::Held);
-
-		sys.Call("Inputs/GetKey", SDL_SCANCODE_W, state);
-		vertMove += (state == Inputs::Held);
-		sys.Call("Inputs/GetKey", SDL_SCANCODE_S, state);
-		vertMove -= (state == Inputs::Held);
-		cam.Update(1.f, false, horizMove, vertMove, horizMouse, vertMouse, scroll, Time::DeltaTime());
 
 		//Math::Mat4 mat;
 		//mat = Math::GL::Translate(mat, fVec3(sinf(Time::ProgramTime()) * 1.f,0.f, 0.f));
@@ -186,15 +167,16 @@ int main(int argc, char *argv[])
 		prog->Use();
 		prog->Set("model", mat);
 		//prog->Set("view", Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front, Vector3::Up));
-		//prog->Set("projection", Math::GL::Perspective(Math::Deg2Rad * 80.f, ((float)WIDTH / HEIGHT), 0.01f, 1000.f));
+		//prog->Set("projection", Math::Mat4());
 		prog->Set("view", Math::Mat4());
-		prog->Set("projection", Math::Mat4());
+		float size = 2.f;
+		prog->Set("projection", Math::GL::Orthographic(-((float)WIDTH / HEIGHT)*size, ((float)WIDTH / HEIGHT)*size, -size, size, -10.f, 1000.f));
 
 		tex.Bind();
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
-		sys.Call("Update"); 
+		Locator::Call("Update"); 
 
 		while(SDL_PollEvent(&event))
 		{
@@ -206,14 +188,14 @@ int main(int argc, char *argv[])
 		
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
-			{  sys.Call("Inputs/SetKey", event); } break;
+			{  Locator::Call("Inputs/SetKey", event); } break;
 			case SDL_MOUSEMOTION:
-			{ sys.Call("Inputs/SetMousePos", event); } break;
+			{ Locator::Call("Inputs/SetMousePos", event); } break;
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
-			{ sys.Call("Inputs/SetMouseButton", event); } break;
+			{ Locator::Call("Inputs/SetMouseButton", event); } break;
 			case SDL_MOUSEWHEEL:
-			{ sys.Call("Inputs/SetMouseWheel", event); } break;
+			{ Locator::Call("Inputs/SetMouseWheel", event); } break;
 			}
 		}
 

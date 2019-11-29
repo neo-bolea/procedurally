@@ -10,7 +10,7 @@ double Time::deltaTime;
 
 Time::Time()
 {
-	Locator::Get().Add(Locator::CmdNode("Update", this, &Time::update));
+	Locator::Add(Locator::CmdNode("Update", this, &Time::update));
 
 	startTime = std::chrono::steady_clock::now();
 }

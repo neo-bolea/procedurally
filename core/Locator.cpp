@@ -44,6 +44,8 @@ std::vector<Locator::CmdNode::nodePath> Locator::CmdNode::dissectTree() const
 	return cmdPaths;
 }
 
+int Locator::callStackSize = 0;
+
 void Locator::Add(const CmdNode &tree)
 {
 	auto cmdPaths = tree.dissectTree();

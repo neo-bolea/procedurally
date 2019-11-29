@@ -32,7 +32,7 @@
 #include <tuple>
 #include <unordered_map>
 
-class Locator : public Singleton<Locator>
+static class Locator
 {
 	// Helper class to wrap functions with different signatures under the same signature,
 	// using void * and type_info &. That way multiple functions can be saved in the same container.
@@ -44,30 +44,27 @@ public:
 	struct CmdNode;
 
 	// Add functions to a given hash.
-	void Add(const CmdNode &tree);
+	static void Add(const CmdNode &tree);
 
 	// Remove functions with a given hash.
-	void Remove(const CmdNode &tree);
+	static void Remove(const CmdNode &tree);
 
 	// Call all functions that fit the given hash, passing args as arguments.
 	// Compile time
 	template<size_t N, typename ...Args>
-	constexpr void Call(const char (&key)[N], Args &&...args);
+	static constexpr void Call(const char (&key)[N], Args &&...args);
 
 	// Runtime, see above
 	template<typename ...Args>
-	void Call(const locatorHasher::id id, Args &&...args);
+	static void Call(const locatorHasher::id id, Args &&...args);
 
 private:
-	friend Singleton<Locator>;
-	Locator() {}
-
 	// Erase all functions that where noted down by Remove().
-	void cleanRemoves();
+	static void cleanRemoves();
 
-	int callStackSize = 0;
-	std::unordered_multimap<locatorHasher::id, LeafFunc> cmds;
-	std::vector<decltype(cmds)::iterator> cmdsToRemove;
+	static int callStackSize;
+	static std::unordered_multimap<locatorHasher::id, LeafFunc> cmds;
+	static std::vector<decltype(cmds)::iterator> cmdsToRemove;
 };
 
 class Locator::LeafFunc

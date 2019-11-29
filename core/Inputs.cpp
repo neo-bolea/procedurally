@@ -22,9 +22,9 @@ Inputs::Inputs() : logger(new Logger(*this)), recorder(new Recorder(*this))
 		CNEND
 	);
 
-	Locator::Get().Add(tree);		
+	Locator::Add(tree);		
 
-	Locator::Get().Add(Locator::CmdNode{ "Update", this, &Inputs::update });
+	Locator::Add(Locator::CmdNode{ "Update", this, &Inputs::update });
 
 	isIgnored = false;
 }
@@ -44,15 +44,40 @@ void Inputs::ignoreInputs(bool ignore)
 {
 	if(ignore && !isIgnored)
 	{
-		Locator::Get().Remove(tree);
+		Locator::Remove(tree);
 		isIgnored = true;
 	}
 
 	if(!ignore && isIgnored)
 	{
-		Locator::Get().Add(tree);
+		Locator::Add(tree);
 		isIgnored = false;
 	}
+}
+
+Inputs::State Inputs::GetKey(SDL_Scancode code) 
+{ 
+
+}
+
+Inputs::State Inputs::GetMouseButton(byte button) 
+{ 
+ 
+}
+
+dVec2 Inputs::GetMousePos() 
+{ 
+ 
+}
+
+dVec2 Inputs::GetMouseMove() 
+{ 
+ 
+}
+
+dVec2 Inputs::GetMouseWheel() 
+{ 
+	
 }
 
 void Inputs::setKey(SDL_Event &event)
@@ -149,10 +174,10 @@ Inputs::Logger::Logger(Inputs &inputs) : inputs(inputs)
 }
 
 void Inputs::Logger::start()
-{ Locator::Get().Add(tree); }
+{ Locator::Add(tree); }
 
 void Inputs::Logger::stop()
-{ Locator::Get().Remove(tree); }
+{ Locator::Remove(tree); }
 
 void Inputs::Logger::setKey(SDL_Event &event)
 { std::cout << "Key changed: " << event.key.keysym.scancode << std::endl; }
@@ -182,7 +207,7 @@ void Inputs::Recorder::startRecording()
 { 
 	if(isRecording) { stopRecording(); }
 
-	Locator::Get().Add(recordTree); 
+	Locator::Add(recordTree); 
 
 	actionStartTime = Time::ProgramTime();
 	isRecording = true;
@@ -192,7 +217,7 @@ void Inputs::Recorder::stopRecording()
 { 
 	if(isReplaying) { stopReplaying(); }
 
-	Locator::Get().Remove(recordTree);
+	Locator::Remove(recordTree);
 	isRecording = false;
 }
 
@@ -203,7 +228,7 @@ void Inputs::Recorder::startReplaying()
 	if(isReplaying) { stopReplaying(); }
 	if(isRecording) { stopRecording(); }
 
-	Locator::Get().Add(replayTree); 
+	Locator::Add(replayTree); 
 
 	actionStartTime = Time::ProgramTime();
 	replayCurrentInput = 0;
@@ -217,7 +242,7 @@ void Inputs::Recorder::stopReplaying()
 	if(isRecording)
 	{ stopRecording(); }
 
-	Locator::Get().Remove(replayTree);
+	Locator::Remove(replayTree);
 	isReplaying = false;
 }
 
