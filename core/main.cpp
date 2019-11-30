@@ -102,50 +102,51 @@ int main(int argc, char *argv[])
 #pragma endregion
 
 	Inputs inputs;
+	inputs.StartDebug();
 	Time time;
 
 	bool quit = false;
 	SDL_Event event;
 
-	GL::ProgRef prog = GL::Programs.Load({"basic.vert", "basic.frag"});
+	//GL::ProgRef prog = GL::Programs.Load({"basic.vert", "basic.frag"});
+	//
+	//std::array<float, 18> vertices = 
+	//{
+	//	// positions         
+	//	1.0f,  1.0f, 0.0f,   
+	//	1.0f, -1.0f, 0.0f,   
+	//	-1.0f, -1.0f, 0.0f,  
+	//
+	//	1.0f,  1.0f, 0.0f,   
+	//	-1.0f, -1.0f, 0.0f,  
+	//	-1.0f,  1.0f, 0.0f,  
+	//};
+	//
+	//std::array<float, 12> uv =
+	//{
+	//	1.0f, 1.0f,
+	//	1.0f, 0.0f,
+	//	0.0f, 0.0f,
+	//
+	//	1.0f, 1.0f,
+	//	0.0f, 0.0f,
+	//	0.0f, 1.0f 
+	//};
+	//
+	//unsigned int VBO[2], VAO;
+	//glGenVertexArrays(1, &VAO);
+	//glGenBuffers(2, VBO);
+	//
+	//glBindVertexArray(VAO);
+	//
+	//GLHelper::SetVBOData(VBO[0], vertices, 3, 0);
+	//GLHelper::SetVBOData(VBO[1], uv, 2, 1);
+	//
+	//glBindBuffer(GL_ARRAY_BUFFER, 0); 
+	//glBindVertexArray(0); 
 
-	std::array<float, 18> vertices = 
-	{
-		// positions         
-		1.0f,  1.0f, 0.0f,   
-		1.0f, -1.0f, 0.0f,   
-		-1.0f, -1.0f, 0.0f,  
-
-		1.0f,  1.0f, 0.0f,   
-		-1.0f, -1.0f, 0.0f,  
-		-1.0f,  1.0f, 0.0f,  
-	};
-
-	std::array<float, 12> uv =
-	{
-		1.0f, 1.0f,
-		1.0f, 0.0f,
-		0.0f, 0.0f,
-	
-		1.0f, 1.0f,
-		0.0f, 0.0f,
-		0.0f, 1.0f 
-	};
-
-	unsigned int VBO[2], VAO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(2, VBO);
-
-	glBindVertexArray(VAO);
-
-	GLHelper::SetVBOData(VBO[0], vertices, 3, 0);
-	GLHelper::SetVBOData(VBO[1], uv, 2, 1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0); 
-	glBindVertexArray(0); 
-
-	GL::Tex2D tex;
-	tex.Setup("WCMan.png");
+	//GL::Tex2D tex;
+	//tex.Setup("WCMan.png");
 
 	Inputs::State state;
 
@@ -159,22 +160,22 @@ int main(int argc, char *argv[])
 		//mat = Math::GL::Rotate(mat, Time::ProgramTime() * 0.5f, Vector3(0.f, 0.f, 1.f));
 		//mat = Math::GL::Scale(mat, Vector3(tex.Ratio(), 1.f, 1.f));
 
-		Math::Mat4 mat;
-		mat = Math::GL::Translate(mat, (fVec3)fVec2(sinf(Time::ProgramTime()) * 1.f, 0.f));
-		mat = Math::GL::Rotate(mat, Time::ProgramTime() * 0.5f, Vector3(0.f, 0.f, 1.f));
-		mat = Math::GL::Scale(mat, Vector3(tex.Ratio(), 1.f, 1.f));
-
-		prog->Use();
-		prog->Set("model", mat);
-		//prog->Set("view", Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front, Vector3::Up));
-		//prog->Set("projection", Math::Mat4());
-		prog->Set("view", Math::Mat4());
-		float size = 2.f;
-		prog->Set("projection", Math::GL::Orthographic(-((float)WIDTH / HEIGHT)*size, ((float)WIDTH / HEIGHT)*size, -size, size, -10.f, 1000.f));
-
-		tex.Bind();
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		//Math::Mat4 mat;
+		//mat = Math::GL::Translate(mat, (fVec3)fVec2(sinf(Time::ProgramTime()) * 1.f, 0.f));
+		//mat = Math::GL::Rotate(mat, Time::ProgramTime() * 0.5f, Vector3(0.f, 0.f, 1.f));
+		//mat = Math::GL::Scale(mat, Vector3(tex.Ratio(), 1.f, 1.f));
+		//
+		//prog->Use();
+		//prog->Set("model", mat);
+		////prog->Set("view", Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front, Vector3::Up));
+		////prog->Set("projection", Math::Mat4());
+		//prog->Set("view", Math::Mat4());
+		//float size = 2.f;
+		//prog->Set("projection", Math::GL::Orthographic(-((float)WIDTH / HEIGHT)*size, ((float)WIDTH / HEIGHT)*size, -size, size, -10.f, 1000.f));
+		//
+		//tex.Bind();
+		//glBindVertexArray(VAO);
+		//glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		Locator::Call("Update"); 
 

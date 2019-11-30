@@ -38,13 +38,13 @@ public:
 	void StartRecording(), StopRecording();
 	void StartReplaying(), StopReplaying();
 
-#define DYNAMIC_HEADER(return, func, returnName, ...) return func(__VA_ARGS__); void func(__VA_ARGS__, return &returnName)
-	DYNAMIC_HEADER(State, GetKey, state, SDL_Scancode code);
-	State GetKey(SDL_Scancode code);
-	State GetMouseButton(byte button);
-	dVec2 GetMousePos();
-	dVec2 GetMouseMove();
-	dVec2 GetMouseWheel();
+//#define DYNAMIC_HEADER(return, func, returnName, ...) return func(__VA_ARGS__); void func(__VA_ARGS__, return &returnName)
+//	DYNAMIC_HEADER(State, GetKey, state, SDL_Scancode code);
+	//State GetKey(SDL_Scancode code);
+	//State GetMouseButton(byte button);
+	//dVec2 GetMousePos();
+	//dVec2 GetMouseMove();
+	//dVec2 GetMouseWheel();
 
 private:
 	void ignoreInputs(bool ignore);

@@ -117,6 +117,8 @@ namespace GL
 #define MAX_PROPERTY_NAME_LENGTH 32
 	PropertyMap Program::GetProgramUniforms(uint program) const
 	{
+		if (ID == -1) { return PropertyMap(); }
+
 		PropertyMap properties;
 
 		GLchar buffer[MAX_PROPERTY_NAME_LENGTH];

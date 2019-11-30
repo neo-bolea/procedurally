@@ -45,6 +45,8 @@ std::vector<Locator::CmdNode::nodePath> Locator::CmdNode::dissectTree() const
 }
 
 int Locator::callStackSize = 0;
+std::unordered_multimap<locatorHasher::id, Locator::LeafFunc> Locator::cmds;
+std::vector<decltype(Locator::cmds)::iterator> Locator::cmdsToRemove;
 
 void Locator::Add(const CmdNode &tree)
 {

@@ -1,5 +1,7 @@
 #include "Systems/Inputs.h"
 
+#include "Debug.h"
+
 #include <iostream>
 
 Inputs::Inputs() : logger(new Logger(*this)), recorder(new Recorder(*this))
@@ -55,30 +57,30 @@ void Inputs::ignoreInputs(bool ignore)
 	}
 }
 
-Inputs::State Inputs::GetKey(SDL_Scancode code) 
-{ 
-
-}
-
-Inputs::State Inputs::GetMouseButton(byte button) 
-{ 
- 
-}
-
-dVec2 Inputs::GetMousePos() 
-{ 
- 
-}
-
-dVec2 Inputs::GetMouseMove() 
-{ 
- 
-}
-
-dVec2 Inputs::GetMouseWheel() 
-{ 
-	
-}
+//Inputs::State Inputs::GetKey(SDL_Scancode code) 
+//{ 
+//
+//}
+//
+//Inputs::State Inputs::GetMouseButton(byte button) 
+//{ 
+// 
+//}
+//
+//dVec2 Inputs::GetMousePos() 
+//{ 
+// 
+//}
+//
+//dVec2 Inputs::GetMouseMove() 
+//{ 
+// 
+//}
+//
+//dVec2 Inputs::GetMouseWheel() 
+//{ 
+//	
+//}
 
 void Inputs::setKey(SDL_Event &event)
 {
@@ -98,6 +100,12 @@ void Inputs::setKey(SDL_Event &event)
 void Inputs::setMouseButton(SDL_Event &event)
 {
 	SDL_MouseButtonEvent button = event.button;
+	if (button.button <= 0)
+	{
+		Debug::Log("Pressed button was outside the range \
+			(1, " + std::to_string(buttonStates.size()) + "):" + std::to_string(button.button), Debug::Info);
+		return;
+	}
 	State &state = buttonStates[button.button - 1];
 
 	if(button.state == WasPressed)
