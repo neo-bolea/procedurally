@@ -13,14 +13,14 @@ Inputs::Inputs() : logger(new Logger(*this)), recorder(new Recorder(*this))
 	(
 		CNSTART "Inputs", 
 		Locator::CmdNode("SetKey", this, &Inputs::setKey),
-		Locator::CmdNode("GetKey", this, &Inputs::getKey),
+		Locator::CmdNode("GetKey", this, &Inputs::GetKey_),
 		Locator::CmdNode("SetMouseButton", this, &Inputs::setMouseButton),
-		Locator::CmdNode("GetMouseButton", this, &Inputs::getMouseButton),
+		Locator::CmdNode("GetMouseButton", this, &Inputs::GetMouseButton_),
 		Locator::CmdNode("SetMousePos", this, &Inputs::setMousePos),
-		Locator::CmdNode("GetMousePos", this, &Inputs::getMousePos),
-		Locator::CmdNode("GetMouseMove", this, &Inputs::getMouseMove),
+		Locator::CmdNode("GetMousePos", this, &Inputs::GetMousePos_),
+		Locator::CmdNode("GetMouseMove", this, &Inputs::GetMouseMove_),
 		Locator::CmdNode("SetMouseWheel", this, &Inputs::setMouseWheel),
-		Locator::CmdNode("GetMouseWheel", this, &Inputs::getMouseWheel),
+		Locator::CmdNode("GetMouseWheel", this, &Inputs::GetMouseWheel_),
 		CNEND
 	);
 
@@ -57,30 +57,66 @@ void Inputs::ignoreInputs(bool ignore)
 	}
 }
 
-//Inputs::State Inputs::GetKey(SDL_Scancode code) 
-//{ 
-//
+//#define DYNAMIC_IMPL(returnType, name, impl, ...) \
+//std::decay_t<returnType> name(__VA_ARGS__)	\
+//{																									\
+//	using Trait = FunctionTraits<void(__VA_ARGS__, returnType)>;				\
+//	std::decay_t<Trait::Argument<Trait::ArgCount - 1>::type> toReturn;							\
+//	FunctionTraits<void(__VA_ARGS__)>::ReturnType;									\
+//	name##_(__VA_ARGS__, toReturn);														\
+//	return toReturn;																			\
+//}																								  \
+//																								  \
+//void name##_(__VA_ARGS__, returnType toReturn)	\
+//{										\
+//	impl								\
 //}
 //
-//Inputs::State Inputs::GetMouseButton(byte button) 
-//{ 
-// 
-//}
 //
-//dVec2 Inputs::GetMousePos() 
-//{ 
-// 
+//#define DYNAMIC_IMPL_NOARG(returnType, name) returnType name() \
+//{																					\
+//	using Trait = FunctionTraits<void(returnType)>;					\
+//	Trait::Argument<Trait::ArgCount - 1>::type toReturn;			\
+//	FunctionTraits<void()>::ReturnType;									\
+//	name##_(toReturn);														\
+//	return toReturn;															\
 //}
-//
-//dVec2 Inputs::GetMouseMove() 
-//{ 
-// 
-//}
-//
-//dVec2 Inputs::GetMouseWheel() 
-//{ 
-//	
-//}
+
+Inputs::State Inputs::GetKey(SDL_Scancode code)
+{
+	State state;
+	Locator::Call("Inputs/GetKey", code, state);
+	return state;
+}
+
+Inputs::State Inputs::GetMouseButton(byte button)
+{
+	State state;
+	Locator::Call("Inputs/GetMouseButton", button, state);
+	return state;
+}
+
+dVec2 Inputs::GetMousePos()
+{
+	dVec2 v;
+	Locator::Call("Inputs/GetMousePos", v);
+	return v;
+}
+
+dVec2 Inputs::GetMouseMove()
+{
+	dVec2 v;
+	Locator::Call("Inputs/GetMouseMove", v);
+	return v;
+}
+
+dVec2 Inputs::GetMouseWheel()
+{
+	dVec2 v;
+	Locator::Call("Inputs/GetMouseWheel", v);
+	return v;
+}
+
 
 void Inputs::setKey(SDL_Event &event)
 {
@@ -151,21 +187,19 @@ void Inputs::update()
 	mouseMove = dVec2(0.0); 
 }
 
-void Inputs::getKey(SDL_Scancode code, State &state)
-{ 
-	state = keyStates[code];
-}
+void Inputs::GetKey_(SDL_Scancode code, State &state)
+{ state = keyStates[code]; }
 
-void Inputs::getMouseButton(byte button, State &state)
+void Inputs::GetMouseButton_(byte button, State &state)
 { state = buttonStates[button]; }
 
-void Inputs::getMousePos(dVec2 &v)
+void Inputs::GetMousePos_(dVec2 &v)
 { v = mousePos; }
 
-void Inputs::getMouseMove(dVec2 &v)
+void Inputs::GetMouseMove_(dVec2 &v)
 { v = mouseMove; }
 
-void Inputs::getMouseWheel(dVec2 &v)
+void Inputs::GetMouseWheel_(dVec2 &v)
 { v = mouseWheelMove; }
 
 Inputs::Logger::Logger(Inputs &inputs) : inputs(inputs)

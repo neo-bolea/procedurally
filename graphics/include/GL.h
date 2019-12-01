@@ -679,10 +679,10 @@ namespace GLHelper
 		uint dataType = GL_FLOAT,
 		bool normalized = false)
 	{
-		using T = typename std::decay<decltype(*data.begin())>::type;
+		using T = typename Arr::value_type;
 		glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), drawType);
 
-		glVertexAttribPointer(index, dataSize, dataType, normalized, dataSize * sizeof(T), 0);
+		glVertexAttribPointer(index, dataSize, dataType, normalized, sizeof(T), (void *)0);
 		glEnableVertexAttribArray(index);
 	}
 

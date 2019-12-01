@@ -4,26 +4,30 @@
 #include "MathGL.h"
 #include "Time.h"
 
-void Camera::Update(float speed, float lockView, float horizMove, float vertMove, float horizMouse, float vertMouse, float scroll, float deltaTime)
+#include <iostream>
+
+void Camera::Update(float speed, bool lockView, const dVec2 &move, const dVec2 &mouseMove, float scroll, double deltaTime)
 {
 	Vector3 right = (Vector3::Cross(Front, Vector3::Up)).Normalize();
 	Vector3 up = (Vector3::Cross(Front, right)).Normalize();
-	Pos = Pos + speed * Front * vertMove * deltaTime;
-	Pos = Pos + speed * right * horizMove * deltaTime;
+	Pos = Pos + speed * Front * move.y * deltaTime;
+	Pos = Pos + speed * right * move.x * deltaTime;
 	//Pos += speed * up    * scroll * (float)Time::DeltaTime();
 
 	if(!lockView)
 	{
-		Yaw   +=  horizMouse;
-		Pitch +=  vertMouse;
+		Yaw   +=  static_cast<float>(mouseMove.x);
+		Pitch +=  static_cast<float>(mouseMove.y);
 		FOV   += -scroll;
 	}
 
 	Pitch = Math::Clamp(Pitch, -89.5f, 89.5f);
 
-	Front.x =  cos(Math::Deg2Rad * Pitch) * cos(Math::Deg2Rad * Yaw);
-	Front.y = -sin(Math::Deg2Rad * Pitch);
-	Front.z =  cos(Math::Deg2Rad * Pitch) * sin(Math::Deg2Rad * Yaw);
+	Front.x = static_cast<float>(cos(Math::Deg2Rad * static_cast<double>(Pitch))
+		* cos(Math::Deg2Rad * static_cast<double>(Yaw)));
+	Front.y = static_cast<float>(-sin(Math::Deg2Rad * static_cast<double>(Pitch)));
+	Front.z = static_cast<float>(cos(Math::Deg2Rad * static_cast<double>(Pitch))
+		* sin(Math::Deg2Rad * static_cast<double>(Yaw)));
 	Front = Front.Normalize();
 }
 

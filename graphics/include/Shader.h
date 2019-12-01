@@ -12,6 +12,7 @@
 #include <any>
 #include <assert.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #undef GetProp
@@ -74,7 +75,7 @@ namespace GL
 	{
 	public:
 		inline int GetID(const std::string &uniformName) const;
-		inline Uniform GetUniform(const std::string &uniformName) const;
+		inline Uniform GetUniform(const std::string &uniformName);
 
 		inline void Use() const;
 		static void Push(const Program &prog), Pop();
@@ -82,7 +83,7 @@ namespace GL
 		inline void Dispatch() const;
 
 		///<summary> Sets a uniform by name. </summary>
-		inline void Set(const std::string &name, UniformData value) const;
+		inline void Set(const std::string &name, UniformData value);
 		///<summary> Sets a uniform by ID. Faster than by name, if used together with GetUniform(). </summary>
 		inline void Set(const Uniform &unif, UniformData value) const;
 
@@ -113,7 +114,7 @@ namespace GL
 
 
 		PropertyMap GetProgramUniforms(uint program) const;
-		DataType GetProp(const std::string &name) const;
+		DataType GetProp(const std::string &name);
 		ShaderType GetShaderType(const std::string &path) const;
 
 		std::string LoadTxtFile(const std::string &filePath) const;
@@ -126,6 +127,8 @@ namespace GL
 		PropertyMap properties;
 		ProgramType type;
 		std::vector<ShaderType> shaders;
+
+		std::unordered_set<std::string> erroneousUniforms;
 	};
 
 	class ProgramPool : private Pool<ProgramPool, Program>
@@ -192,14 +195,19 @@ namespace GL
 		//glDispatchCompute()
 	}
 
-	inline DataType Program::GetProp(const std::string &name) const
+	inline DataType Program::GetProp(const std::string &name)
 	{
 		auto it = properties.find(name);
 		if(it != properties.end())
 		{ return it->second; }
 		else
 		{ 
-			Debug::Log("The property " + std::string(name) + " is not part of the shader's uniforms!", Debug::Error, { "Graphics", "Shader" }); 
+			if (erroneousUniforms.find(name) == erroneousUniforms.end())
+			{
+				erroneousUniforms.insert(name);
+				Debug::Log("The property " + std::string(name) 
+					+ " is not part of the shader's uniforms!", Debug::Error, { "Graphics", "Shader" });
+			}
 			return (DataType)-1;
 		}
 	}
@@ -207,7 +215,7 @@ namespace GL
 	inline int Program::GetID(const std::string &uniformName) const
 	{ return glGetUniformLocation(ID, uniformName.c_str()); }
 
-	inline Uniform Program::GetUniform(const std::string &uniformName) const
+	inline Uniform Program::GetUniform(const std::string &uniformName) 
 	{ 
 		auto prop = GetProp(uniformName);
 		if(prop == (DataType)-1)
@@ -216,7 +224,7 @@ namespace GL
 		return Uniform{ GetID(uniformName), prop };
 	}
 
-	inline void Program::Set(const std::string &name, UniformData value) const
+	inline void Program::Set(const std::string &name, UniformData value)
 	{ 
 		Uniform unif = GetUniform(name); 
 		if(unif.ID == -1) { return; }

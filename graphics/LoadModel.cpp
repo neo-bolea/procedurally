@@ -1,12 +1,17 @@
-#include "GL.h"
+/*#include "GL.h"
 
 #include "Debug.h"
 #include "Mesh.h"
+#include "Watch.h"
+
+#include "assimp/Importer.hpp"
+#include "assimp/scene.h"
+#include "assimp/postprocess.h"
 
 #include <string>
 #include <unordered_map>
 #include <vector>
-/*
+
 namespace GL
 {
 	void ProcessNode(const aiScene *scene, std::unique_ptr<std::vector<Mesh>> &meshes);
@@ -18,25 +23,42 @@ namespace GL
 	std::string directory, path;
 	std::unordered_map<std::string, MatTex> texturesLoaded;
 
-	Model LoadModel(const std::string &_path)
+	//Model LoadModel(const std::string &_path)
+	//{
+	//	std::unique_ptr<std::vector<Mesh>> meshes = std::unique_ptr<std::vector<Mesh>>(new std::vector<Mesh>());
+	//
+	//	Assimp::Importer importer;
+	//	const aiScene *scene = importer.ReadFile(_path, aiProcess_Triangulate | aiProcess_FlipUVs);
+	//	if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+	//	{
+	//		Debug::Log("Unable to load model: " + _path + ", Error:" + importer.GetErrorString(), Debug::Error, 
+	//			{ "Assimp", "GL", "IO", "Loading" });
+	//		return Model(*meshes.get());
+	//	}
+	//
+	//	path = _path;
+	//	directory = _path.substr(0, _path.find_last_of('/'));
+	//
+	//	ProcessNode(scene, meshes);
+	//
+	//	return Model(*meshes.get());
+	//}
+
+	Model LoadModel(const std::string& _path)
 	{
 		std::unique_ptr<std::vector<Mesh>> meshes = std::unique_ptr<std::vector<Mesh>>(new std::vector<Mesh>());
+		Assimp::Importer import;
+		const aiScene* scene = import.ReadFile(_path, aiProcess_Triangulate | aiProcess_FlipUVs);
 
-		Assimp::Importer importer;
-		Debug::Watch watch;
-		const aiScene *scene = importer.ReadFile(_path, aiProcess_Triangulate | aiProcess_FlipUVs);
-		if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 		{
-			Debug::Log("Unable to load model: " + _path + ", Error:" + importer.GetErrorString(), Debug::Error, { "Assimp", "GL", "IO", "Loading" });
+			std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
 			return Model(*meshes.get());
 		}
-
 		path = _path;
 		directory = _path.substr(0, _path.find_last_of('/'));
 
-		watch.StartTime("Loading");
 		ProcessNode(scene, meshes);
-		watch.StopTime();
 
 		return Model(*meshes.get());
 	}
@@ -65,7 +87,6 @@ namespace GL
 	Mesh ProcessMesh(aiMesh *mesh, const aiScene *scene)
 	{
 		Mesh result;
-		Debug::Watch watch;
 		if(mesh->HasPositions())
 		{
 			//Positions

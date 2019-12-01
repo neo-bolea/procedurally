@@ -13,6 +13,7 @@
 #include "Hash.h"
 #include "Mat.h"
 #include "MathGL.h"
+#include "Mesh.h"
 #include "StringUtils.h"
 #include "Time.h"
 #include "Vec.h"
@@ -20,15 +21,15 @@
 
 #include "GL/glew.h"
 #include "SDL.h"
-#include "external/glm/glm.hpp"
-#include "external/glm/gtc/matrix_transform.hpp"
-#include "external/glm/gtc/type_ptr.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include <charconv>
 #include <chrono>
+#include <random>
 #include <iostream>
+#include <fstream>
 
 #define __WINDOWS_WASAPI__
 #define __WINDOWS_DS__
@@ -36,6 +37,78 @@
 
 #define WIDTH (2560/2)
 #define HEIGHT (1440/2)
+
+void Load(const std::string &path,
+	std::vector<fVec3> &vertices, 
+	std::vector<fVec3> &normals)
+{
+	std::vector<fVec3> indexedVertices;
+	std::vector<fVec3> indexedNormals;
+	std::vector<int> vertIndices, normalIndices;
+
+	std::ifstream file(path);
+	std::string currLine;
+	while (std::getline(file, currLine))
+	{
+		size_t wordStart = 0, wordEnd = 1;
+		if (currLine[0] == 'v')
+		{
+			std::vector<std::string_view> xyz;
+			xyz.reserve(3);
+			Strings::Split1(' ', xyz, currLine, currLine.find_first_of(' ')+1);
+
+			if (currLine[1] == ' ')
+			{ 
+				fVec3 v;
+				for (size_t i = 0; i < xyz.size(); i++)
+				{ 
+					std::from_chars(xyz[i].data(), xyz[i].data() + xyz[i].size(), v[i]);
+				}
+				indexedVertices.push_back(v);
+			}
+			else if (currLine[1] == 'n')
+			{ 
+				fVec3 v;
+				for (size_t i = 0; i < xyz.size(); i++)
+				{
+					std::from_chars(xyz[i].data(), xyz[i].data() + xyz[i].size(), v[i]);
+				}
+				indexedNormals.push_back(v);
+			}
+		}
+		else if (currLine[0] == 'f' && currLine[1] == ' ')
+		{
+			std::vector<std::string_view> mixedIndices;
+			Strings::Split1(' ', mixedIndices, currLine, currLine.find_first_of(' ') + 1);
+
+			std::vector<std::vector<std::string_view>> singleIndices;
+			singleIndices.resize(mixedIndices.size());
+			for (int i = 0; i < mixedIndices.size(); i++)
+			{
+				Strings::Split1('/', singleIndices[i], mixedIndices[i]);
+				int v, vn;
+				std::from_chars(singleIndices[i][0].data(), singleIndices[i][0].data() + singleIndices[i][0].size(), v);
+				std::from_chars(singleIndices[i][2].data(), singleIndices[i][2].data() + singleIndices[i][2].size(), vn);
+				vertIndices.push_back(v - 1);
+				normalIndices.push_back(vn - 1);
+			}
+		}
+	}
+
+	// Since .obj adds different indices for each attribute, and OpenGL only accepts one pair of
+	// indices, we have to "expand" the indices into what they are pointing to.
+	vertices.reserve(vertIndices.size());
+	for (size_t i = 0; i < vertIndices.size(); i++)
+	{
+		vertices.push_back(indexedVertices[vertIndices[i]]);
+	}
+
+	normals.reserve(normalIndices.size());
+	for (size_t i = 0; i < normalIndices.size(); i++)
+	{
+		normals.push_back(indexedNormals[normalIndices[i]]);
+	}
+}
 
 int main(int argc, char *argv[])
 {
@@ -60,7 +133,8 @@ int main(int argc, char *argv[])
 
 	if(window == NULL)
 	{
-		std::cout << "Failed to open an SDL window: " << std::endl << SDL_GetError() << std::endl;
+		std::cout << "Failed to open an SDL window: " << std::endl 
+			<< SDL_GetError() << std::endl;
 		SDL_Quit();
 		return EXIT_FAILURE;
 	}
@@ -80,9 +154,9 @@ int main(int argc, char *argv[])
 	glViewport(0, 0, WIDTH, HEIGHT);
 	
 	//Culling
-	glCullFace(GL_BACK);
+	glCullFace(GL_NONE);
 	glFrontFace(GL_CCW);
-	//glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 	
 	//Blending
 	glEnable(GL_BLEND);
@@ -101,81 +175,92 @@ int main(int argc, char *argv[])
 	SDL_GL_SetSwapInterval(1);
 #pragma endregion
 
+	Watch watch1(Watch::ms);
+	Watch watch2(Watch::ms);
+	Math::Mat4 mat1;
+	Math::Mat4 mat2;
+	for (size_t i = 0; i < 1'000'0000; i++)
+	{
+		watch1.Start();
+		mat1 = Math::GL::Rotate(mat1, 45.f, fVec3(3324.f, 0.35f, 235.f));
+		watch1.Stop();
+		watch2.Start();
+		mat2 = Math::GL::Rotate1(mat2, 45.f, fVec3(3324.f, 0.35f, 235.f));
+		watch2.Stop();
+	}
+	
+	std::cout << "FIRST: " << watch1.sTimeTotal() << std::endl;
+	std::cout << "FIRST: " << watch2.sTimeTotal() << std::endl;
+	
+	std::cout << "EQUAL: " << (mat1 == mat2) << std::endl;
+
+	GL::Tex2D tex;
+	tex.Filter = GL::TexFilter::Linear;
+	tex.Setup("WCMan.png");
+	GL::ProgRef prog = GL::Programs.Load({ "basic.vert", "basic.frag" });
+	GL::ProgRef outline = GL::Programs.Load({ "outline.vert", "outline.frag" });
+	//GL::Model mesh = GL::LoadModel("nanosuit/scene.gltf");
+
+	Watch watch(Watch::ms);
+	watch.Start();
+
+	std::vector<fVec3> vertices;
+	std::vector<fVec3> normals;
+	Load("nanosuit1/scene.obj", vertices, normals);
+
+	watch.Stop();
+	std::cout << "Finished: " << watch.sTime() << std::endl;
+
+	uint VAO, VBO[2];
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(2, VBO);
+
+	glBindVertexArray(VAO);
+
+	GLHelper::SetVBOData(VBO[0], vertices, 3, 0);
+	GLHelper::SetVBOData(VBO[1], normals, 3, 1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	Inputs inputs;
-	inputs.StartDebug();
 	Time time;
 
 	bool quit = false;
 	SDL_Event event;
 
-	//GL::ProgRef prog = GL::Programs.Load({"basic.vert", "basic.frag"});
-	//
-	//std::array<float, 18> vertices = 
-	//{
-	//	// positions         
-	//	1.0f,  1.0f, 0.0f,   
-	//	1.0f, -1.0f, 0.0f,   
-	//	-1.0f, -1.0f, 0.0f,  
-	//
-	//	1.0f,  1.0f, 0.0f,   
-	//	-1.0f, -1.0f, 0.0f,  
-	//	-1.0f,  1.0f, 0.0f,  
-	//};
-	//
-	//std::array<float, 12> uv =
-	//{
-	//	1.0f, 1.0f,
-	//	1.0f, 0.0f,
-	//	0.0f, 0.0f,
-	//
-	//	1.0f, 1.0f,
-	//	0.0f, 0.0f,
-	//	0.0f, 1.0f 
-	//};
-	//
-	//unsigned int VBO[2], VAO;
-	//glGenVertexArrays(1, &VAO);
-	//glGenBuffers(2, VBO);
-	//
-	//glBindVertexArray(VAO);
-	//
-	//GLHelper::SetVBOData(VBO[0], vertices, 3, 0);
-	//GLHelper::SetVBOData(VBO[1], uv, 2, 1);
-	//
-	//glBindBuffer(GL_ARRAY_BUFFER, 0); 
-	//glBindVertexArray(0); 
-
-	//GL::Tex2D tex;
-	//tex.Setup("WCMan.png");
-
-	Inputs::State state;
+	Camera cam(fVec3(0, 0, 0), fVec3::Forward);
 
 	while(!quit)
 	{
-		glClearColor(0.1f, 0.1f, 0.1f, 1.f);
+		glClearColor(1.f, 1.f, 1.f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		//Math::Mat4 mat;
-		//mat = Math::GL::Translate(mat, fVec3(sinf(Time::ProgramTime()) * 1.f,0.f, 0.f));
-		//mat = Math::GL::Rotate(mat, Time::ProgramTime() * 0.5f, Vector3(0.f, 0.f, 1.f));
-		//mat = Math::GL::Scale(mat, Vector3(tex.Ratio(), 1.f, 1.f));
+		dVec2 move;
+		move.x = (inputs.GetKey(SDL_SCANCODE_D) == Inputs::Held) 
+			- (inputs.GetKey(SDL_SCANCODE_A) == Inputs::Held);
+		move.y = (inputs.GetKey(SDL_SCANCODE_W) == Inputs::Held)
+			- (inputs.GetKey(SDL_SCANCODE_S) == Inputs::Held);
+		dVec2 mouseMove = inputs.GetMouseMove() * 0.25f;
+		cam.Update(1.f, false, move, mouseMove, inputs.GetMouseWheel().x, Time::DeltaTime());
+		
+		tex.Bind();
+		Math::Mat4 mvp = Math::GL::Scale(Math::Mat4(), fVec3(0.1f));
+		mvp = Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front) * mvp;
+		mvp = Math::GL::Perspective(Math::Deg2Rad * 60.f, ((float)WIDTH / HEIGHT), 0.001f, 1000.f) * mvp;
 
-		//Math::Mat4 mat;
-		//mat = Math::GL::Translate(mat, (fVec3)fVec2(sinf(Time::ProgramTime()) * 1.f, 0.f));
-		//mat = Math::GL::Rotate(mat, Time::ProgramTime() * 0.5f, Vector3(0.f, 0.f, 1.f));
-		//mat = Math::GL::Scale(mat, Vector3(tex.Ratio(), 1.f, 1.f));
-		//
-		//prog->Use();
-		//prog->Set("model", mat);
-		////prog->Set("view", Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front, Vector3::Up));
-		////prog->Set("projection", Math::Mat4());
-		//prog->Set("view", Math::Mat4());
-		//float size = 2.f;
-		//prog->Set("projection", Math::GL::Orthographic(-((float)WIDTH / HEIGHT)*size, ((float)WIDTH / HEIGHT)*size, -size, size, -10.f, 1000.f));
-		//
-		//tex.Bind();
-		//glBindVertexArray(VAO);
-		//glDrawArrays(GL_TRIANGLES, 0, 6);
+		prog->Use();
+		prog->Set("uMVP", mvp);
+		//prog->Set("uEye", cam.Pos);
+
+		glCullFace(GL_BACK);
+		glDrawArrays(GL_TRIANGLES, 0, vertices.size() * 3);
+
+		outline->Use();
+		outline->Set("uMVP", mvp);
+		outline->Set("uEye", mvp * (fVec4)cam.Pos);
+
+		glCullFace(GL_FRONT);
+		glDrawArrays(GL_TRIANGLES, 0, vertices.size() * 3);
 
 		Locator::Call("Update"); 
 
@@ -189,7 +274,7 @@ int main(int argc, char *argv[])
 		
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
-			{  Locator::Call("Inputs/SetKey", event); } break;
+			{ Locator::Call("Inputs/SetKey", event); } break;
 			case SDL_MOUSEMOTION:
 			{ Locator::Call("Inputs/SetMousePos", event); } break;
 			case SDL_MOUSEBUTTONDOWN:

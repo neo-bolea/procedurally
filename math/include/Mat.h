@@ -35,7 +35,9 @@ namespace Math
 		};
 
 		//// Constants ////
-		static constexpr const size_t Rows = ROWS, Cols = COLS;
+		static constexpr size_t Rows = ROWS, Cols = COLS;
+		static constexpr bool SIMD_READY
+			= (ROWS == 4) && (COLS == 4) && std::is_arithmetic_v<T>;
 
 		//// Constructors ////
 		constexpr Mat(), Mat(T n), Mat(const T *d);
@@ -55,6 +57,7 @@ namespace Math
 
 		//// Functions ////
 		constexpr Mat<T, ROWS, COLS> Identity();
+		constexpr Mat<T, COLS, ROWS> Transpose();
 
 		//// Data ////
 		union

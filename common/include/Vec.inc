@@ -24,7 +24,7 @@ const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Backward{ 0.f, 0.f,
 //// Constructors ////
 template<typename T, size_t N>
 constexpr Vec<T, N>::Vec() 
-{ for(size_t i = 0; i < N; i++) { this->e[i] = 0.f; } }
+{ for(size_t i = 0; i < N; i++) { this->e[i] = static_cast<T>(0); } }
 
 template<typename T, size_t N>
 constexpr Vec<T, N>::Vec(T n) 
@@ -35,11 +35,11 @@ constexpr Vec<T, N>::Vec(const T *d)
 { for(size_t i = 0; i < N; i++) { this->e[i] = d[i]; } }
 
 template<typename T, size_t N>
-constexpr Vec<T, N>::Vec<T, N>(const VecData<T, N> &other)
+constexpr Vec<T, N>::Vec(const VecData<T, N> &other)
 { for(size_t i = 0; i < N; i++) { this->e[i] = other.e[i]; } }
 
 template<typename T, size_t N>
-constexpr Vec<T, N>::Vec<T, N>(const Vec<T, N> &other)
+constexpr Vec<T, N>::Vec(const Vec<T, N> &other)
 { for(size_t i = 0; i < N; i++) { this->e[i] = other[i]; } }
 
 template<typename T, size_t N>
@@ -54,7 +54,7 @@ constexpr Vec<T, N>::Vec(Args... args)
 
 template<typename T, size_t N>
 template<size_t NN>
-constexpr Vec<T, N>::Vec<T, N>(const Vec<T, NN> &other)
+constexpr Vec<T, N>::Vec(const Vec<T, NN> &other)
 { 
 	size_t i = 0;
 	for(; i < std::min(N, NN); i++) { this->e[i] = other[i]; } 
@@ -146,18 +146,18 @@ constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 	return result;
 }
 
-template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+template<typename T, size_t N, typename U, typename>
 constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs)
 {
 	Vec<T, N> result;
 	if constexpr(Vec<T, N>::SIMDReady)
 	{ result = _mm_mul_ps(lhs, _mm_set1_ps(rhs)); }
 	else
-	{ for(size_t i = 0; i < N; i++) { result[i] = lhs[i] * rhs; } }
+	{ for(size_t i = 0; i < N; i++) { result[i] = static_cast<T>(lhs[i] * rhs); } }
 	return result;
 }
 
-template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+template<typename T, size_t N, typename U, typename>
 constexpr Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs)
 { return rhs * lhs; }
 
@@ -168,18 +168,18 @@ constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 	if constexpr(Vec<T, N>::SIMDReady)
 	{ result = _mm_div_ps(lhs, rhs); }
 	else
-	{ for(size_t i = 0; i < N; i++) { result[i] = lhs[i] / rhs[i]; } }
+	{ for(size_t i = 0; i < N; i++) { result[i] = static_cast<T>(lhs[i] / rhs[i]); } }
 	return result;
 }
 
-template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+template<typename T, size_t N, typename U, typename>
 constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs)
 {
 	Vec<T, N> result;
 	if constexpr(Vec<T, N>::SIMDReady)
 	{ result = _mm_div_ps(lhs, _mm_set1_ps(rhs)); }
 	else
-	{ for(size_t i = 0; i < N; i++) { result[i] = lhs[i] / rhs; } }
+	{ for(size_t i = 0; i < N; i++) { result[i] = static_cast<T>(lhs[i] / rhs); } }
 	return result;
 }
 

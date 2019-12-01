@@ -38,15 +38,13 @@ public:
 	void StartRecording(), StopRecording();
 	void StartReplaying(), StopReplaying();
 
-//#define DYNAMIC_HEADER(return, func, returnName, ...) return func(__VA_ARGS__); void func(__VA_ARGS__, return &returnName)
-//	DYNAMIC_HEADER(State, GetKey, state, SDL_Scancode code);
-	//State GetKey(SDL_Scancode code);
-	//State GetMouseButton(byte button);
-	//dVec2 GetMousePos();
-	//dVec2 GetMouseMove();
-	//dVec2 GetMouseWheel();
+	State GetKey(SDL_Scancode code);
+	State GetMouseButton(byte button);
+	dVec2 GetMousePos();
+	dVec2 GetMouseMove();
+	dVec2 GetMouseWheel();
 
-private:
+public:
 	void ignoreInputs(bool ignore);
 
 	void setKey(SDL_Event &);
@@ -55,11 +53,11 @@ private:
 	void setMouseWheel(SDL_Event &);
 	void update();
 
-	void getKey(SDL_Scancode code, State &state);
-	void getMouseButton(byte button, State &state);
-	void getMousePos(dVec2 &v);
-	void getMouseMove(dVec2 &v);
-	void getMouseWheel(dVec2 &v);
+	void GetKey_(SDL_Scancode code, State &state);
+	void GetMouseButton_(byte button, State &state);
+	void GetMousePos_(dVec2 &v);
+	void GetMouseMove_(dVec2 &v);
+	void GetMouseWheel_(dVec2 &v);
 
 	std::array<State, SDL_NUM_SCANCODES> keyStates;
 	std::array<State, 5> buttonStates;
