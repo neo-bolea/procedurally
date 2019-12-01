@@ -213,11 +213,7 @@ int main(int argc, char *argv[])
 
 	while(!quit)
 	{
-		static int frame = 0;
-		if(frame++ % 2 == 0)
-			glClearColor(0.f, 1.f, 0.f, 1.f);
-		else
-			glClearColor(0.f, 0.f, 1.f, 1.f);
+		glClearColor(1.f, 1.f, 1.f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		dVec2 move;
@@ -229,7 +225,8 @@ int main(int argc, char *argv[])
 		cam.Update(1.f, false, move, mouseMove, inputs.GetMouseWheel().x, Time::DeltaTime());
 		
 		tex.Bind();
-		Math::Mat4 mvp = Math::GL::Scale(Math::Mat4(), fVec3(0.1f));
+		Math::Mat4 model = Math::GL::Scale(Math::Mat4(), fVec3(0.1f));
+		Math::Mat4 mvp = model;
 		mvp = Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front) * mvp;
 		mvp = Math::GL::Perspective(Math::Deg2Rad * 60.f, ((float)WIDTH / HEIGHT), 0.001f, 1000.f) * mvp;
 
@@ -240,10 +237,10 @@ int main(int argc, char *argv[])
 		glDrawArrays(GL_TRIANGLES, 0, vertices.size() * 3);
 
 		outline->Use();
+		outline->Set("uModel", model);
 		outline->Set("uMVP", mvp);
-		outline->Set("uEye", mvp * (fVec4)cam.Pos);
+		outline->Set("uEye", (fVec4)cam.Pos);
 
-		glCullFace(GL_FRONT);
 		glDrawArrays(GL_TRIANGLES, 0, vertices.size() * 3);
 
 		Locator::Call("Update"); 
