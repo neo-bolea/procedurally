@@ -35,8 +35,8 @@
 #define __WINDOWS_DS__
 #define __WINDOWS_ASIO__
 
-#define WIDTH (2560/2)
-#define HEIGHT (1440/2)
+#define WIDTH (1920)
+#define HEIGHT (1080)
 
 void Load(const std::string &path,
 	std::vector<fVec3> &vertices, 
@@ -172,34 +172,13 @@ int main(int argc, char *argv[])
 	glEnable(GL_DEBUG_OUTPUT);
 
 	//VSync
-	SDL_GL_SetSwapInterval(1);
+	SDL_GL_SetSwapInterval(0);
 #pragma endregion
-
-	Watch watch1(Watch::ms);
-	Watch watch2(Watch::ms);
-	Math::Mat4 mat1;
-	Math::Mat4 mat2;
-	for (size_t i = 0; i < 1'000'0000; i++)
-	{
-		watch1.Start();
-		mat1 = Math::GL::Rotate(mat1, 45.f, fVec3(3324.f, 0.35f, 235.f));
-		watch1.Stop();
-		watch2.Start();
-		mat2 = Math::GL::Rotate1(mat2, 45.f, fVec3(3324.f, 0.35f, 235.f));
-		watch2.Stop();
-	}
-	
-	std::cout << "FIRST: " << watch1.sTimeTotal() << std::endl;
-	std::cout << "FIRST: " << watch2.sTimeTotal() << std::endl;
-	
-	std::cout << "EQUAL: " << (mat1 == mat2) << std::endl;
 
 	GL::Tex2D tex;
 	tex.Filter = GL::TexFilter::Linear;
-	tex.Setup("WCMan.png");
 	GL::ProgRef prog = GL::Programs.Load({ "basic.vert", "basic.frag" });
 	GL::ProgRef outline = GL::Programs.Load({ "outline.vert", "outline.frag" });
-	//GL::Model mesh = GL::LoadModel("nanosuit/scene.gltf");
 
 	Watch watch(Watch::ms);
 	watch.Start();
@@ -230,9 +209,15 @@ int main(int argc, char *argv[])
 
 	Camera cam(fVec3(0, 0, 0), fVec3::Forward);
 
+	Time::SetLimitFPS(true);
+
 	while(!quit)
 	{
-		glClearColor(1.f, 1.f, 1.f, 1.f);
+		static int frame = 0;
+		if(frame++ % 2 == 0)
+			glClearColor(0.f, 1.f, 0.f, 1.f);
+		else
+			glClearColor(0.f, 0.f, 1.f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		dVec2 move;
@@ -250,7 +235,6 @@ int main(int argc, char *argv[])
 
 		prog->Use();
 		prog->Set("uMVP", mvp);
-		//prog->Set("uEye", cam.Pos);
 
 		glCullFace(GL_BACK);
 		glDrawArrays(GL_TRIANGLES, 0, vertices.size() * 3);
