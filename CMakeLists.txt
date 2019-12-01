@@ -39,12 +39,13 @@ set(GLEW_USE_STATIC_LIBS ON)
 find_library(GLEW REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}${GLEW_INCLUDE_DIR})
 link_libraries(${CMAKE_SOURCE_DIR}${GLEW_LIBRARIES})
-message(DIR: ${CMAKE_SOURCE_DIR}${GLEW_INCLUDE_DIR})
-message(LIB: ${CMAKE_SOURCE_DIR}${GLEW_LIBRARIES})
 
 find_package(OpenGL REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}${OPENGL_INCLUDE_DIRS})
 link_libraries(${OPENGL_LIBRARIES})
+
+# Other external includes
+include_directories("${CMAKE_SOURCE_DIR}/external")
 
 # Configuration
 list(APPEND CMAKE_CXX_FLAGS "/std:c++17")
