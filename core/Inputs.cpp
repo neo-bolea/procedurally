@@ -88,34 +88,48 @@ Inputs::State Inputs::GetKey(SDL_Scancode code)
 	Locator::Call("Inputs/GetKey", code, state);
 	return state;
 }
-
 Inputs::State Inputs::GetMouseButton(byte button)
 {
 	State state;
 	Locator::Call("Inputs/GetMouseButton", button, state);
 	return state;
 }
-
 dVec2 Inputs::GetMousePos()
 {
 	dVec2 v;
 	Locator::Call("Inputs/GetMousePos", v);
 	return v;
 }
-
 dVec2 Inputs::GetMouseMove()
 {
 	dVec2 v;
 	Locator::Call("Inputs/GetMouseMove", v);
 	return v;
 }
-
 dVec2 Inputs::GetMouseWheel()
 {
 	dVec2 v;
 	Locator::Call("Inputs/GetMouseWheel", v);
 	return v;
 }
+
+bool Inputs::IsKeyPressed(SDL_Scancode code) { return GetKey(code) == Pressed; }
+bool Inputs::IsKeyReleased(SDL_Scancode code) { return GetKey(code) == Released; }
+bool Inputs::IsKeyDown(SDL_Scancode code) 
+{
+	State key = GetKey(code);
+	return code == Pressed || code == Held;
+}
+bool Inputs::IsKeyUp(SDL_Scancode code) { return !IsKeyDown(code); }
+
+bool Inputs::IsMouseButtonPressed(byte button) { return GetMouseButton(button) == Pressed; }
+bool Inputs::IsMouseButtonReleased(byte button) { return GetMouseButton(button) == Released; }
+bool Inputs::IsMouseButtonDown(byte button)
+{
+	State button = GetMouseButton(button);
+	return button == Pressed || button == Held;
+}
+bool Inputs::IsMouseButtonUp(byte button) { return !IsMouseButtonDown(button); }
 
 
 void Inputs::setKey(SDL_Event &event)

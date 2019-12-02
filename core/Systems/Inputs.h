@@ -38,11 +38,22 @@ public:
 	void StartRecording(), StopRecording();
 	void StartReplaying(), StopReplaying();
 
+
 	State GetKey(SDL_Scancode code);
 	State GetMouseButton(byte button);
 	dVec2 GetMousePos();
 	dVec2 GetMouseMove();
 	dVec2 GetMouseWheel();
+
+	bool IsKeyPressed(SDL_Scancode code);
+	bool IsKeyReleased(SDL_Scancode code);
+	bool IsKeyDown(SDL_Scancode code);
+	bool IsKeyUp(SDL_Scancode code);
+		 
+	bool IsMouseButtonPressed(byte button);
+	bool IsMouseButtonReleased(byte button);
+	bool IsMouseButtonDown(byte button);
+	bool IsMouseButtonUp(byte button);
 
 public:
 	void ignoreInputs(bool ignore);
