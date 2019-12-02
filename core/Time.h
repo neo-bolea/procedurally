@@ -20,13 +20,13 @@ public:
 	static void SetMaxFPS(int maxFPS);
 
 private:
-	static ChronoPoint startTime;
-	static double programTime;
-	static double deltaTime;
+	inline static ChronoPoint startTime;
+	inline static double programTime;
+	inline static double deltaTime;
 
-	static bool LimitFPS;
-	static int MaxFPS;
-	static double nextLimitedFrame;
+	inline static bool LimitFPS = false;
+	inline static int MaxFPS = 144;
+	inline static double nextLimitedFrame = 0;
 
 	void sleep(), update();
 };

@@ -6,17 +6,13 @@
 
 #include "MathExt.h"
 #include "Camera.h"
-#include "IOUtil.h"
 #include "Shader.h"
 #include "GL.h"
 #include "Systems/Inputs.h"
-#include "Hash.h"
-#include "Mat.h"
 #include "MathGL.h"
 #include "Mesh.h"
 #include "StringUtils.h"
 #include "Time.h"
-#include "Vec.h"
 #include "Watch.h"
 
 #include "GL/glew.h"
@@ -26,8 +22,6 @@
 #include "stb_image.h"
 
 #include <charconv>
-#include <chrono>
-#include <random>
 #include <iostream>
 #include <fstream>
 

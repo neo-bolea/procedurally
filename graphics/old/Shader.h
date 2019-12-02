@@ -1,6 +1,5 @@
 #pragma once
 
-#include "DesignPatterns.h"
 #include "StringUtils.h"
 
 #include <filesystem>
@@ -49,7 +48,7 @@ namespace Graphics
 		GID ID;
 	};
 
-	class ProgramManager : public Singleton<ProgramManager>
+	class ProgramManager
 	{
 	public:
 		template<typename ...Arg>

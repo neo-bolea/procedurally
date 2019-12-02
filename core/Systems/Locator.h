@@ -23,7 +23,6 @@
 
 #include "cmdKeys.h"
 
-#include "DesignPatterns.h"
 #include "MathHelpers.h"
 #include "Templates.h"
 
