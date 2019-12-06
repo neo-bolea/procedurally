@@ -23,3 +23,6 @@ add_custom_command(
 )
 
 target_link_libraries(Core ${Core_LINKS})
+if(MSVC)
+    target_compile_options(Core PRIVATE "/MP")
+endif()
