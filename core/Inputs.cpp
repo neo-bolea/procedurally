@@ -117,8 +117,8 @@ bool Inputs::IsKeyPressed(SDL_Scancode code) { return GetKey(code) == Pressed; }
 bool Inputs::IsKeyReleased(SDL_Scancode code) { return GetKey(code) == Released; }
 bool Inputs::IsKeyDown(SDL_Scancode code) 
 {
-	State key = GetKey(code);
-	return code == Pressed || code == Held;
+	State state = GetKey(code);
+	return state == Pressed || state == Held;
 }
 bool Inputs::IsKeyUp(SDL_Scancode code) { return !IsKeyDown(code); }
 
@@ -126,8 +126,8 @@ bool Inputs::IsMouseButtonPressed(byte button) { return GetMouseButton(button) =
 bool Inputs::IsMouseButtonReleased(byte button) { return GetMouseButton(button) == Released; }
 bool Inputs::IsMouseButtonDown(byte button)
 {
-	State button = GetMouseButton(button);
-	return button == Pressed || button == Held;
+	State state = GetMouseButton(button);
+	return state == Pressed || state == Held;
 }
 bool Inputs::IsMouseButtonUp(byte button) { return !IsMouseButtonDown(button); }
 

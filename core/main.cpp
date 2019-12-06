@@ -211,10 +211,10 @@ int main(int argc, char *argv[])
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		dVec2 move;
-		move.x = (inputs.GetKey(SDL_SCANCODE_D) == Inputs::Held) 
-			- (inputs.GetKey(SDL_SCANCODE_A) == Inputs::Held);
-		move.y = (inputs.GetKey(SDL_SCANCODE_W) == Inputs::Held)
-			- (inputs.GetKey(SDL_SCANCODE_S) == Inputs::Held);
+		move.x = inputs.IsKeyDown(SDL_SCANCODE_D)
+			- inputs.IsKeyDown(SDL_SCANCODE_A);
+		move.y = inputs.IsKeyDown(SDL_SCANCODE_W)
+			- inputs.IsKeyDown(SDL_SCANCODE_S);
 		dVec2 mouseMove = inputs.GetMouseMove() * 0.25f;
 		cam.Update(1.f, false, move, mouseMove, inputs.GetMouseWheel().x, Time::DeltaTime());
 		
