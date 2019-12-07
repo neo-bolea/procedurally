@@ -71,6 +71,7 @@ struct Vec : public VecData<T, N>
 {
 	//// Constants ////
 	static const bool SIMDReady = (N == 4) && std::is_arithmetic_v<T>;
+	using Type = T;
 	static const size_t Count = N;
 
 	//// Constructors ////
@@ -109,6 +110,7 @@ struct Vec : public VecData<T, N>
 	constexpr T LenSqr() const;
 	static constexpr T Dot(const Vec<T, N> &a, const Vec<T, N> &b);
 	static constexpr Vec<T, N> Cross(const Vec<T, N> &a, const Vec<T, N> &b);
+	static constexpr Vec<T, N> Lerp(const Vec<T, N>& a, const Vec<T, N>& b, T t);
 	constexpr Vec<T, N> Normalize() const;
 };
 

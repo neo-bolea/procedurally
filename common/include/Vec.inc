@@ -218,7 +218,7 @@ constexpr T Vec<T, N>::Dot(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 					  "The vector type must be default constructible for the dot product to be used.");
 
 	T sum{};
-	{ for(size_t i = 0; i < N; i++) { sum += lhs[i] * rhs[i]; } }
+	for(size_t i = 0; i < N; i++) { sum += lhs[i] * rhs[i]; }
 
 	return sum;
 }
@@ -234,6 +234,17 @@ constexpr Vec<T, N> Vec<T, N>::Cross(const Vec<T, N> &a, const Vec<T, N> &b)
 		a.y * b.z - b.y * a.z,
 		a.z * b.x - b.z * a.x,
 		a.x * b.y - b.x * a.y);
+}
+
+template<typename T, size_t N>
+constexpr Vec<T, N> Vec<T, N>::Lerp(const Vec<T, N> &a, const Vec<T, N> &b, T t)
+{
+	static_assert(std::is_arithmetic_v<T>,
+		"Lerping is undefined for non-arithmetic types.");
+
+	Vec<T, N> result;
+	for (size_t i = 0; i < N; i++) { result[i] = Math::Lerp(a[i], b[i], t); }
+	return result;
 }
 
 template<typename T, size_t N>
