@@ -1,185 +1,79 @@
-/*#include "GL.h"
+#include "StringUtils.h"
+#include "Vec.h"
 
-#include "Debug.h"
-#include "Mesh.h"
-#include "Watch.h"
-
-#include "assimp/Importer.hpp"
-#include "assimp/scene.h"
-#include "assimp/postprocess.h"
-
+#include <charconv>
+#include <fstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
-namespace GL
+void Load(const std::string& path, std::vector<fVec3>& vertices, std::vector<fVec3>& normals)
 {
-	void ProcessNode(const aiScene *scene, std::unique_ptr<std::vector<Mesh>> &meshes);
-	Mesh ProcessMesh(aiMesh *mesh, const aiScene *scene);
-	std::vector<MatTex> LoadMaterialTexs(aiMaterial *mat, aiTextureType type, TexUse texType);
+	std::vector<fVec3> indexedVertices;
+	std::vector<fVec3> indexedNormals;
+	std::vector<int>   vertIndices, normalIndices;
 
-#define FACE_INDICES_COUNT 3
-
-	std::string directory, path;
-	std::unordered_map<std::string, MatTex> texturesLoaded;
-
-	//Model LoadModel(const std::string &_path)
-	//{
-	//	std::unique_ptr<std::vector<Mesh>> meshes = std::unique_ptr<std::vector<Mesh>>(new std::vector<Mesh>());
-	//
-	//	Assimp::Importer importer;
-	//	const aiScene *scene = importer.ReadFile(_path, aiProcess_Triangulate | aiProcess_FlipUVs);
-	//	if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-	//	{
-	//		Debug::Log("Unable to load model: " + _path + ", Error:" + importer.GetErrorString(), Debug::Error, 
-	//			{ "Assimp", "GL", "IO", "Loading" });
-	//		return Model(*meshes.get());
-	//	}
-	//
-	//	path = _path;
-	//	directory = _path.substr(0, _path.find_last_of('/'));
-	//
-	//	ProcessNode(scene, meshes);
-	//
-	//	return Model(*meshes.get());
-	//}
-
-	Model LoadModel(const std::string& _path)
+	std::ifstream file(path);
+	std::string   currLine;
+	while (std::getline(file, currLine))
 	{
-		std::unique_ptr<std::vector<Mesh>> meshes = std::unique_ptr<std::vector<Mesh>>(new std::vector<Mesh>());
-		Assimp::Importer import;
-		const aiScene* scene = import.ReadFile(_path, aiProcess_Triangulate | aiProcess_FlipUVs);
-
-		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+		size_t wordStart = 0, wordEnd = 1;
+		if (currLine[0] == 'v')
 		{
-			std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
-			return Model(*meshes.get());
-		}
-		path = _path;
-		directory = _path.substr(0, _path.find_last_of('/'));
+			std::vector<std::string_view> xyz;
+			xyz.reserve(3);
+			Strings::Split1(' ', xyz, currLine, currLine.find_first_of(' ') + 1);
 
-		ProcessNode(scene, meshes);
-
-		return Model(*meshes.get());
-	}
-
-	void ProcessNode(const aiScene *scene, std::unique_ptr<std::vector<Mesh>> &meshes)
-	{
-		std::vector<aiNode*> nodes;
-		nodes.push_back(scene->mRootNode);
-
-		aiNode *node;
-		while(!nodes.empty())
-		{
-			node = nodes.back();
-			nodes.pop_back();
-
-			for(uint i = 0; i < node->mNumMeshes; i++)
+			if (currLine[1] == ' ')
 			{
-				aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-				meshes->push_back(ProcessMesh(mesh, scene));
-			}
-
-			for(uint i = 0; i < node->mNumChildren; i++)
-			{ nodes.push_back(node->mChildren[i]); } }
-	}
-
-	Mesh ProcessMesh(aiMesh *mesh, const aiScene *scene)
-	{
-		Mesh result;
-		if(mesh->HasPositions())
-		{
-			//Positions
-			result.Pos.reserve(mesh->mNumVertices);
-			for(uint i = 0; i < mesh->mNumVertices; i++)
-			{ result.Pos.push_back(Vector3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z)); } }
-
-		if(mesh->HasNormals())
-		{	//Normals
-			result.Norms.reserve(mesh->mNumVertices);
-			for(uint i = 0; i < mesh->mNumVertices; i++)
-			{ result.Norms.push_back(Vector3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z)); } }
-
-		if(mesh->HasTextureCoords(0))
-		{	//UVs
-			result.UVs.reserve(mesh->mNumVertices);
-			for(uint i = 0; i < mesh->mNumVertices; i++)
-			{ result.UVs.push_back(Vector2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)); } }
-
-		if(mesh->HasTangentsAndBitangents())
-		{	//Tangents
-			result.Tans.reserve(mesh->mNumVertices);
-			for(uint i = 0; i < mesh->mNumVertices; i++)
-			{ result.Tans.push_back(Vector3(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z)); } 
-			//Bitangents
-			result.Bitans.reserve(mesh->mNumVertices);
-			for(uint i = 0; i < mesh->mNumVertices; i++)
-			{ result.Bitans.push_back(Vector3(mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z)); } }
-
-		if(mesh->HasFaces())
-		{	//Indices
-			result.Indices.reserve(mesh->mNumFaces * FACE_INDICES_COUNT);
-			for(uint i = 0; i < mesh->mNumFaces; i++)
-			{
-				aiFace face = mesh->mFaces[i];
-				for(uint j = 0; j < FACE_INDICES_COUNT; j++)
+				fVec3 v;
+				for (size_t i = 0; i < xyz.size(); i++)
 				{
-					result.Indices.push_back(face.mIndices[j]);
+					std::from_chars(xyz[i].data(), xyz[i].data() + xyz[i].size(), v[i]);
 				}
+				indexedVertices.push_back(v);
 			}
-		}
-
-		//Materials
-		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-
-		std::vector<MatTex> diffuseMaps = LoadMaterialTexs(material, aiTextureType_DIFFUSE, TexUse::Diffuse);
-		result.Texs.insert(result.Texs.end(), diffuseMaps.begin(), diffuseMaps.end());
-		std::vector<MatTex> specularMaps = LoadMaterialTexs(material, aiTextureType_SPECULAR, TexUse::Specular);
-		result.Texs.insert(result.Texs.end(), specularMaps.begin(), specularMaps.end());
-		std::vector<MatTex> normalMaps = LoadMaterialTexs(material, aiTextureType_HEIGHT, TexUse::Normal);
-		result.Texs.insert(result.Texs.end(), normalMaps.begin(), normalMaps.end());
-		std::vector<MatTex> heightMaps = LoadMaterialTexs(material, aiTextureType_AMBIENT, TexUse::Height);
-		result.Texs.insert(result.Texs.end(), heightMaps.begin(), heightMaps.end());
-		/*aiMaterial material = scene->mMaterials[index];
-		aiString texture_file;
-		material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), texture_file);
-		if(auto texture = scene->GetEmbeddedTexture(texture_file.C_Str())) {
-			//returned pointer is not null, read texture from memory
-		}
-		else {
-			//regular file, check if it exists and read it
-		}* /
-
-		return result;
-	}
-
-	std::vector<MatTex> LoadMaterialTexs(aiMaterial *mat, aiTextureType type, TexUse texType)
-	{
-		std::vector<MatTex> textures;
-		for(uint i = 0; i < mat->GetTextureCount(type); i++)
-		{
-			aiString texName;
-			mat->GetTexture(type, i, &texName);
-
-			//If the texture has already been loaded, we don't have to load it again.
-			auto loadedTexture = texturesLoaded.find(texName.C_Str());
-			if(loadedTexture != texturesLoaded.end())
+			else if (currLine[1] == 'n')
 			{
-				textures.push_back(loadedTexture->second);
-			}
-			else
-			{	//The texture hasn't been loaded yet, so load it.
-				MatTex matTex;
-				matTex.Ref.Filter = Linear;
-				matTex.Ref.Wrap = Repeat;
-				matTex.Ref.GenerateMipmaps = true;
-				matTex.Ref.Setup(directory + "/" + texName.C_Str());
-
-				matTex.Type_ = texType;
-				textures.push_back(matTex);
-				texturesLoaded.insert({ texName.C_Str(), matTex });
+				fVec3 v;
+				for (size_t i = 0; i < xyz.size(); i++)
+				{
+					std::from_chars(xyz[i].data(), xyz[i].data() + xyz[i].size(), v[i]);
+				}
+				indexedNormals.push_back(v);
 			}
 		}
-		return textures;
+		else if (currLine[0] == 'f' && currLine[1] == ' ')
+		{
+			std::vector<std::string_view> mixedIndices;
+			Strings::Split1(' ', mixedIndices, currLine, currLine.find_first_of(' ') + 1);
+
+			std::vector<std::vector<std::string_view>> singleIndices;
+			singleIndices.resize(mixedIndices.size());
+			for (int i = 0; i < mixedIndices.size(); i++)
+			{
+				Strings::Split1('/', singleIndices[i], mixedIndices[i]);
+				int v, vn;
+				std::from_chars(singleIndices[i][0].data(),
+					singleIndices[i][0].data() + singleIndices[i][0].size(), v);
+				std::from_chars(singleIndices[i][2].data(),
+					singleIndices[i][2].data() + singleIndices[i][2].size(), vn);
+				vertIndices.push_back(v - 1);
+				normalIndices.push_back(vn - 1);
+			}
+		}
 	}
-};*/
+
+	// Since .obj adds different indices for each attribute, and OpenGL only accepts one pair of
+	// indices, we have to "expand" the indices into what they are pointing to.
+	vertices.reserve(vertIndices.size());
+	for (size_t i = 0; i < vertIndices.size(); i++)
+	{
+		vertices.push_back(indexedVertices[vertIndices[i]]);
+	}
+
+	normals.reserve(normalIndices.size());
+	for (size_t i = 0; i < normalIndices.size(); i++)
+	{
+		normals.push_back(indexedNormals[normalIndices[i]]);
+	}
+}

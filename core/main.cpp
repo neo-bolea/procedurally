@@ -1,134 +1,280 @@
 #define GLEW_STATIC
 #define SDL_MAIN_HANDLED
-#include "pch.h"
-#include "framework.h"
-#include "Core.h"
-
-#include "MathExt.h"
+#include "Array2D.h"
 #include "Camera.h"
-#include "Shader.h"
+#include "Core.h"
 #include "GL.h"
-#include "Systems/Inputs.h"
+#include "GL/glew.h"
+#include "MathExt.h"
 #include "MathGL.h"
 #include "Mesh.h"
+#include "SDL.h"
+#include "Shader.h"
 #include "StringUtils.h"
+#include "Systems/Inputs.h"
 #include "Time.h"
 #include "Watch.h"
-
-#include "GL/glew.h"
-#include "SDL.h"
+#include "framework.h"
+#include "pch.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 #include <charconv>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <random>
 
 #define __WINDOWS_WASAPI__
 #define __WINDOWS_DS__
 #define __WINDOWS_ASIO__
 
-#define WIDTH (1920)
-#define HEIGHT (1080)
+#define WIDTH (1920 / 2)
+#define HEIGHT (1080 / 2)
 
-void Load(const std::string &path,
-	std::vector<fVec3> &vertices, 
-	std::vector<fVec3> &normals)
+//ClampedArray2D<float> Caves(0, 0);
+//GL::Mesh CaveMesh;
+//uint totalVertCount;
+
+class StorageBuffer
 {
-	std::vector<fVec3> indexedVertices;
-	std::vector<fVec3> indexedNormals;
-	std::vector<int> vertIndices, normalIndices;
+	uint byteSize;
+	GL::DrawType usage;
 
-	std::ifstream file(path);
-	std::string currLine;
-	while (std::getline(file, currLine))
+public:
+	uint id;
+
+	StorageBuffer(uint binding, size_t dataByteSize, void* data, GL::DrawType usage = GL::StreamDraw)
 	{
-		size_t wordStart = 0, wordEnd = 1;
-		if (currLine[0] == 'v')
-		{
-			std::vector<std::string_view> xyz;
-			xyz.reserve(3);
-			Strings::Split1(' ', xyz, currLine, currLine.find_first_of(' ')+1);
+		byteSize = dataByteSize;
+		this->usage = usage;
 
-			if (currLine[1] == ' ')
-			{ 
-				fVec3 v;
-				for (size_t i = 0; i < xyz.size(); i++)
-				{ 
-					std::from_chars(xyz[i].data(), xyz[i].data() + xyz[i].size(), v[i]);
-				}
-				indexedVertices.push_back(v);
-			}
-			else if (currLine[1] == 'n')
-			{ 
-				fVec3 v;
-				for (size_t i = 0; i < xyz.size(); i++)
-				{
-					std::from_chars(xyz[i].data(), xyz[i].data() + xyz[i].size(), v[i]);
-				}
-				indexedNormals.push_back(v);
-			}
-		}
-		else if (currLine[0] == 'f' && currLine[1] == ' ')
-		{
-			std::vector<std::string_view> mixedIndices;
-			Strings::Split1(' ', mixedIndices, currLine, currLine.find_first_of(' ') + 1);
-
-			std::vector<std::vector<std::string_view>> singleIndices;
-			singleIndices.resize(mixedIndices.size());
-			for (int i = 0; i < mixedIndices.size(); i++)
-			{
-				Strings::Split1('/', singleIndices[i], mixedIndices[i]);
-				int v, vn;
-				std::from_chars(singleIndices[i][0].data(), singleIndices[i][0].data() + singleIndices[i][0].size(), v);
-				std::from_chars(singleIndices[i][2].data(), singleIndices[i][2].data() + singleIndices[i][2].size(), vn);
-				vertIndices.push_back(v - 1);
-				normalIndices.push_back(vn - 1);
-			}
-		}
+		glGenBuffers(1, &id);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, dataByteSize, data, usage);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, id);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	}
 
-	// Since .obj adds different indices for each attribute, and OpenGL only accepts one pair of
-	// indices, we have to "expand" the indices into what they are pointing to.
-	vertices.reserve(vertIndices.size());
-	for (size_t i = 0; i < vertIndices.size(); i++)
+	void SetData(void* data)
 	{
-		vertices.push_back(indexedVertices[vertIndices[i]]);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, byteSize, data);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	}
 
-	normals.reserve(normalIndices.size());
-	for (size_t i = 0; i < normalIndices.size(); i++)
+	void SetData(void* data, uint offset, uint dataByteSize)
 	{
-		normals.push_back(indexedNormals[normalIndices[i]]);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, dataByteSize, data);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	}
+
+	float* Map(uint offset = 0, uint dataByteSize = -1)
+	{
+		if (dataByteSize == -1) { dataByteSize = byteSize; }
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
+		return (float*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, byteSize, GL_MAP_READ_BIT);
+	}
+
+	void Unmap()
+	{
+		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	}
+};
+
+//struct NoisePass
+//{
+//	FastNoise::NoiseType Type = FastNoise::Perlin;
+//	FastNoise::Interp Interp = FastNoise::Linear;
+//	FastNoise::FractalType FracType = FastNoise::Billow;
+//	FastNoise::CellularDistanceFunction DistType = FastNoise::Euclidean;
+//	FastNoise::CellularReturnType CellType = FastNoise::Distance;
+//	float Strength = 1.f;
+//	float Freq = 0.01f;
+//	float PertAmp = 1.f;
+//
+//	int Octaves = 1;
+//	float Lacunarity = 2.f;
+//	float Gain = 0.5f;
+//};
+//
+//void GenerateCave(std::vector<NoisePass>& passes)
+//{
+//	Caves.ForAll([](int x, int y) { Caves(x, y) = 0.f; });
+//
+//	FastNoise fn(1337);
+//	Debug::Watch watch("Generate Noise");
+//	for (size_t i = 0; i < passes.size(); i++)
+//	{
+//		auto pass = passes[i];
+//
+//		fn.SetNoiseType(pass.Type);
+//		fn.SetInterp(pass.Interp);
+//		fn.SetFractalType(pass.FracType);
+//		fn.SetCellularDistanceFunction(pass.DistType);
+//		fn.SetCellularReturnType(pass.CellType);
+//		fn.SetFrequency(pass.Freq);
+//		fn.SetGradientPerturbAmp(pass.PertAmp);
+//
+//		fn.SetFractalOctaves(pass.Octaves);
+//		fn.SetFractalLacunarity(pass.Lacunarity);
+//		fn.SetFractalGain(pass.Gain);
+//
+//		for (float x = 0; x < Caves.Length[0]; x++)
+//		{
+//			for (float y = 0; y < Caves.Length[1]; y++)
+//			{
+//				float xx = x, yy = y;
+//				fn.GradientPerturb(xx, yy);
+//				float noise = fn.GetNoise(xx, yy);
+//				Caves(x, y) += noise * pass.Strength;
+//			}
+//		}
+//	}
+//	watch.StopTime();
+//}
+//
+//uint totalVertCount;
+//std::unique_ptr<StorageBuffer> CreateMesh(int pyrW, int pyrH)
+//{
+//	int texMaxSize = GL::TextureMaxSize();
+//	IntVector3 workSize;
+//
+//	//Create the PH texture.
+//	GL::Tex2D vertCountTex;
+//	vertCountTex.Setup(std::fminf(pyrW * 2, texMaxSize), std::fmaxf((pyrW * 2) / texMaxSize, 1), GL::R32UI);
+//	glBindImageTexture(1, vertCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, vertCountTex.Format);
+//
+//	//Generate the base level (based on the configuration of the squares).
+//	GL::ProgRef baseLvlProg = GL::Programs.Load({ { "HPBaseLevel.comp" } });
+//	baseLvlProg->Use();
+//	glGetProgramiv(baseLvlProg->id, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
+//	int dispatchX = Math::NextPowerOfTwo(Caves.Length[0] / workSize.x),
+//		dispatchY = Math::NextPowerOfTwo(Caves.Length[1] / workSize.y);
+//	glDispatchCompute(std::fmaxf(dispatchX, 1), std::fmaxf(dispatchY, 1), 1);
+//
+//	//Bind the buffer to get the total vertex count.
+//	StorageBuffer vertexCount(0, sizeof(uint), NULL);
+//
+//	//Reduce the PH levels until we reach the top level (which has a single node with the total vertex count).
+//	GL::ProgRef reducProg = GL::Programs.Load({ { "HPReduction.comp" } });
+//	glGetProgramiv(reducProg->id, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
+//	reducProg->Use();
+//
+//	uint uCellCount = Math::NextPowerOfTwo(pyrW) / 2;
+//	uint lowerOffset = 0, upperOffset = pyrW;
+//
+//	glGetProgramiv(reducProg->id, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
+//	for (uint i = 0; i < pyrH; i++)
+//	{
+//		//TODO: Get WorkSize
+//		reducProg->Set("uCellCount", uCellCount);
+//		reducProg->Set("uLowerXOffset", lowerOffset);
+//		reducProg->Set("uUpperXOffset", upperOffset);
+//		glDispatchCompute(std::fmaxf(uCellCount / workSize.x, 1), 1, 1);
+//		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+//
+//		Debug::Log("PASS: " + std::to_string(upperOffset) + ", " + std::to_string(uCellCount));
+//
+//		lowerOffset = upperOffset;
+//		upperOffset += uCellCount;
+//		uCellCount /= 2;
+//	}
+//
+//	void* bufferPointer = vertexCount.Map();
+//	memcpy(&totalVertCount, bufferPointer, sizeof(uint));
+//	Debug::Log("Final Vertex Count: " + std::to_string(int(totalVertCount)));
+//	vertexCount.Unmap();
+//
+//	std::unique_ptr<StorageBuffer> meshBuffer(new StorageBuffer(1, totalVertCount * sizeof(Vector2), NULL));
+//	//meshBuffer->SetData(&totalVertCount, 0, sizeof(uint));
+//
+//	//Create the mesh texture
+//	//GL::Tex2D caveTex;
+//	//int wrappedHeight = totalVertCount / texMaxSize + 1;
+//	//caveTex.Setup(std::fminf(totalVertCount, texMaxSize), wrappedHeight, GL::RG32F);
+//	//glBindImageTexture(2, caveTex.ID, 0, GL_FALSE, 0, GL_WRITE_ONLY, caveTex.Format);
+//
+//	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+//
+//	GL::ProgRef expandProg = GL::Programs.Load({ { "HPExpansion.comp" } });
+//	expandProg->Use();
+//	expandProg->Set("uMaxY", pyrH - 1);
+//	expandProg->Set("VertCount", totalVertCount);
+//	expandProg->Set("uTopXOffset", upperOffset);
+//	Debug::Log("TOP" + std::to_string(upperOffset));
+//	glGetProgramiv(expandProg->id, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
+//	int maxGroup;
+//	glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &maxGroup);
+//	glDispatchCompute(Math::NextPowerOfTwo(totalVertCount / workSize.x), 1, 1);
+//
+//	vertCountTex.Release();
+//	glDeleteBuffers(1, &vertexCount.id);
+//
+//	return std::move(meshBuffer);
+//}
+
+fVec2 GetBezier(fVec2 a, fVec2 b, fVec2 c, fVec2 d, float t)
+{
+	float mt = 1 - t;
+	float mt2 = mt * mt;
+	float mt3 = mt2 * mt;
+
+	float t2 = t * t;
+	float t3 = t2 * t;
+	return mt3 * a + 3 * t * mt2 * b + 3 * t2 * mt * c + t3 * d;
+}
+
+fVec2 GetSpline(const std::vector<fVec2>& points, float t)
+{
+	assert(t >= 0.f && t < 1.f, "t has to be inside the range [0, 1)."); 
+	t *= ((points.size() - 1) / 3);
+	int i = (int)t;
+	t -= i;
+	i *= 3;
+	
+	return GetBezier(points[i], points[i + 1], points[i + 2], points[i + 3], t);
+}
+
+void GenerateSpline(const std::vector<fVec2>& ctrlPoints, std::vector<fVec2> &result, int resolution)
+{
+	result.resize(resolution);
+	double inc = 1.0 / resolution;
+	double t = 0;
+	for (int i = 0; i < resolution; i++)
+	{
+		result[i] = GetSpline(ctrlPoints, t);
+		t += inc;
 	}
 }
 
+Math::fMat<10000, 10000> mat1(0.f);
 int main(int argc, char *argv[])
 {
 #pragma region SDL
-	//SDL
+	// SDL
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
-	//OpenGL 3.3
+	// OpenGL 3.3
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-	//Anti-Aliasing
+	// Anti-Aliasing
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
-	//Window
-	auto window = SDL_CreateWindow("TestTitle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-											 WIDTH, HEIGHT, 
-											 SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	// Window
+	auto window = SDL_CreateWindow("TestTitle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH,
+		HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
-	if(window == NULL)
+	if (window == NULL)
 	{
-		std::cout << "Failed to open an SDL window: " << std::endl 
-			<< SDL_GetError() << std::endl;
+		std::cout << "Failed to open an SDL window: " << std::endl << SDL_GetError() << std::endl;
 		SDL_Quit();
 		return EXIT_FAILURE;
 	}
@@ -138,62 +284,36 @@ int main(int argc, char *argv[])
 
 #pragma region GLEW
 	glewExperimental = GL_TRUE;
-	
-	if(glewInit() != GLEW_OK)
+
+	if (glewInit() != GLEW_OK)
 	{
 		std::cout << "Failed to initialize GLEW" << std::endl;
 		return EXIT_FAILURE;
 	}
-	
+
 	glViewport(0, 0, WIDTH, HEIGHT);
-	
-	//Culling
-	glCullFace(GL_NONE);
+
+	// Culling
+	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
 	glEnable(GL_CULL_FACE);
-	
-	//Blending
+
+	// Blending
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	
-	//Depth Test
+
+	// Depth Test
 	glEnable(GL_DEPTH_TEST);
-	
-	//Multi Sampling 
-	glEnable(GL_MULTISAMPLE);  
-	
-	//Errors
+
+	// Multi Sampling
+	glEnable(GL_MULTISAMPLE);
+
+	// Errors
 	glEnable(GL_DEBUG_OUTPUT);
 
-	//VSync
+	// VSync
 	SDL_GL_SetSwapInterval(0);
 #pragma endregion
-
-	GL::Tex2D tex;
-	tex.Filter = GL::TexFilter::Linear;
-	GL::ProgRef prog = GL::Programs.Load({ "basic.vert", "basic.frag" });
-	GL::ProgRef outline = GL::Programs.Load({ "outline.vert", "outline.frag" });
-
-	Watch watch(Watch::ms);
-	watch.Start();
-
-	std::vector<fVec3> vertices;
-	std::vector<fVec3> normals;
-	Load("nanosuit1/scene.obj", vertices, normals);
-
-	watch.Stop();
-	std::cout << "Finished: " << watch.sTime() << std::endl;
-
-	uint VAO, VBO[2];
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(2, VBO);
-
-	glBindVertexArray(VAO);
-
-	GLHelper::SetVBOData(VBO[0], vertices, 3, 0);
-	GLHelper::SetVBOData(VBO[1], normals, 3, 1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	Inputs inputs;
 	Time time;
@@ -201,62 +321,195 @@ int main(int argc, char *argv[])
 	bool quit = false;
 	SDL_Event event;
 
-	Camera cam(fVec3(0, 0, 0), fVec3::Forward);
-
 	Time::SetLimitFPS(true);
 
-	while(!quit)
+	std::vector<fVec2> ctrlPoints =
 	{
-		glClearColor(1.f, 1.f, 1.f, 1.f);
+		fVec2(-0.2f, -0.2f),
+		fVec2(-0.2f, 0.2f),
+		fVec2(0.2f, 0.2f),
+		fVec2(0.2f, -0.2f),
+	};
+
+	GL::ProgRef prog = GL::Programs.Load({ "Line.vert", "Line.frag" });
+	std::vector<fVec2> vertices;
+
+	Watch watch(Watch::ms);
+	watch.Start();
+	GenerateSpline(ctrlPoints, vertices, 1000);
+	watch.Stop();
+	std::cout << "TIME: " << watch.sTime();
+
+	uint LinesVAO;
+	{
+		uint VBO;
+		glGenVertexArrays(1, &LinesVAO);
+		glGenBuffers(1, &VBO);
+
+		glBindVertexArray(LinesVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		GLHelper::SetVBOData(vertices, 2, 0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	uint PointsVAO;
+	{
+		uint VBO;
+		glGenVertexArrays(1, &PointsVAO);
+		glGenBuffers(1, &VBO);
+
+		glBindVertexArray(PointsVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		GLHelper::SetVBOData(ctrlPoints, 2, 0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+	glPointSize(4);
+	glLineWidth(4);
+
+//	float isoThresh = -0.28f;
+//	Caves.Length[0] = 512;
+//	Caves.Length[1] = 512;
+//
+//#pragma region Noise
+//	NoisePass np;
+//	np.Type = FastNoise::SimplexFractal;
+//	np.FracType = FastNoise::Billow;
+//	np.Freq = 0.0024f;
+//	np.Octaves = 4;
+//	np.Lacunarity = 2.f;
+//	np.Gain = 0.5f;
+//
+//	np.Type = FastNoise::Perlin;
+//	np.FracType = FastNoise::FBM;
+//	np.Freq = 0.0024f;
+//	np.Octaves = 1;
+//	np.Lacunarity = 2.f;
+//	np.Gain = 0.5f;
+//
+//	std::vector<NoisePass> npList = { np };
+//#pragma endregion
+//
+//#pragma region Shader Setup
+//	GL::ProgRef texShader = GL::Programs.Load({ { "Texture.vert" }, { "Tex.frag"} });
+//	GL::ProgRef meshShader = GL::Programs.LoadDefaultProgram(GL::ProgramPool::eSolid3D);
+//	meshShader->Use();
+//	auto ident = Math::GL::Identity(4);
+//	meshShader->Set("uColor", Vector3(1.f));
+//
+//#pragma region Compute Cave
+//	GL::Tex2D noiseTex;
+//	noiseTex.Data = GL::Float;
+//	noiseTex.Wrap = GL::Clamp;
+//	noiseTex.Filter = GL::Nearest;
+//	noiseTex.Setup(Caves.Length[0], Caves.Length[1], GL::R16F);
+//	glBindImageTexture(0, noiseTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, noiseTex.Format);
+//
+//	SpriteRef caveSpr = rend.CreateSprite();
+//	caveSpr->SetTex(std::make_shared<GL::Tex2D>(noiseTex));
+//
+//	Compute::Noise cn;
+//	cn.Octaves.Set(4);
+//	cn.Frequency.Set(5.f);
+//	cn.Gain.Set(0.5f);
+//	cn.Lacunarity.Set(2.f);
+//
+//	Debug::Watch watch("Noise");
+//	cn.GetNoise(std::make_shared<GL::Tex2D>(noiseTex));
+//	cn.WaitFinish();
+//
+//	int pyrW = Math::NextPowerOfTwo(Caves.Length[0] * Caves.Length[1]);
+//	int pyrH = (int)log2(pyrW);
+//	Debug::Log(IntVector2(pyrW, pyrH).ToString());
+//	auto meshBuffer = CreateMesh(pyrW, pyrH);
+//	watch.StopTime();
+//#pragma endregion
+//
+//
+//	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+//	std::vector<Vector2> caveMesh;
+//	caveMesh.resize(totalVertCount);
+//	//void *mesh = meshBuffer->Map();
+//	//memcpy(&caveMesh[0], (Vector2 *)mesh, totalVertCount * sizeof(Vector2));
+//	//meshBuffer->Unmap();
+//
+//	uint VAO, VBO;
+//	glGenVertexArrays(1, &VAO);
+//	glGenBuffers(1, &VBO);
+//	glBindVertexArray(VAO);
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, meshBuffer->id);
+//	glVertexAttribPointer(0, 2, GL_FLOAT, false, sizeof(Vector2), 0);
+//	glEnableVertexAttribArray(0);
+//
+//	glBindBuffer(GL_ARRAY_BUFFER, 0);
+//
+//	uint ubo = GLHelper::CreateUBO(0, (16 * sizeof(float)) * 3);
+#pragma endregion
+
+	Array2D<float> mat2(10000, 10000);
+	Watch watch1(Watch::ms), watch2(Watch::ms);
+	std::mt19937 gen;
+	for (size_t i = 0; i < 10000; i++)
+	{
+		mat1[gen() % mat1.Rows][gen() % mat1.Cols] = gen();
+		mat2(gen() % mat2.Length[0], gen() % mat2.Length[1]) = gen();
+	}
+
+	size_t ix = 342;
+	for (size_t i = 0; i < mat1.Rows; i++)
+	{
+		for (size_t j = 0; j < mat1.Cols; j++)
+		{
+			watch1.Start();
+			ix += mat1[i][j];
+			watch1.Stop();
+			watch2.Start();
+			ix += mat2(i, j);
+			watch2.Stop();
+		}
+	}
+
+	std::cout << ix << std::endl;
+	std::cout << watch1.sTimeTotal() << " vs " << watch2.sTimeTotal() << std::endl;
+
+	while (!quit)
+	{
+		glClearColor(0.f, 0.f, 0.5f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		dVec2 move;
-		move.x = inputs.IsKeyDown(SDL_SCANCODE_D)
-			- inputs.IsKeyDown(SDL_SCANCODE_A);
-		move.y = inputs.IsKeyDown(SDL_SCANCODE_W)
-			- inputs.IsKeyDown(SDL_SCANCODE_S);
-		dVec2 mouseMove = inputs.GetMouseMove() * 0.25f;
-		cam.Update(1.f, false, move, mouseMove, inputs.GetMouseWheel().x, Time::DeltaTime());
-		
-		tex.Bind();
-		Math::Mat4 model = Math::GL::Scale(Math::Mat4(), fVec3(0.1f));
-		Math::Mat4 mvp = model;
-		mvp = Math::GL::LookAt(cam.Pos, cam.Pos + cam.Front) * mvp;
-		mvp = Math::GL::Perspective(Math::Deg2Rad * 60.f, ((float)WIDTH / HEIGHT), 0.001f, 1000.f) * mvp;
-
 		prog->Use();
-		prog->Set("uMVP", mvp);
+		prog->Set("uColor", fVec3(1, 0, 0));
+		glBindVertexArray(LinesVAO);
+		glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
+		prog->Set("uColor", fVec3(0, 1, 0));
+		glBindVertexArray(PointsVAO);
+		glDrawArrays(GL_POINTS, 0, ctrlPoints.size());
+		glBindVertexArray(0);
 
-		glCullFace(GL_BACK);
-		glDrawArrays(GL_TRIANGLES, 0, vertices.size() * 3);
+		Locator::Call("Update");
 
-		outline->Use();
-		outline->Set("uModel", model);
-		outline->Set("uMVP", mvp);
-		outline->Set("uEye", (fVec4)cam.Pos);
-
-		glDrawArrays(GL_TRIANGLES, 0, vertices.size() * 3);
-
-		Locator::Call("Update"); 
-
-		while(SDL_PollEvent(&event))
+		while (SDL_PollEvent(&event))
 		{
-			switch(event.type)
+			switch (event.type)
 			{
-			case SDL_QUIT:
-				quit = true;
-				break;
-		
+			case SDL_QUIT: quit = true; break;
+
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
-			{ Locator::Call("Inputs/SetKey", event); } break;
+			{ Locator::Call("Inputs/SetKey", event); }
+			break;
 			case SDL_MOUSEMOTION:
-			{ Locator::Call("Inputs/SetMousePos", event); } break;
+			{ Locator::Call("Inputs/SetMousePos", event); }
+			break;
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
-			{ Locator::Call("Inputs/SetMouseButton", event); } break;
+			{ Locator::Call("Inputs/SetMouseButton", event); }
+			break;
 			case SDL_MOUSEWHEEL:
-			{ Locator::Call("Inputs/SetMouseWheel", event); } break;
+			{ Locator::Call("Inputs/SetMouseWheel", event); }
+			break;
 			}
 		}
 
