@@ -366,14 +366,14 @@ void Inputs::Recorder::simulateNextInput()
 	
 	case SDL_MOUSEMOTION:
 	{ 
-		event.motion.x = std::any_cast<dVec2>(nextInput.Value).x;
-		event.motion.y = std::any_cast<dVec2>(nextInput.Value).y;
+		event.motion.x = static_cast<Sint32>(std::any_cast<dVec2>(nextInput.Value).x);
+		event.motion.y = static_cast<Sint32>(std::any_cast<dVec2>(nextInput.Value).y);
 	} break;
 	
 	case SDL_MOUSEWHEEL:
 	{
-		event.wheel.x = std::any_cast<dVec2>(nextInput.Value).x;
-		event.wheel.y = std::any_cast<dVec2>(nextInput.Value).y;
+		event.wheel.x = static_cast<Sint32>(std::any_cast<dVec2>(nextInput.Value).x);
+		event.wheel.y = static_cast<Sint32>(std::any_cast<dVec2>(nextInput.Value).y);
 	} break;
 	}
 	
