@@ -125,7 +125,7 @@ template<typename T, size_t N, size_t M, size_t O, size_t P>
 constexpr void operator *(const Mat<T, N, M>& lhs, const Mat<T, O, P>& rhs)
 {
 	static_assert(N != M, "Matrix multiplication is only defined for \
-									two matrices, where a.cols == b.rows");
+									two matrices with a.cols == b.rows");
 }
 
 template<typename T, size_t N, size_t M, size_t O>
