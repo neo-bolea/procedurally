@@ -48,8 +48,9 @@ link_libraries(${OPENGL_LIBRARIES})
 include_directories("${CMAKE_SOURCE_DIR}/external")
 
 # Configuration
-list(APPEND CMAKE_CXX_FLAGS "/std:c++17")
-add_definitions(-DWINDOWS)
+if(${PLATFORM} EQUAL x64 OR ${PLATFORM} EQUAL Win32)
+    add_definitions(-DWINDOWS)
+endif()
 
 if(MSVC) # VS
     add_definitions(/FI"${CMAKE_SOURCE_DIR}/common/include/Common.h")
