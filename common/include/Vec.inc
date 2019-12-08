@@ -48,7 +48,7 @@ constexpr Vec<T, N>::Vec(Args... args)
 {
 	static_assert(sizeof...(Args) == N, "Invalid number of arguments for vector constructor.");
 
-	std::array<T, sizeof...(Args)> elems = { args... };
+	std::array<T, sizeof...(Args)> elems = { static_cast<T>(args)... };
 	for(size_t i = 0; i < N; i++) { this->e[i] = elems[i]; }
 }
 
