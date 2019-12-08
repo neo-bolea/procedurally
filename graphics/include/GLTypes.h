@@ -172,3 +172,55 @@ namespace GL
 		AtomicUInt           = GL_UNSIGNED_INT_ATOMIC_COUNTER,
 	};
 }
+
+namespace GL
+{
+	class StorageBuffer
+	{
+		uint byteSize;
+		GL::DrawType usage;
+	
+	public:
+		uint id;
+	
+		StorageBuffer(uint binding, size_t dataByteSize, void* data, GL::DrawType usage = GL::StreamDraw)
+		{
+			byteSize = dataByteSize;
+			this->usage = usage;
+	
+			glGenBuffers(1, &id);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
+			glBufferData(GL_SHADER_STORAGE_BUFFER, dataByteSize, data, usage);
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, id);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	
+		void SetData(void* data)
+		{
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
+			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, byteSize, data);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	
+		void SetData(void* data, uint offset, uint dataByteSize)
+		{
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
+			glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, dataByteSize, data);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	
+		float* Map(uint offset = 0, uint dataByteSize = -1)
+		{
+			if (dataByteSize == -1) { dataByteSize = byteSize; }
+	
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
+			return (float*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, byteSize, GL_MAP_READ_BIT);
+		}
+	
+		void Unmap()
+		{
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	};
+}

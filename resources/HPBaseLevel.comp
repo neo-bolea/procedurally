@@ -1,0 +1,39 @@
+#version 430 core
+
+//See https://www.nvidia.com/content/gtc-2010/pdfs/gtc10_session2020_hp5mc_dyken_ziegler.pdf for more information.
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(r16f , binding = 0) uniform  image2D uValueField;
+layout(r32ui, binding = 1) uniform uimage2D uVertCountTex;												  
+
+uniform float uIsoThreshold;
+
+int ConfigToVertCount[16] = 
+{
+	0, /*0 */  3, /*1 */  3, /*2 */ 6, /*3 */
+	3, /*4 */ 12, /*5 */  6, /*6 */ 9, /*7 */
+	3, /*8 */  6, /*9 */ 12, /*10*/ 9, /*11*/
+	6, /*12*/  9, /*13*/  9, /*14*/ 6, /*15*/
+};														  
+
+void main() 
+{
+	ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 dims = imageSize(uValueField);
+	if (pix.x+1 >= dims.x || pix.y+1 >= dims.y) { return; }
+	
+	float bl = imageLoad(uValueField, pix + ivec2(vec2( 0,  0))).x;
+	float br = imageLoad(uValueField, pix + ivec2(vec2(+1,  0))).x;
+	float tr = imageLoad(uValueField, pix + ivec2(vec2(+1, +1))).x;
+	float tl = imageLoad(uValueField, pix + ivec2(vec2( 0, +1))).x;
+	
+	uint config = 0;
+	if(bl >= uIsoThreshold) { config |= 1; }
+	if(br >= uIsoThreshold) { config |= 2; }
+	if(tr >= uIsoThreshold) { config |= 4; }
+	if(tl >= uIsoThreshold) { config |= 8; }
+
+	ivec2 countDims = imageSize(uVertCountTex);
+	uint xCoord = pix.x + pix.y * dims.x;
+	ivec2 coords = ivec2(xCoord % countDims.x, xCoord / countDims.x);
+	imageStore(uVertCountTex, coords, ivec4(ConfigToVertCount[config]));
+}

@@ -1,0 +1,176 @@
+#version 430 core
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(r16f, binding = 0) uniform image2D uNoiseTex;
+layout(r8ui, binding = 1) uniform readonly uimage1D uPerm;
+layout(r8ui, binding = 2) uniform readonly uimage1D uPerm12;
+
+uniform uint  uOctaves = 4;
+uniform float uLacunarity = 2.f, 
+			  uGain = 0.5f,
+			  uFrequency = 5.f;
+
+uniform float uFractalBounding = 0.533333361f;
+
+
+//Type
+#define Value			 0
+#define ValueFractal	 1
+#define Perlin			 2
+#define PerlinFractal	 3
+#define Simplex			 4
+#define SimplexFractal	 5
+#define Cellular		 6
+#define WhiteNoise		 7
+#define Cubic			 8
+#define CubicFractal     9
+
+//Interpolation 
+#define Linear  10
+#define Hermite 11
+#define Quintic 12
+
+//FractalType
+#define FBM        13
+#define Billow	   14
+#define RigidMulti 15
+
+//CellularDistanceFunction 
+#define Euclidean	16
+#define Manhattan	17
+#define Natural		18
+
+//CellularReturnType
+#define CellValue	 19
+#define NoiseLookup	 20
+#define Distance	 21
+#define Distance2	 22
+#define Distance2Add 23
+#define Distance2Sub 24
+#define Distance2Mul 25
+#define Distance2Div 26
+
+const float GRAD_X[] =
+{
+	1, -1, 1, -1,
+	1, -1, 1, -1,
+	0, 0, 0, 0
+};
+const float GRAD_Y[] =
+{
+	1, 1, -1, -1,
+	0, 0, 0, 0,
+	1, -1, 1, -1
+};
+const float GRAD_Z[] =
+{
+	0, 0, 0, 0,
+	1, 1, -1, -1,
+	1, 1, -1, -1
+};
+
+uint m_perm(uint i) { return imageLoad(uPerm, int(i)).x; }
+uint m_perm12(uint i) { return imageLoad(uPerm12, int(i)).x; }
+
+int FastFloor(float f) { return (f >= 0 ? int(f) : int(f)- 1); }
+
+uint Index2D_12(uint offset, int x, int y)
+{ return m_perm12((x & 0xff) + m_perm((y & 0xff) + offset)); }
+
+uint Index3D_12(uint offset, int x, int y, int z) 
+{ return m_perm12((x & 0xff) + m_perm((y & 0xff) + m_perm((z & 0xff) + offset))); }
+
+float GradCoord3D(uint offset, int x, int y, int z, float xd, float yd, float zd)
+{
+	uint lutPos = Index3D_12(offset, x, y, z);
+	return xd * GRAD_X[lutPos] + yd * GRAD_Y[lutPos] + zd * GRAD_Z[lutPos];
+}
+
+float GradCoord2D(uint offset, int x, int y, float xd, float yd)
+{
+	uint lutPos = Index2D_12(offset, x, y);
+	return xd * GRAD_X[lutPos] + yd * GRAD_Y[lutPos];
+}
+
+const float SQRT3 = 1.7320508075688772935274463415059f;
+const float F2 = 0.5f * (SQRT3 - 1.f);
+const float G2 = (3.f - SQRT3) / 6.f;
+
+float SingleSimplex(uint offset, float x, float y)
+{
+	float t = (x + y) * F2;
+	int i = FastFloor(x + t);
+	int j = FastFloor(y + t);
+
+	t = (i + j) * G2;
+	float X0 = i - t;
+	float Y0 = j - t;
+
+	float x0 = x - X0;
+	float y0 = y - Y0;
+
+	int i1, j1;
+	if(x0 > y0) { i1 = 1; j1 = 0; }
+	else { i1 = 0; j1 = 1; }
+
+	float x1 = x0 - float(i1) + G2;
+	float y1 = y0 - float(j1) + G2;
+	float x2 = x0 - 1 + 2 * G2;
+	float y2 = y0 - 1 + 2 * G2;
+
+	float n0, n1, n2;
+
+	t = float(0.5) - x0 * x0 - y0 * y0;
+	if(t < 0) n0 = 0;
+	else
+	{
+		t *= t;
+		n0 = t * t * GradCoord2D(offset, i, j, x0, y0);
+	}
+
+	t = float(0.5) - x1 * x1 - y1 * y1;
+	if(t < 0) n1 = 0;
+	else
+	{
+		t *= t;
+		n1 = t * t*GradCoord2D(offset, i + i1, j + j1, x1, y1);
+	}
+
+	t = float(0.5) - x2 * x2 - y2 * y2;
+	if(t < 0) n2 = 0;
+	else
+	{
+		t *= t;
+		n2 = t * t*GradCoord2D(offset, i + 1, j + 1, x2, y2);
+	}
+
+	return 70 * (n0 + n1 + n2);
+}
+
+float SingleSimplexFractalFBM(float x, float y)
+{
+	float sum = SingleSimplex(m_perm(0), x, y);
+	float amp = 1;
+	int i = 0;
+
+	while(++i < uOctaves)
+	{
+		x *= uLacunarity;
+		y *= uLacunarity;
+
+		amp *= uGain;
+		sum += SingleSimplex(m_perm(i), x, y) * amp;
+	}
+
+	return sum * uFractalBounding;
+}
+
+void main() 
+{
+  ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+  ivec2 dims = imageSize(uNoiseTex);
+  if(coords.x >= dims.x || coords.y >= dims.y) { return; }
+
+  vec2 uv = vec2(coords) / dims;
+
+  imageStore(uNoiseTex, coords, vec4(SingleSimplexFractalFBM(uv.x * uFrequency, uv.y * uFrequency)));
+}

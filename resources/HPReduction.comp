@@ -1,0 +1,39 @@
+#version 430 core
+
+//See https://www.nvidia.com/content/gtc-2010/pdfs/gtc10_session2020_hp5mc_dyken_ziegler.pdf for more information.
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(r32ui, binding = 1) uniform uimage2D uVertCountTex;												  
+
+uniform uint uCellCount, 
+			 uLowerXOffset, uUpperXOffset;
+
+layout(std430, binding = 0) buffer CountBuffer
+{ uint VertCount; };
+
+uint GetVertCount(uint xCoord, uint texWidth)
+{
+	ivec2 coords = ivec2(xCoord % texWidth, xCoord / texWidth);
+	return uint(imageLoad(uVertCountTex, coords).x);
+}
+
+void SetVertCount(uint xCoord, uint texWidth, uint value)
+{
+	ivec2 coords = ivec2(xCoord % texWidth, xCoord / texWidth);
+	imageStore(uVertCountTex, coords, ivec4(value));
+}
+
+void main() 
+{
+	uint coords = gl_GlobalInvocationID.x;
+	ivec2 dims = imageSize(uVertCountTex);
+	if(coords >= uCellCount) { return; }
+
+	uint xLowCoord = uLowerXOffset + coords * 2;
+	uint newVal = GetVertCount(xLowCoord, dims.x) + GetVertCount(xLowCoord + 1, dims.x);
+	
+	uint xUpCoord = uUpperXOffset + coords;
+	SetVertCount(xUpCoord, dims.x, newVal);
+
+	//Write the total vertex count
+	if(uCellCount == 1) { VertCount = newVal; }
+}
