@@ -4,6 +4,8 @@
 #include "Camera.h"
 #include "Core.h"
 #include "GL.h"
+#include "GLTypes.h"
+#include "GPUGrid.h"
 #include "Grid.h"
 #include "MathExt.h"
 #include "MathGL.h"
@@ -18,6 +20,7 @@
 #include "pch.h"
 
 #define STB_IMAGE_IMPLEMENTATION
+#include "FastNoise.h"
 #include "GL/glew.h"
 #include "stb_image.h"
 
@@ -30,12 +33,13 @@
 #define __WINDOWS_DS__
 #define __WINDOWS_ASIO__
 
-#define WIDTH (1920 / 2)
-#define HEIGHT (1080 / 2)
+#define WIDTH (1920)
+#define HEIGHT (1080)
+#define ASPECT ((float)WIDTH / HEIGHT)
 
-Grid<float, 2, BorderPolicy::Clamp> Caves(0, 0);
+Grid<float, 2, BorderPolicy::Clamp> Caves(16, 16);
 GL::Mesh CaveMesh;
-uint totalVertCount;
+uint totalVertCount, totalEdgeCount;
 
 struct NoisePass
 {
@@ -55,10 +59,11 @@ struct NoisePass
 
 void GenerateCave(std::vector<NoisePass>& passes)
 {
-	Caves.ForAll([](int x, int y) { Caves(x, y) = 0.f; });
+	Caves.ForAll([](const std::array<size_t, 2> &coords) { Caves(coords) = 0.f; });
 
 	FastNoise fn(1337);
-	Debug::Watch watch("Generate Noise");
+	Watch watch(Watch::ms);
+	watch.Start();
 	for (size_t i = 0; i < passes.size(); i++)
 	{
 		auto pass = passes[i];
@@ -75,9 +80,9 @@ void GenerateCave(std::vector<NoisePass>& passes)
 		fn.SetFractalLacunarity(pass.Lacunarity);
 		fn.SetFractalGain(pass.Gain);
 
-		for (float x = 0; x < Caves.Length[0]; x++)
+		for (float x = 0; x < Caves.Size[0]; x++)
 		{
-			for (float y = 0; y < Caves.Length[1]; y++)
+			for (float y = 0; y < Caves.Size[1]; y++)
 			{
 				float xx = x, yy = y;
 				fn.GradientPerturb(xx, yy);
@@ -86,62 +91,98 @@ void GenerateCave(std::vector<NoisePass>& passes)
 			}
 		}
 	}
-	watch.StopTime();
+	watch.Stop();
+	std::cout << "Generate Noise: " << watch.sTime() << std::endl;
 }
 
-uint totalVertCount;
-std::unique_ptr<StorageBuffer> CreateMesh(int pyrW, int pyrH)
+void CreateMesh(int pyrW, int pyrH, std::shared_ptr<GL::StorageBuffer> &vertBuffer, std::shared_ptr<GL::StorageBuffer> &edgeBuffer)
 {
 	int texMaxSize = GL::TextureMaxSize();
-	IntVector3 workSize;
 
 	//Create the PH texture.
-	GL::Tex2D vertCountTex;
+	GL::Tex2D vertCountTex, edgeCountTex;
 	vertCountTex.Setup(std::fminf(pyrW * 2, texMaxSize), std::fmaxf((pyrW * 2) / texMaxSize, 1), GL::R32UI);
 	glBindImageTexture(1, vertCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, vertCountTex.Format);
+
+	edgeCountTex.Setup(std::fminf(pyrW * 2, texMaxSize), std::fmaxf((pyrW * 2) / texMaxSize, 1), GL::R32UI);
+	glBindImageTexture(2, edgeCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, edgeCountTex.Format);
 
 	//Generate the base level (based on the configuration of the squares).
 	GL::ProgRef baseLvlProg = GL::Programs.Load({ { "HPBaseLevel.comp" } });
 	baseLvlProg->Use();
-	glGetProgramiv(baseLvlProg->id, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
-	int dispatchX = Math::NextPowerOfTwo(Caves.Length[0] / workSize.x),
-		dispatchY = Math::NextPowerOfTwo(Caves.Length[1] / workSize.y);
-	glDispatchCompute(std::fmaxf(dispatchX, 1), std::fmaxf(dispatchY, 1), 1);
+	baseLvlProg->Dispatch(Caves.Size[0], Caves.Size[1], 1);
 
 	//Bind the buffer to get the total vertex count.
-	StorageBuffer vertexCount(0, sizeof(uint), NULL);
+	GL::StorageBuffer vertexCount(0, sizeof(uint), NULL);
 
-	//Reduce the PH levels until we reach the top level (which has a single node with the total vertex count).
-	GL::ProgRef reducProg = GL::Programs.Load({ { "HPReduction.comp" } });
-	glGetProgramiv(reducProg->id, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
-	reducProg->Use();
-
-	uint uCellCount = Math::NextPowerOfTwo(pyrW) / 2;
 	uint lowerOffset = 0, upperOffset = pyrW;
-
-	glGetProgramiv(reducProg->id, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
-	for (uint i = 0; i < pyrH; i++)
+	GL::ProgRef reducProg = GL::Programs.Load({ { "HPReduction.comp" } });
+	//Reduce the PH levels until we reach the top level (which has a single node with the total vertex count).
 	{
-		//TODO: Get WorkSize
-		reducProg->Set("uCellCount", uCellCount);
-		reducProg->Set("uLowerXOffset", lowerOffset);
-		reducProg->Set("uUpperXOffset", upperOffset);
-		glDispatchCompute(std::fmaxf(uCellCount / workSize.x, 1), 1, 1);
-		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+		glBindImageTexture(1, vertCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, vertCountTex.Format);
+		reducProg->Use();
 
-		Debug::Log("PASS: " + std::to_string(upperOffset) + ", " + std::to_string(uCellCount));
+		uint uCellCount = Math::NextPowerOfTwo(pyrW) / 2;
+		lowerOffset = 0, upperOffset = pyrW;
 
-		lowerOffset = upperOffset;
-		upperOffset += uCellCount;
-		uCellCount /= 2;
+		for (uint i = 0; i < pyrH; i++)
+		{
+			reducProg->Set("uCellCount", uCellCount);
+			reducProg->Set("uLowerXOffset", lowerOffset);
+			reducProg->Set("uUpperXOffset", upperOffset);
+			reducProg->Dispatch(uCellCount, 1, 1);
+			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+
+			lowerOffset = upperOffset;
+			upperOffset += uCellCount;
+			uCellCount /= 2;
+		}
+
+		Watch watch(Watch::ms);
+		watch.Start();
+
+		void* bufferPointer = vertexCount.Map();
+		watch.Stop();
+		memcpy(&totalVertCount, bufferPointer, sizeof(uint));
+		Debug::Log("Final Vertex Count: " + std::to_string(int(totalVertCount)));
+		vertexCount.Unmap();
+		std::cout << "TOTALVERTCOUNT FETCH: " << watch.sTime() << std::endl;
 	}
 
-	void* bufferPointer = vertexCount.Map();
-	memcpy(&totalVertCount, bufferPointer, sizeof(uint));
-	Debug::Log("Final Vertex Count: " + std::to_string(int(totalVertCount)));
-	vertexCount.Unmap();
+	GL::StorageBuffer edgeCount(0, sizeof(uint), NULL);
+	//Reduce the PH levels until we reach the top level (which has a single node with the total vertex count).
+	{
+		glBindImageTexture(1, edgeCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, edgeCountTex.Format);
+		reducProg->Use();
 
-	std::unique_ptr<StorageBuffer> meshBuffer(new StorageBuffer(1, totalVertCount * sizeof(Vector2), NULL));
+		uint uCellCount = Math::NextPowerOfTwo(pyrW) / 2;
+		lowerOffset = 0, upperOffset = pyrW;
+
+		for (uint i = 0; i < pyrH; i++)
+		{
+			reducProg->Set("uCellCount", uCellCount);
+			reducProg->Set("uLowerXOffset", lowerOffset);
+			reducProg->Set("uUpperXOffset", upperOffset);
+			reducProg->Dispatch(uCellCount, 1, 1);
+			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+
+			lowerOffset = upperOffset;
+			upperOffset += uCellCount;
+			uCellCount /= 2;
+		}
+
+		Watch watch(Watch::ms);
+		watch.Start();
+
+		void* bufferPointer = edgeCount.Map();
+		watch.Stop();
+		memcpy(&totalEdgeCount, bufferPointer, sizeof(uint));
+		Debug::Log("Final Edge Count: " + std::to_string(int(totalEdgeCount)));
+		vertexCount.Unmap();
+		std::cout << "TOTALEDGECOUNT FETCH: " << watch.sTime() << std::endl;
+	}
+	glBindImageTexture(1, vertCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, vertCountTex.Format);
+
 	//meshBuffer->SetData(&totalVertCount, 0, sizeof(uint));
 
 	//Create the mesh texture
@@ -150,23 +191,30 @@ std::unique_ptr<StorageBuffer> CreateMesh(int pyrW, int pyrH)
 	//caveTex.Setup(std::fminf(totalVertCount, texMaxSize), wrappedHeight, GL::RG32F);
 	//glBindImageTexture(2, caveTex.ID, 0, GL_FALSE, 0, GL_WRITE_ONLY, caveTex.Format);
 
+	vertBuffer = std::shared_ptr<GL::StorageBuffer>(new GL::StorageBuffer(1, totalVertCount * sizeof(Vector2), NULL));
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-	GL::ProgRef expandProg = GL::Programs.Load({ { "HPExpansion.comp" } });
-	expandProg->Use();
-	expandProg->Set("uMaxY", pyrH - 1);
-	expandProg->Set("VertCount", totalVertCount);
-	expandProg->Set("uTopXOffset", upperOffset);
-	Debug::Log("TOP" + std::to_string(upperOffset));
-	glGetProgramiv(expandProg->id, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
-	int maxGroup;
-	glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &maxGroup);
-	glDispatchCompute(Math::NextPowerOfTwo(totalVertCount / workSize.x), 1, 1);
+	{
+		GL::ProgRef expandVertProg = GL::Programs.Load({ { "HPExpansionVert.comp" } });
+		expandVertProg->Use();
+		expandVertProg->Set("uMaxY", pyrH - 1);
+		expandVertProg->Set("VertCount", totalVertCount);
+		expandVertProg->Set("uTopXOffset", upperOffset);
+		expandVertProg->Dispatch(totalVertCount, 1, 1);
+	}
 
-	vertCountTex.Release();
+	glBindImageTexture(1, edgeCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, edgeCountTex.Format);
+	edgeBuffer = std::shared_ptr<GL::StorageBuffer>(new GL::StorageBuffer(1, totalEdgeCount * sizeof(Vector2), NULL));
+	{
+		GL::ProgRef expandEdgeProg = GL::Programs.Load({ { "HPExpansionEdge.comp" } });
+		expandEdgeProg->Use();
+		expandEdgeProg->Set("uMaxY", pyrH - 1);
+		expandEdgeProg->Set("VertCount", totalEdgeCount);
+		expandEdgeProg->Set("uTopXOffset", upperOffset);
+		expandEdgeProg->Dispatch(totalEdgeCount, 1, 1);
+	}
+	 
 	glDeleteBuffers(1, &vertexCount.id);
-
-	return std::move(meshBuffer);
 }
 
 int main(int argc, char *argv[])
@@ -240,165 +288,150 @@ int main(int argc, char *argv[])
 
 	Time::SetLimitFPS(true);
 
-	std::vector<fVec2> ctrlPoints =
-	{
-		fVec2(-0.2f, -0.2f),
-		fVec2(-0.2f, 0.2f),
-		fVec2(0.2f, 0.2f),
-		fVec2(0.2f, -0.2f),
-	};
 
-	GL::ProgRef prog = GL::Programs.Load({ "Line.vert", "Line.frag" });
-	std::vector<fVec2> vertices;
+	float isoThresh = -0.f;
 
-	Watch watch(Watch::ms);
-	watch.Start();
-	Bezier::GenerateSpline(ctrlPoints, vertices, 1000);
-	watch.Stop();
-	std::cout << "TIME: " << watch.sTime();
+#pragma region Noise
+	NoisePass np;
+	np.Type = FastNoise::SimplexFractal;
+	np.FracType = FastNoise::Billow;
+	np.Freq = 0.0024f;
+	np.Octaves = 4;
+	np.Lacunarity = 2.f;
+	np.Gain = 0.5f;
 
-	uint LinesVAO;
-	{
-		uint VBO;
-		glGenVertexArrays(1, &LinesVAO);
-		glGenBuffers(1, &VBO);
+	np.Type = FastNoise::Perlin;
+	np.FracType = FastNoise::FBM;
+	np.Freq = 0.0024f;
+	np.Octaves = 1;
+	np.Lacunarity = 2.f;
+	np.Gain = 0.5f;
 
-		glBindVertexArray(LinesVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		GLHelper::SetVBOData(vertices, 2, 0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-	}
-
-	uint PointsVAO;
-	{
-		uint VBO;
-		glGenVertexArrays(1, &PointsVAO);
-		glGenBuffers(1, &VBO);
-
-		glBindVertexArray(PointsVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		GLHelper::SetVBOData(ctrlPoints, 2, 0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-	}
-	glPointSize(4);
-	glLineWidth(4);
-
-//	float isoThresh = -0.28f;
-//	Caves.Length[0] = 512;
-//	Caves.Length[1] = 512;
-//
-//#pragma region Noise
-//	NoisePass np;
-//	np.Type = FastNoise::SimplexFractal;
-//	np.FracType = FastNoise::Billow;
-//	np.Freq = 0.0024f;
-//	np.Octaves = 4;
-//	np.Lacunarity = 2.f;
-//	np.Gain = 0.5f;
-//
-//	np.Type = FastNoise::Perlin;
-//	np.FracType = FastNoise::FBM;
-//	np.Freq = 0.0024f;
-//	np.Octaves = 1;
-//	np.Lacunarity = 2.f;
-//	np.Gain = 0.5f;
-//
-//	std::vector<NoisePass> npList = { np };
-//#pragma endregion
-//
-//#pragma region Shader Setup
-//	GL::ProgRef texShader = GL::Programs.Load({ { "Texture.vert" }, { "Tex.frag"} });
-//	GL::ProgRef meshShader = GL::Programs.LoadDefaultProgram(GL::ProgramPool::eSolid3D);
-//	meshShader->Use();
-//	auto ident = Math::GL::Identity(4);
-//	meshShader->Set("uColor", Vector3(1.f));
-//
-//#pragma region Compute Cave
-//	GL::Tex2D noiseTex;
-//	noiseTex.Data = GL::Float;
-//	noiseTex.Wrap = GL::Clamp;
-//	noiseTex.Filter = GL::Nearest;
-//	noiseTex.Setup(Caves.Length[0], Caves.Length[1], GL::R16F);
-//	glBindImageTexture(0, noiseTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, noiseTex.Format);
-//
-//	SpriteRef caveSpr = rend.CreateSprite();
-//	caveSpr->SetTex(std::make_shared<GL::Tex2D>(noiseTex));
-//
-//	Compute::Noise cn;
-//	cn.Octaves.Set(4);
-//	cn.Frequency.Set(5.f);
-//	cn.Gain.Set(0.5f);
-//	cn.Lacunarity.Set(2.f);
-//
-//	Debug::Watch watch("Noise");
-//	cn.GetNoise(std::make_shared<GL::Tex2D>(noiseTex));
-//	cn.WaitFinish();
-//
-//	int pyrW = Math::NextPowerOfTwo(Caves.Length[0] * Caves.Length[1]);
-//	int pyrH = (int)log2(pyrW);
-//	Debug::Log(IntVector2(pyrW, pyrH).ToString());
-//	auto meshBuffer = CreateMesh(pyrW, pyrH);
-//	watch.StopTime();
-//#pragma endregion
-//
-//
-//	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-//	std::vector<Vector2> caveMesh;
-//	caveMesh.resize(totalVertCount);
-//	//void *mesh = meshBuffer->Map();
-//	//memcpy(&caveMesh[0], (Vector2 *)mesh, totalVertCount * sizeof(Vector2));
-//	//meshBuffer->Unmap();
-//
-//	uint VAO, VBO;
-//	glGenVertexArrays(1, &VAO);
-//	glGenBuffers(1, &VBO);
-//	glBindVertexArray(VAO);
-//
-//	glBindBuffer(GL_ARRAY_BUFFER, meshBuffer->id);
-//	glVertexAttribPointer(0, 2, GL_FLOAT, false, sizeof(Vector2), 0);
-//	glEnableVertexAttribArray(0);
-//
-//	glBindBuffer(GL_ARRAY_BUFFER, 0);
-//
-//	uint ubo = GLHelper::CreateUBO(0, (16 * sizeof(float)) * 3);
+	std::vector<NoisePass> npList = { np };
 #pragma endregion
 
-	Grid<float> mat2(10000, 10000);
-	for (size_t i = 0; i < mat2.Size[0]; i++)
+#pragma region Shader Setup
+	GL::ProgRef texShader = GL::Programs.Load({ { "Texture.vert" }, { "Tex.frag"} });
+	GL::ProgRef meshShader = GL::Programs.Load({ { "Min3D.vert" }, { "Solid.frag"} });
+	meshShader->Use();
+	Math::Mat4 ident;
+	meshShader->Set("uColor", Vector3(1.f));
+
+#pragma region Compute Cave
+	GL::Tex2D noiseTex;
+	noiseTex.Data = GL::Float;
+	noiseTex.Wrap = GL::Clamp;
+	noiseTex.Filter = GL::Nearest;
+	noiseTex.Setup(Caves.Size[0], Caves.Size[1], GL::R16F);
+	glBindImageTexture(0, noiseTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, noiseTex.Format);
+
+	//SpriteRef caveSpr = rend.CreateSprite();
+	//caveSpr->SetTex(std::make_shared<GL::Tex2D>(noiseTex));
+
+	Compute::Noise cn;
+	cn.SetOctaves(4);
+	cn.SetFrequency(5.f);
+	cn.SetGain(0.5f);
+	cn.SetLacunarity(2.f);
+
+	Watch caveWatch(Watch::ms);
+	caveWatch.Start();
+	cn.GetNoise(noiseTex);
+	cn.WaitFinish();
+
+	int pyrW = Math::NextPowerOfTwo(Caves.Size[0] * Caves.Size[1]);
+	int pyrH = (int)log2(pyrW);
+	//Debug::Log(IntVector2(pyrW, pyrH).ToString());
+	std::shared_ptr<GL::StorageBuffer> vertBuffer, edgeBuffer;
+	CreateMesh(pyrW, pyrH, vertBuffer, edgeBuffer);
+	caveWatch.Stop();
+	std::cout << "Caves: " << caveWatch.sTime() << std::endl;
+#pragma endregion
+
+
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	std::vector<Vector2> caveMesh, linesMesh;
+
+
+	linesMesh.resize(totalEdgeCount);
+	void* lines = edgeBuffer->Map();
+	memcpy(&linesMesh[0], (Vector2*)lines, totalEdgeCount * sizeof(Vector2));
+	edgeBuffer->Unmap();
+
+	caveMesh.resize(totalVertCount);
+	void *mesh = vertBuffer->Map();
+	memcpy(&caveMesh[0], (Vector2 *)mesh, totalVertCount * sizeof(Vector2));
+	vertBuffer->Unmap();
+
+
+	uint VAO, MeshLinesVAO;
+	glGenVertexArrays(1, &VAO);
+	glGenVertexArrays(1, &MeshLinesVAO);
 	{
-		for (size_t j = 0; j < mat2.Size[1]; j++)
-		{
-			mat2[i][j] = i * (mat2.Size[0] - 1) + j;
-		}
+		uint VBO;
+		glGenBuffers(1, &VBO);
+		glBindVertexArray(VAO);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vertBuffer->id);
+		GLHelper::SetVBOData(caveMesh, 2, 0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	int xi = 0;
-	Watch watch1(Watch::ms);
-	watch1.Start();
-	mat2.ForAll([&xi, &mat2](const std::array<size_t, 2>& arr)
-		{
-			xi += mat2[arr[0]][arr[1]];
-		});
-	watch1.Stop();
-	std::cout << xi << std::endl;
-	std::cout << watch1.sTime() << std::endl;
+	{
+		uint VBO;
+		glGenBuffers(1, &VBO);
+		glBindVertexArray(MeshLinesVAO);
 
+		glBindBuffer(GL_ARRAY_BUFFER, edgeBuffer->id);
+		GLHelper::SetVBOData(linesMesh, 2, 0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	uint ubo = GLHelper::CreateUBO(0, (16 * sizeof(float)) * 3);
+#pragma endregion
+
+	glLineWidth(3.f);
+
+	Camera cam(Vector3(0.f, 0.f, 10.f), Vector3::Forward);
 
 	while (!quit)
 	{
 		glClearColor(0.f, 0.f, 0.5f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		prog->Use();
-		prog->Set("uColor", fVec3(1, 0, 0));
-		glBindVertexArray(LinesVAO);
-		glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
-		prog->Set("uColor", fVec3(0, 1, 0));
-		glBindVertexArray(PointsVAO);
-		glDrawArrays(GL_POINTS, 0, ctrlPoints.size());
-		glBindVertexArray(0);
+		dVec2 move;
+		move.x = inputs.IsKeyDown(SDL_SCANCODE_E) - inputs.IsKeyDown(SDL_SCANCODE_Q);
+		move.y = inputs.IsKeyDown(SDL_SCANCODE_D) - inputs.IsKeyDown(SDL_SCANCODE_A);
+		float scroll = inputs.IsKeyDown(SDL_SCANCODE_S) - inputs.IsKeyDown(SDL_SCANCODE_W);
+		cam.Update(10.f, true, move, dVec2(), scroll, Time::DeltaTime());
+		Math::fMat4 view = Math::GL::LookAt(cam.Pos, cam.Pos - Vector3::Forward, Vector3::Up), 
+			proj = Math::GL::Perspective(Math::Deg2Rad * 70.f, ASPECT, 0.01f, 1000.f);
+		Math::fMat4 vp = proj * view;
+		//caveShader->Use();
+		glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+		GLHelper::BindUBOData(0, 16 * sizeof(float), &view.v[0]);
+		GLHelper::BindUBOData(16 * sizeof(float), 16 * sizeof(float), &proj.v[0]);
+		GLHelper::BindUBOData(16 * sizeof(float) * 2, 16 * sizeof(float), &vp.v[0]);
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+
+		meshShader->Use();
+		Math::Mat4 mat;
+		//mat = Math::GL::Translate(mat, Vector3(tf.Pos.x / ASPECT, tf.Pos.y, 0.f));
+		mat = Math::GL::Scale(mat, Vector3(0.1f));
+		//mat = Math::GL::Rotate(mat, Math::Deg2Rad * tf.Rot, Vector3::Forward);
+		//mat = Math::GL::Scale(mat, /*Vector3(tex->Ratio(), 1.f) */ Vector3(tf.Scale) / (8.f * ASPECT));
+		meshShader->Set("uModel", mat);
+
+		meshShader->Set("uColor", fVec4(1.f, 0.f, 0.f, 1.f));
+		glBindVertexArray(MeshLinesVAO);
+		glDrawArrays(GL_LINE_STRIP, 0, totalEdgeCount);
+
+		meshShader->Set("uColor", fVec4(1.f));
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, totalVertCount);
 
 		Locator::Call("Update");
 

@@ -1,5 +1,10 @@
 #pragma once
 
+#include "GL.h"
+#include "MathExt.h"
+#include "Vec.h"
+
+#include <GL/glew.h>
 #include <random>
 
 namespace Compute
@@ -17,13 +22,13 @@ namespace Compute
 		char m_perm[512], m_perm12[512];
 		GL::Tex1D permTex, perm12Tex;
 		GL::ProgRef program;
-		IntVector3 workSize;
+		iVec3 workSize;
 
 	public:
 		Noise(uint seed = 42069)
 		{
 			program = GL::Programs.Load({ { "Noise.comp" } });
-			glGetProgramiv(program->id, GL_COMPUTE_WORK_GROUP_SIZE, workSize.e);
+			glGetProgramiv(program->ID, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
 
 			SetOctaves(octaves);
 			SetLacunarity(lacunarity);
@@ -67,14 +72,14 @@ namespace Compute
 		}
 
 	public:
-		void GetNoise(const GL::Tex2DRef tex)
+		void GetNoise(const GL::Tex2D &tex)
 		{
 			glActiveTexture(GL::Texture0);
-			tex->Bind();
+			tex.Bind();
 			bindSeedTexture();
 
 			program->Use();
-			glDispatchCompute(Math::NextPowerOfTwo(tex->Size.x / workSize.x), Math::NextPowerOfTwo(tex->Size.y / workSize.y), 1);
+			program->Dispatch(tex.Size.x, tex.Size.y, 1);
 		}
 
 		void WaitFinish()
@@ -83,12 +88,12 @@ namespace Compute
 	private:
 		void calculateFractialBounding()
 		{
-			float amp = _Gain;
+			float amp = gain;
 			float ampFractal = 1.0f;
-			for(int i = 1; i < _Octaves; i++)
+			for(int i = 1; i < octaves; i++)
 			{
 				ampFractal += amp;
-				amp *= _Gain;
+				amp *= gain;
 			}
 			setFractalBounding(1.0f / ampFractal);
 		}
@@ -103,30 +108,30 @@ namespace Compute
 	public:
 		void SetOctaves(uint oct)
 		{
-			Octaves = oct;
+			octaves = oct;
 			calculateFractialBounding();
-			program->Set("uOctaves", Octaves);
+			program->Set("uOctaves", octaves);
 		}
 
 		void SetFrequency(float freq)
 		{
-			Frequency = freq;
+			frequency = freq;
 			program->Use();
-			program->Set("uFrequency", Frequency);
+			program->Set("uFrequency", frequency);
 		}
 
 		void SetLacunarity(float lac)
 		{
-			Lacunarity = lac;
+			lacunarity = lac;
 			program->Use();
-			program->Set("uLacunarity", Lacunarity);
+			program->Set("uLacunarity", lacunarity);
 		}
 
 		void SetGain(float gain)
 		{
-			Gain = gain;
+			this->gain = gain;
 			calculateFractialBounding();
-			program->Set("uGain", Gain);
-		})
+			program->Set("uGain", gain);
+		}
 	};
 }

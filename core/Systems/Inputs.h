@@ -55,7 +55,7 @@ public:
 	bool IsMouseButtonDown(byte button);
 	bool IsMouseButtonUp(byte button);
 
-public:
+private:
 	void ignoreInputs(bool ignore);
 
 	void setKey(SDL_Event &);

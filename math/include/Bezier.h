@@ -1,5 +1,6 @@
 #include "Vec.h"
 
+#include <assert.h>
 #include <vector>
 
 namespace Bezier

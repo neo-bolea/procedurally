@@ -12,7 +12,7 @@ void Camera::Update(float speed, bool lockView, const dVec2 &move, const dVec2 &
 	Vector3 up = (Vector3::Cross(Front, right)).Normalize();
 	Pos = Pos + speed * Front * move.y * deltaTime;
 	Pos = Pos + speed * right * move.x * deltaTime;
-	//Pos += speed * up    * scroll * (float)Time::DeltaTime();
+	Pos = Pos + speed * up * scroll * deltaTime;
 
 	if(!lockView)
 	{

@@ -44,24 +44,24 @@ namespace Strings
 		}
 	}
 
-	template <typename Input>
-	void Split1(
-		char delimiter, 
-		std::vector<std::string_view> &output, 
-		Input &input, 
-		size_t start1 = 0, size_t end1 = 0)
-	{
-		if (end1 == 0) { end1 = std::size(input); }
-		size_t last = (std::size(input) - end1);
-		Input::iterator start = input.begin() + start1;
-		Input::iterator end = input.end();
-		Input::iterator next = std::find(start, end, delimiter);
-		while (next != std::end(input) - last) 
-		{
-			output.push_back(std::string_view(&(*start), next - start));
-			start = next + 1;
-			next = std::find(start, end, delimiter);
-		}
-		output.push_back(std::string_view(&(*start), next - start));
-	}
+	//template <typename Input>
+	//void Split1(
+	//	char delimiter, 
+	//	std::vector<std::string_view> &output, 
+	//	Input &input, 
+	//	size_t start1 = 0, size_t end1 = 0)
+	//{
+	//	if (end1 == 0) { end1 = std::size(input); }
+	//	size_t last = (std::size(input) - end1);
+	//	Input::iterator start = input.begin() + start1;
+	//	Input::iterator end = input.end();
+	//	Input::iterator next = std::find(start, end, delimiter);
+	//	while (next != std::end(input) - last) 
+	//	{
+	//		output.push_back(std::string_view(&(*start), next - start));
+	//		start = next + 1;
+	//		next = std::find(start, end, delimiter);
+	//	}
+	//	output.push_back(std::string_view(&(*start), next - start));
+	//}
 }
