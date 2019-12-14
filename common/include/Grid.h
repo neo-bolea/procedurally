@@ -162,7 +162,10 @@ T &GRID_SGN::operator()(const Coords &coords)
 		if(0 <= coords[i] && coords[i] < Size[i])
 		{ index += coords[i] * currMult; }
 		else
-		{ return EvaluateBorder(coords); }
+		{ 
+			T value = EvaluateBorder(coords);
+			return value;
+		}
 	}
 	return v[index];
 }
@@ -205,8 +208,9 @@ T GRID_SGN::EvaluateBorder(const Coords &coords)
 	}
 	else if constexpr (Policy == BorderPolicy::Clamp)
 	{
+		Coords clampedCoords;
 		for (size_t i = 0; i < N; i++)
-		{ coords[i] = Math::Clamp(coords[i], 0, Size[i]); }
+		{ clampedCoords[i] = Math::Clamp(coords[i], CoordType(0), Size[i]); }
 		return this->operator()(coords);
 	}
 	else if constexpr (Policy == BorderPolicy::Value)
