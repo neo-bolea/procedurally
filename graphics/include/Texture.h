@@ -125,20 +125,14 @@ namespace GL
 	class Tex
 	{
 	public:
-		void Bind() { glBindTexture(type, ID); }
-		void Unbind() { glBindTexture(type, 0); }
+		~Tex() { Release(); }
 
-		void Release() { glDeleteTextures(1, &ID); }
 
-		//TODO: Add Destructor correctly (so it works with vector, etc.)
-		//~Tex() { glDeleteTextures(1, &ID); }
-		//Tex(const Tex &) = delete;
-		//Tex &operator =(const Tex &) = delete;
-		//
-		//void Copy(const Tex &src);
-		//Tex() {}
-		//Tex(Tex &&other);
-		//Tex &operator =(Tex &&other);
+		void Bind() const { glBindTexture(type, ID); }
+		void Unbind() const { glBindTexture(type, 0); }
+
+		void Release() const { glDeleteTextures(1, &ID); }
+
 
 		uint ID = 0;
 
