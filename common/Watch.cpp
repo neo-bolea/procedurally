@@ -1,8 +1,26 @@
 #include "Watch.h"
 
 Watch::Watch(Format format) : format(format) {}
-void Watch::Start() { start = getTime(); }
-void Watch::Stop() { diff = (TimeType)(getTime() - start).count(); total += diff; counter++; }
+void Watch::Start() 
+{ 
+	start = getTime(); 
+
+	started = true; 
+}
+
+void Watch::Stop()
+{
+	if(!started) 
+	{
+		diff = static_cast<TimeType>(0);
+		return;
+	}
+	diff = (TimeType)(getTime() - start).count(); 
+	total += diff;
+	counter++;
+
+	started = false; 
+}
 
 Watch::TimeType Watch::Time() { return cast(diff); }
 Watch::TimeType Watch::TimeTotal() { return cast(total); }
