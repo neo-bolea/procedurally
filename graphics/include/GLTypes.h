@@ -173,6 +173,7 @@ namespace GL
 	};
 }
 
+#define STORAGE_BUFFER_TYPE GL_SHADER_STORAGE_BUFFER
 namespace GL
 {
 	class StorageBuffer
@@ -183,44 +184,46 @@ namespace GL
 	public:
 		uint id;
 	
-		StorageBuffer(uint binding, size_t dataByteSize, void* data, GL::DrawType usage = GL::StreamDraw)
+		StorageBuffer(uint binding, size_t dataByteSize, void *data, GL::DrawType usage = GL::StreamDraw)
 		{
 			byteSize = dataByteSize;
 			this->usage = usage;
 	
 			glGenBuffers(1, &id);
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
-			glBufferData(GL_SHADER_STORAGE_BUFFER, dataByteSize, data, usage);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, id);
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+			glBindBuffer(STORAGE_BUFFER_TYPE, id);
+			glBufferData(STORAGE_BUFFER_TYPE, dataByteSize, data, usage);
+			glBindBufferBase(STORAGE_BUFFER_TYPE, binding, id);
+			glBindBuffer(STORAGE_BUFFER_TYPE, 0);
 		}
 	
 		void SetData(void* data)
 		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
-			glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, byteSize, data);
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+			glBindBuffer(STORAGE_BUFFER_TYPE, id);
+			glBufferSubData(STORAGE_BUFFER_TYPE, 0, byteSize, data);
+			glBindBuffer(STORAGE_BUFFER_TYPE, 0);
 		}
 	
 		void SetData(void* data, uint offset, uint dataByteSize)
 		{
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
-			glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, dataByteSize, data);
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+			glBindBuffer(STORAGE_BUFFER_TYPE, id);
+			glBufferSubData(STORAGE_BUFFER_TYPE, offset, dataByteSize, data);
+			glBindBuffer(STORAGE_BUFFER_TYPE, 0);
 		}
 	
-		float* Map(uint offset = 0, uint dataByteSize = -1)
+		float *Map(uint offset = 0, uint dataByteSize = -1)
 		{
 			if (dataByteSize == -1) { dataByteSize = byteSize; }
-	
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, id);
-			return (float*)glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, byteSize, GL_MAP_READ_BIT);
+
+			glBindBuffer(STORAGE_BUFFER_TYPE, id);
+
+
+			return (float*)glMapBufferRange(STORAGE_BUFFER_TYPE, 0, byteSize, GL_MAP_READ_BIT);
 		}
 	
 		void Unmap()
 		{
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+			glUnmapBuffer(STORAGE_BUFFER_TYPE);
+			glBindBuffer(STORAGE_BUFFER_TYPE, 0);
 		}
 	};
 }
