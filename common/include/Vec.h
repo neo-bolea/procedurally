@@ -16,6 +16,9 @@ template<typename T, size_t N, typename Enable = void>
 struct VecData;
 
 template<typename T, size_t N>
+struct Vec;
+
+template<typename T, size_t N>
 struct VecData<T, N, std::enable_if_t<N == 1>>
 {
 	union
@@ -34,7 +37,7 @@ struct VecData<T, N, std::enable_if_t<N == 2>>
 		std::array<T, N> e{};
 	};
 
-	static const VecData<T, N> Up, Down, Left, Right;
+	static const Vec<T, N> Up, Down, Left, Right;
 };
 
 template<typename T, size_t N>
@@ -46,7 +49,7 @@ struct VecData<T, N, std::enable_if_t<N == 3>>
 		std::array<T, N> e{};
 	};
 
-	static const VecData<T, N> Up, Down, Left, Right, Forward, Backward;
+	static const Vec<T, N> Up, Down, Left, Right, Forward, Backward;
 };
 
 template<typename T, size_t N>
@@ -92,6 +95,9 @@ struct Vec : public VecData<T, N>
 	template<typename TT, size_t NN>
 	explicit constexpr Vec<T, N>(const Vec<TT, NN> &other);
 
+
+	constexpr operator VecData<T, N>();
+
 	//// Operators ////
 	constexpr void operator =(const Vec<T, N> &other);
 	constexpr T operator [](size_t i) const;
@@ -110,7 +116,7 @@ struct Vec : public VecData<T, N>
 	constexpr T LenSqr() const;
 	static constexpr T Dot(const Vec<T, N> &a, const Vec<T, N> &b);
 	static constexpr Vec<T, N> Cross(const Vec<T, N> &a, const Vec<T, N> &b);
-	static constexpr Vec<T, N> Lerp(const Vec<T, N>& a, const Vec<T, N>& b, T t);
+	static constexpr Vec<T, N> Lerp(const Vec<T, N> &a, const Vec<T, N>& b, T t);
 	constexpr Vec<T, N> Normalize() const;
 };
 

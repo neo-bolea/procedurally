@@ -1,25 +1,26 @@
 //// Constants ////
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Up{ 0.f, 1.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Up{ 0.f, 1.f };
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Down{ 0.f, -1.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Down{ 0.f, -1.f };
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Left{ -1.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Left{ -1.f, 0.f };
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Right{ 1.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Right{ 1.f, 0.f };
 
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Up{ 0.f, 1.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Up{ 0.f, 1.f, 0.f };
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Down{ 0.f, -1.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Down{ 0.f, -1.f, 0.f };
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Left{ -1.f, 0.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Left{ -1.f, 0.f, 0.f };
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Right{ 1.f, 0.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Right{ 1.f, 0.f, 0.f };
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Forward{ 0.f, 0.f, 1.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Forward{ 0.f, 0.f, 1.f };
 template<typename T, size_t N>
-const VecData<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Backward{ 0.f, 0.f, -1.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Backward{ 0.f, 0.f, -1.f };
+
 
 //// Constructors ////
 template<typename T, size_t N>
@@ -74,6 +75,11 @@ constexpr Vec<T, N>::Vec(const Vec<TT, NN> &other)
 	for(; i < std::min(N, NN); i++) { this->e[i] = static_cast<T>(other[i]); } 
 	for(; i < N; i++) { this->e[i] = T(); } 
 }
+
+
+template<typename T, size_t N>
+constexpr Vec<T, N>::operator VecData<T, N>()
+{ return static_cast<VecData<T, N>>(*this); }
 
 
 //// Non-arithmetic operators ////
