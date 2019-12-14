@@ -30,6 +30,7 @@ private:
 
 	Format format;
 	TimePoint start;
+	bool started = false;
 	TimeType diff = 0; 
 	TimeType total = 0; 
 	int counter = 0;
