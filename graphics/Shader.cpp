@@ -10,6 +10,168 @@ namespace GL
 {
 	ProgRef activeProgram;
 
+	Program::Program(const ShaderPaths &shaderPaths, ProgramPool *pool)
+	: ID(LoadProgram(shaderPaths)), properties(GetProgramUniforms(ID)), pool(pool)
+	{
+		int matrices = glGetUniformBlockIndex(ID, "Matrices");
+		if(matrices != -1) { glUniformBlockBinding(ID, matrices, 0); }
+
+		for(size_t i = 0; i < shaderPaths.size(); i++)
+		{ shaders.push_back(GetShaderType(shaderPaths[i])); }
+
+		if(shaders.size() == 1 && shaders[0] == ShaderType::Compute)
+		{ 
+			type = ProgramType::Compute;
+			glGetProgramiv(ID, GL_COMPUTE_WORK_GROUP_SIZE, localComputeWorkGroupSize.data());
+
+			int maxWorkGroupSize[3];
+			glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &maxWorkGroupSize[0]);
+			glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &maxWorkGroupSize[1]);
+			glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &maxWorkGroupSize[2]);
+			for (size_t i = 0; i < 3; i++)
+			{
+				localComputeWorkGroupSize[i] = 
+					std::min(localComputeWorkGroupSize[i], maxWorkGroupSize[i]);
+			}
+		}
+		else { type = ProgramType::Graphical; }
+	}
+
+	Program::Program(const Program &other)
+		: ID(other.ID), properties(other.properties), pool(pool)
+	{
+		type = other.type;
+		shaders = other.shaders;
+		localComputeWorkGroupSize = other.localComputeWorkGroupSize;
+	}
+
+	/*
+			ProgramPool *pool;
+		PropertyMap properties;
+		ProgramType type;
+		std::vector<ShaderType> shaders;
+
+		std::unordered_set<std::string> erroneousUniforms;
+
+		std::unique_ptr<int[]> localComputeWorkGroupSize;
+	*/
+
+
+	void Program::Use() const
+	{
+		glUseProgram(ID);
+		activeProgram = std::make_shared<Program>(*this);
+	}
+
+	void Program::Dispatch(uint x, uint y, uint z) const
+	{
+		if (type != ProgramType::Compute)
+		{
+			log("A program without a compute shader cannot be dispatched.",
+				Debug::Error, { "Graphics", "Shader", "Compute" });
+			return;
+		}
+
+		if (x == 0 || y == 0 || z == 0)
+		{
+			log("A program of size 0 was dispatched - all dimensions must be larger than 0.",
+				Debug::Warning, { "Graphics", "Shader", "Compute" });
+		}
+
+		if (activeProgram == nullptr || activeProgram->ID != ID)
+		{
+			log("The program has to be active for it to be dispatched.",
+				Debug::Error, { "Graphics", "Shader", "Compute" });
+			return;
+		}
+
+		x = Math::NextPowerOfTwo(x / localComputeWorkGroupSize[0]);
+		y = Math::NextPowerOfTwo(y / localComputeWorkGroupSize[1]);
+		z = Math::NextPowerOfTwo(z / localComputeWorkGroupSize[2]);
+
+		x = std::max<int>(1, x); 
+		y = std::max<int>(1, y); 
+		z = std::max<int>(1, z); 
+
+		glDispatchCompute(x, y, z);
+	}
+
+	DataType Program::GetProp(const std::string &name)
+	{
+		auto it = properties.find(name);
+		if (it != properties.end())
+		{
+			return it->second;
+		}
+		else
+		{
+			log("The property " + std::string(name)
+				+ " is not part of the shader's uniforms!", Debug::Error, { "Graphics", "Shader" });
+			return (DataType)-1;
+		}
+	}
+
+	int Program::GetID(const std::string& uniformName) const
+	{
+		return glGetUniformLocation(ID, uniformName.c_str());
+	}
+
+	Uniform Program::GetUniform(const std::string& uniformName)
+	{
+		auto prop = GetProp(uniformName);
+		if (prop == (DataType)-1)
+		{
+			return Uniform{ -1, prop };
+		}
+
+		return Uniform{ GetID(uniformName), prop };
+	}
+
+	void Program::Set(const std::string& name, UniformData value)
+	{
+		Uniform unif = GetUniform(name);
+		if (unif.ID == -1) { return; }
+
+		Set(unif, value);
+	}
+
+	void Program::Set(const Uniform& unif, UniformData value) const
+	{
+		if (activeProgram == nullptr || activeProgram->ID != ID)
+		{
+			log("The program has to be active for it's uniforms to be changed.",
+				Debug::Error, { "Graphics", "Shader" });
+			return;
+		}
+
+		switch (unif.Type)
+		{
+		case DataType::Float: { auto v = value.Float_; glUniform1f (unif.ID, v); break; }
+		case DataType::Vec2: { auto v = value.Vector2_; glUniform2f (unif.ID, v->x, v->y); break; }
+		case DataType::Vec3: { auto v = value.Vector3_; glUniform3f (unif.ID, v->x, v->y, v->z); break; }
+		case DataType::Vec4: { auto v = value.Vector4_; glUniform4f (unif.ID, v->x, v->y, v->z, v->w); break; }
+		case DataType::Int: { auto v = value.Int_; glUniform1i (unif.ID, v); break; }
+		case DataType::UInt: { auto v = value.Uint_; glUniform1ui(unif.ID, v); break; }
+		case DataType::Bool: { auto v = value.Bool_; glUniform1i (unif.ID, v); break; }
+
+		case DataType::Mat2: { auto v = value.Mat_; assert(v->Rows == 2 && v->Cols == 2);
+			glUniformMatrix2fv(unif.ID, 1, false, &v->v[0]); break; }
+
+		case DataType::Mat3: { auto v = value.Mat_; assert(v->Rows == 3 && v->Cols == 3);
+			glUniformMatrix3fv(unif.ID, 1, false, &v->v[0]); break; }
+
+		case DataType::Mat4: { auto v = value.Mat_; assert(v->Rows == 4 && v->Cols == 4);
+			glUniformMatrix4fv(unif.ID, 1, false, &v->v[0]); break; }
+		default: UNDEFINED_CODE_PATH
+		}
+	}
+
+	void Program::SetGlobal(const std::string& name, UniformData value)
+	{
+		activeProgram->Set(name, value);
+	}
+
+
 	std::string Program::LoadTxtFile(const std::string &filePath) const
 	{
 		std::string shaderCode;
@@ -23,14 +185,18 @@ namespace GL
 		}
 		else
 		{
-			Debug::Log("Could not open shader at " + filePath, Debug::Error, { "Graphics", "Shader", "IO" });
+			log("Could not open shader at " + filePath,
+				Debug::Error, { "Graphics", "Shader", "IO" });
 			return "";
 		}
 
 		return shaderCode;
 	}
 
-	ShadID Program::CreateShader(const std::string &src, GL::ShaderType shaderType, const std::string &filePath) const
+	ShadID Program::CreateShader(
+		const std::string &src,
+		GL::ShaderType shaderType, 
+		const std::string &filePath) const
 	{
 		ShadID shaderID = glCreateShader((uint)shaderType);
 
@@ -52,7 +218,8 @@ namespace GL
 			std::string errorStr(errorMsg.begin(), errorMsg.end());
 
 			if(!filePath.empty())
-			{ Debug::Log(filePath + ": \n" + errorStr, Debug::Error, { "Graphics", "Shader", "IO" }); }
+			{ log(filePath + ": \n" + errorStr,
+				Debug::Error, { "Graphics", "Shader", "IO" }); }
 			return -1;
 		}
 
@@ -78,7 +245,7 @@ namespace GL
 
 			std::string errorStr(errorMsg.begin(), errorMsg.end());
 
-			Debug::Log(errorStr, Debug::Error, { "Graphics", "Shader", "IO" } );
+			log(errorStr, Debug::Error, { "Graphics", "Shader", "IO" } );
 			return -1;
 		}
 
@@ -91,8 +258,11 @@ namespace GL
 		return programID;
 	}
 
-	const std::unordered_map<ShaderType, std::string> shaderTypeStrings{ { ShaderType::Compute, "compute" }, { ShaderType::Fragment, "fragment" },
-	{ ShaderType::Geometry, "geometry" }, { ShaderType::Vertex, "vertex" } };
+	const std::unordered_map<ShaderType, std::string> shaderTypeStrings
+	{ 
+		{ ShaderType::Compute, "compute" }, { ShaderType::Fragment, "fragment" },
+		{ ShaderType::Geometry, "geometry" }, { ShaderType::Vertex, "vertex" } 
+	};
 
 	ShadID Program::LoadProgram(const ShaderPaths &shaderInfos) const
 	{
@@ -106,7 +276,8 @@ namespace GL
 			shaderIDs[i] = CreateShader(LoadTxtFile(shaderInfos[i]), type, shaderInfos[i]);
 			if(shaderIDs[i] == -1)
 			{
-				Debug::Log("Not able to load " + shaderTypeStrings.at(type) + " shader: " + shaderInfos[i], Debug::Error, { "Graphics", "Shader", "IO" });
+				log("Not able to load " + shaderTypeStrings.at(type) + " shader: " + shaderInfos[i],
+					Debug::Error, { "Graphics", "Shader", "IO" });
 				return -1;
 			}
 		}
@@ -127,7 +298,8 @@ namespace GL
 		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &uniCount);
 		for(uint i = 0; i < (uint)uniCount; i++)
 		{
-			glGetActiveUniform(program, i, MAX_PROPERTY_NAME_LENGTH, &length, &size, (GLenum *)&prop, buffer);
+			glGetActiveUniform(program, i, MAX_PROPERTY_NAME_LENGTH, &length, &size, 
+				(GLenum *)&prop, buffer);
 			properties[buffer] = prop;
 		}
 
