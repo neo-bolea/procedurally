@@ -1,6 +1,7 @@
 #include "Systems/Inputs.h"
 
 #include "Debug.h"
+#include "MathExt.h"
 
 #include <iostream>
 
@@ -57,31 +58,6 @@ void Inputs::ignoreInputs(bool ignore)
 	}
 }
 
-//#define DYNAMIC_IMPL(returnType, name, impl, ...) \
-//std::decay_t<returnType> name(__VA_ARGS__)	\
-//{																									\
-//	using Trait = FunctionTraits<void(__VA_ARGS__, returnType)>;				\
-//	std::decay_t<Trait::Argument<Trait::ArgCount - 1>::type> toReturn;							\
-//	FunctionTraits<void(__VA_ARGS__)>::ReturnType;									\
-//	name##_(__VA_ARGS__, toReturn);														\
-//	return toReturn;																			\
-//}																								  \
-//																								  \
-//void name##_(__VA_ARGS__, returnType toReturn)	\
-//{										\
-//	impl								\
-//}
-//
-//
-//#define DYNAMIC_IMPL_NOARG(returnType, name) returnType name() \
-//{																					\
-//	using Trait = FunctionTraits<void(returnType)>;					\
-//	Trait::Argument<Trait::ArgCount - 1>::type toReturn;			\
-//	FunctionTraits<void()>::ReturnType;									\
-//	name##_(toReturn);														\
-//	return toReturn;															\
-//}
-
 Inputs::State Inputs::GetKey(SDL_Scancode code)
 {
 	State state;
@@ -130,6 +106,22 @@ bool Inputs::IsMouseButtonDown(byte button)
 	return state == Pressed || state == Held;
 }
 bool Inputs::IsMouseButtonUp(byte button) { return !IsMouseButtonDown(button); }
+
+
+void Inputs::AddAxis(const std::string &name, AnyInput positive, AnyInput negative)
+{ axes.insert({ hash(name), { positive, negative, 0 } }); }
+
+double Inputs::GetAxis(const std::string &name, AxisValueMode mode)
+{ 
+	auto &info = getAxisInfo(name);
+	if (!info.has_value()) { return 0.0; }
+
+	if (mode == Raw) { return info.value().value; }
+	else if(mode == Smooth) { return info.value().smoothValue; }
+
+	Debug::Log("Unknown input axis mode has been requested.", Debug::Error, { "Inputs" });
+	return 0.0;
+}
 
 
 void Inputs::setKey(SDL_Event &event)
@@ -184,6 +176,7 @@ void Inputs::setMouseWheel(SDL_Event &event)
 
 void Inputs::update()
 {
+	// Update buttons
 	for(size_t i = 0; i < buttonStates.size(); i++)
 	{
 		State &button = buttonStates[i];
@@ -191,11 +184,30 @@ void Inputs::update()
 		else if(button == Pressed) { button = Held; }
 	}
 
+	// Update keys
 	for(size_t i = 0; i < keyStates.size(); i++)
 	{
 		State &key = keyStates[i];
 		if(key == Released) { key = Free; }
 		else if(key == Pressed) { key = Held; }
+	}
+
+	// Update axes
+	for(auto &axisPair : axes)
+	{
+		auto &axis = axisPair.second;
+		double negVal, posVal;
+
+		if(axis.positive.IsKey()) 
+		{ posVal = IsKeyDown(std::get<SDL_Scancode>(axis.positive.value)); }
+		else { posVal = IsMouseButtonDown(std::get<byte>(axis.positive.value)); }
+
+		if(axis.negative.IsKey())
+		{ negVal = IsKeyDown(std::get<SDL_Scancode>(axis.negative.value)); }
+		else { negVal = IsMouseButtonDown(std::get<byte>(axis.negative.value)); }
+
+		axis.value = posVal - negVal;
+		axis.smoothValue = Math::TimedExpEase(axis.smoothValue, axis.value, 0.995, Time::DeltaTime());
 	}
 
 	mouseMove = dVec2(0.0); 
@@ -215,6 +227,24 @@ void Inputs::GetMouseMove_(dVec2 &v)
 
 void Inputs::GetMouseWheel_(dVec2 &v)
 { v = mouseWheelMove; }
+
+
+std::optional<Inputs::AxisInfo> Inputs::getAxisInfo(const std::string &name)
+{
+	auto axis = axes.find(hash(name));
+	if (axis == axes.end())
+	{
+		Debug::Log("The requested input axis was not found.", Debug::Error, { "Inputs" });
+		return std::nullopt;
+	}
+	return axis->second;
+}
+
+
+Inputs::stringHash Inputs::hash(const std::string &str)
+{ return CRC32::Get(str.data(), str.size()); }
+
+
 
 Inputs::Logger::Logger(Inputs &inputs) : inputs(inputs)
 {
@@ -378,4 +408,4 @@ void Inputs::Recorder::simulateNextInput()
 	}
 	
 	SDL_PushEvent(&event);
-}
+} 

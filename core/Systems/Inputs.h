@@ -7,6 +7,8 @@
 #include "SDL.h"
 
 #include <any>
+#include <optional>
+#include <variant>
 
 class Inputs
 {
@@ -23,6 +25,8 @@ private:
 	};
 
 public:
+	struct AnyInput;
+
 	enum State
 	{
 		Undefined = 0,
@@ -31,6 +35,8 @@ public:
 		Released,
 		Free
 	};
+
+	enum AxisValueMode { Raw, Smooth };
 
 	Inputs();
 	~Inputs();
@@ -55,7 +61,13 @@ public:
 	bool IsMouseButtonDown(byte button);
 	bool IsMouseButtonUp(byte button);
 
+	void AddAxis(const std::string &name, AnyInput positive, AnyInput negative);
+	double GetAxis(const std::string &name, AxisValueMode mode = Raw);
+
 private:
+	using stringHash = uint;
+	struct AxisInfo;
+
 	void ignoreInputs(bool ignore);
 
 	void setKey(SDL_Event &);
@@ -70,6 +82,10 @@ private:
 	void GetMouseMove_(dVec2 &v);
 	void GetMouseWheel_(dVec2 &v);
 
+
+	std::optional<Inputs::AxisInfo> getAxisInfo(const std::string &str);
+	stringHash hash(const std::string &str);
+
 	std::array<State, SDL_NUM_SCANCODES> keyStates;
 	std::array<State, 5> buttonStates;
 	dVec2 mouseMove;
@@ -78,6 +94,28 @@ private:
 	bool isIgnored;
 
 	Locator::CmdNode tree;
+
+	std::unordered_map<stringHash, AxisInfo> axes;
+};
+
+struct Inputs::AnyInput
+{
+	using ValueType = std::variant<SDL_Scancode, byte>;
+
+	AnyInput() : value(0) {}
+	AnyInput(ValueType value) : value(value) {}
+	AnyInput(SDL_Scancode value) : value(value) {}
+	AnyInput(byte value) : value(value) {}
+
+	bool IsKey() { return value.index() == 0; }
+
+	ValueType value;
+};
+
+struct Inputs::AxisInfo
+{
+	AnyInput positive, negative;
+	double value, smoothValue;
 };
 
 class Inputs::Logger
