@@ -37,7 +37,8 @@ struct VecData<T, N, std::enable_if_t<N == 2>>
 		std::array<T, N> e{};
 	};
 
-	static const Vec<T, N> Up, Down, Left, Right;
+	static const Vec<T, N> Up, Down, Left, Right,
+		Zero, One, OnlyX, NoX, NegX, OnlyY, NoY, NegY;
 };
 
 template<typename T, size_t N>
@@ -49,7 +50,8 @@ struct VecData<T, N, std::enable_if_t<N == 3>>
 		std::array<T, N> e{};
 	};
 
-	static const Vec<T, N> Up, Down, Left, Right, Forward, Backward;
+	static const Vec<T, N> Up, Down, Left, Right, Forward, Backward,
+		Zero, One, OnlyX, NoX, NegX, OnlyY, NoY, NegY, OnlyZ, NoZ, NegZ;
 };
 
 template<typename T, size_t N>
@@ -83,9 +85,6 @@ struct Vec : public VecData<T, N>
 	constexpr Vec<T, N>(const VecData<T, N> &other);
 	constexpr Vec<T, N>(const Vec<T, N> &other);
 
-	template<class... Args>
-	explicit constexpr Vec(Args... args);
-
 	template<size_t NN>
 	explicit constexpr Vec<T, N>(const Vec<T, NN> &other);
 
@@ -95,6 +94,8 @@ struct Vec : public VecData<T, N>
 	template<typename TT, size_t NN>
 	explicit constexpr Vec<T, N>(const Vec<TT, NN> &other);
 
+	template<class... Args>
+	explicit constexpr Vec(Args... args);
 
 	constexpr operator VecData<T, N>();
 
@@ -157,22 +158,32 @@ using Vec3 = Vec<T, 3>;
 template<typename T = float>
 using Vec4 = Vec<T, 4>;
 
+template<size_t N>
+using fVec = Vec<float, N>;
 using fVec2 = Vec2<float>;
 using fVec3 = Vec3<float>;
 using fVec4 = Vec4<float>;
 
+template<size_t N>
+using dVec = Vec<double, N>;
 using dVec2 = Vec2<double>;
 using dVec3 = Vec3<double>;
 using dVec4 = Vec4<double>;
 
+template<size_t N>
+using iVec = Vec<int, N>;
 using iVec2 = Vec2<int>;
 using iVec3 = Vec3<int>;
 using iVec4 = Vec4<int>;
 
-using uVec2 = Vec2<size_t>;
-using uVec3 = Vec3<size_t>;
-using uVec4 = Vec4<size_t>;
+template<size_t N>
+using uVec = Vec<size_t, N>;
+using uVec2 = Vec2<uint>;
+using uVec3 = Vec3<uint>;
+using uVec4 = Vec4<uint>;
 
+template<size_t N>
+using bVec = Vec<bool, N>;
 using bVec2 = Vec2<bool>;
 using bVec3 = Vec3<bool>;
 using bVec4 = Vec4<bool>;

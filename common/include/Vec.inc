@@ -1,25 +1,66 @@
 //// Constants ////
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Up{ 0.f, 1.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Up{ 0, 1 };
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Down{ 0.f, -1.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Down{ 0, -1 };
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Left{ -1.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Left{ -1, 0 };
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Right{ 1.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Right{ 1, 0 };
 
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Up{ 0.f, 1.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Zero{ 0, 0 };
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Down{ 0.f, -1.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::One{ 1, 1 };
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Left{ -1.f, 0.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::OnlyX{ 1, 0 };
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Right{ 1.f, 0.f, 0.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::NoX{ 0, 1 };
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Forward{ 0.f, 0.f, 1.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::NegX{ -1, 1 };
 template<typename T, size_t N>
-const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Backward{ 0.f, 0.f, -1.f };
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::OnlyY{ 0, 1 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::NoY{ 1, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::NegY{ 1, -1 };
+
+
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Up{ 0, 1, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Down{ 0, -1, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Left{ -1, 0, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Right{ 1, 0, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Forward{ 0, 0, 1 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Backward{ 0, 0, -1 };
+
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::Zero{ 0, 0, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::One{ 1, 1, 1 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::OnlyX{ 1, 0, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::NoX{ 0, 1, 1 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::NegX{ -1, 1, 1 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::OnlyY{ 0, 1, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::NoY{ 1, 0, 1 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::NegY{ 1, -1, 1 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::OnlyZ{ 0, 0, 1 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::NoZ{ 1, 1, 0 };
+template<typename T, size_t N>
+const Vec<T, N> VecData<T, N, std::enable_if_t<N == 3>>::NegZ{ 1, 1, -1 };
 
 
 //// Constructors ////
@@ -44,22 +85,12 @@ constexpr Vec<T, N>::Vec(const Vec<T, N> &other)
 { for(size_t i = 0; i < N; i++) { this->e[i] = other[i]; } }
 
 template<typename T, size_t N>
-template<class... Args>
-constexpr Vec<T, N>::Vec(Args... args)
-{
-	static_assert(sizeof...(Args) == N, "Invalid number of arguments for vector constructor.");
-
-	std::array<T, sizeof...(Args)> elems = { static_cast<T>(args)... };
-	for(size_t i = 0; i < N; i++) { this->e[i] = elems[i]; }
-}
-
-template<typename T, size_t N>
 template<size_t NN>
-constexpr Vec<T, N>::Vec(const Vec<T, NN> &other)
-{ 
+constexpr Vec<T, N>::Vec(const Vec<T, NN>& other)
+{
 	size_t i = 0;
-	for(; i < std::min(N, NN); i++) { this->e[i] = other[i]; } 
-	for(; i < N; i++) { this->e[i] = T(); } 
+	for (; i < std::min(N, NN); i++) { this->e[i] = other[i]; }
+	for (; i < N; i++) { this->e[i] = T(); }
 }
 
 template<typename T, size_t N>
@@ -74,6 +105,16 @@ constexpr Vec<T, N>::Vec(const Vec<TT, NN> &other)
 	size_t i = 0;
 	for(; i < std::min(N, NN); i++) { this->e[i] = static_cast<T>(other[i]); } 
 	for(; i < N; i++) { this->e[i] = T(); } 
+}
+
+template<typename T, size_t N>
+template<class... Args>
+constexpr Vec<T, N>::Vec(Args... args)
+{
+	static_assert(sizeof...(Args) == N, "Invalid number of arguments for vector constructor.");
+
+	std::array<T, sizeof...(Args)> elems = { static_cast<T>(args)... };
+	for (size_t i = 0; i < N; i++) { this->e[i] = elems[i]; }
 }
 
 
