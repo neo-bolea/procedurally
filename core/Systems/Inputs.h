@@ -96,6 +96,7 @@ private:
 	Locator::CmdNode tree;
 
 	std::unordered_map<stringHash, AxisInfo> axes;
+	const double smoothAxisSharpness = 0.99875;
 };
 
 struct Inputs::AnyInput

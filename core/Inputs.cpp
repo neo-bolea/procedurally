@@ -207,7 +207,7 @@ void Inputs::update()
 		else { negVal = IsMouseButtonDown(std::get<byte>(axis.negative.value)); }
 
 		axis.value = posVal - negVal;
-		axis.smoothValue = Math::TimedExpEase(axis.smoothValue, axis.value, 0.995, Time::DeltaTime());
+		axis.smoothValue = Math::TimedExpEase(axis.smoothValue, axis.value, smoothAxisSharpness, Time::DeltaTime());
 	}
 
 	mouseMove = dVec2(0.0); 
