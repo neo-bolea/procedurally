@@ -18,6 +18,8 @@ using IntVector2 = iVec2;
 #define GRID_TEMPLATE_SIGNATURE template<typename T, size_t N, BorderPolicy Policy>
 #define GRID_SGN Grid<T, N, Policy>
 
+//TODO: Make Proxy more readably by using decltype(auto) (remember how it returned all arguments as references...).
+
 enum class BorderPolicy
 {
 	Undefined,
@@ -40,12 +42,13 @@ template<typename T, BorderPolicy Policy>
 class GridBase<T, Policy, std::enable_if_t<Policy == BorderPolicy::Value>>
 { T BorderValue; };
 
-template<typename T, size_t N = 2, BorderPolicy Policy = BorderPolicy::Undefined>
+template<typename T, size_t N = 2, BorderPolicy Policy = BorderPolicy::Clamp>
 class Grid : public GridBase<T, Policy>
 {
 public:
 	using CoordType = size_t;
-	using Coords = std::array<CoordType, N>;
+	using Coords = Vec<CoordType, N>;
+	using Dimensions = Coords;
 
 	template<size_t CurN>
 	struct Proxy;
@@ -55,6 +58,7 @@ public:
 
 	template<typename ...Args>
 	GRID_SGN(Args ...dimensions);
+	GRID_SGN(Dimensions dimensions);
 
 	GRID_SGN(const GRID_SGN &arr);
 
@@ -77,16 +81,15 @@ public:
 	//// Functions ////
 	T EvaluateBorder(const Coords &coords);
 
-	template<typename Func>
-	void ForAll(Func &func);
+	void ForAll(function_view<void(Coords)> func);
 
 	//// Data ////
 	std::vector<T> v;
-	std::array<CoordType, N> Size;
+	Dimensions Size;
 
 private:
-	template<typename Func, size_t Depth>
-	inline void forAll(Func &func, Coords &coords);
+	template<size_t Depth>
+	void forAll(function_view<void(Coords)> &func, Coords &coords);
 };
 
 GRID_TEMPLATE_SIGNATURE
@@ -99,9 +102,9 @@ struct GRID_SGN::Proxy
 
 	struct RefWrap
 	{
-		T& ref;
-		void operator =(const T& value) { ref = value; }
-		operator T& () { return ref; }
+		T &ref;
+		void operator =(const T &value) { ref = value; }
+		operator T &() { return ref; }
 	};
 
 	auto operator[](size_t coord)
@@ -125,7 +128,11 @@ GRID_SGN::Grid() : Size{} {}
 GRID_TEMPLATE_SIGNATURE
 template<typename ...Args>
 GRID_SGN::Grid(Args ...dimensions) : Size{ static_cast<CoordType>(dimensions)... }
-{ v.resize(std::accumulate(Size.begin(), Size.end(), 1, std::multiplies<double>())); }
+{ v.resize(std::accumulate(Size.e.begin(), Size.e.end(), 1, std::multiplies<double>())); }
+
+GRID_TEMPLATE_SIGNATURE
+GRID_SGN::Grid(Dimensions dimensions) : Size{ dimensions }
+{ v.resize(std::accumulate(Size.e.begin(), Size.e.end(), 1, std::multiplies<double>())); }
 
 GRID_TEMPLATE_SIGNATURE
 GRID_SGN::Grid(const GRID_SGN &arr) : Size{ arr.Size }
@@ -210,8 +217,8 @@ T GRID_SGN::EvaluateBorder(const Coords &coords)
 	{
 		Coords clampedCoords;
 		for (size_t i = 0; i < N; i++)
-		{ clampedCoords[i] = Math::Clamp(coords[i], CoordType(0), Size[i]); }
-		return this->operator()(coords);
+		{ clampedCoords[i] = Math::Clamp(coords[i], CoordType(0), Size[i] - 1); }
+		return this->operator()(clampedCoords);
 	}
 	else if constexpr (Policy == BorderPolicy::Value)
 	{ return BorderValue; }
@@ -221,27 +228,22 @@ T GRID_SGN::EvaluateBorder(const Coords &coords)
 
 
 GRID_TEMPLATE_SIGNATURE
-template<typename Func>
-void GRID_SGN::ForAll(Func &func)
+void GRID_SGN::ForAll(function_view<void(Coords)> func)
 {
-	using FuncSign = FunctionTraits<std::decay_t<Func>>;
-	static_assert(FuncSign::ArgCount == 1,
-		"Only the following function signature is accepted by Grid::ForAll: T Func(Grid::Coords).");
-
 	Coords coords{};
-	forAll<Func, 0>(func, coords);
+	forAll<0>(func, coords);
 }
 
 GRID_TEMPLATE_SIGNATURE
-template<typename Func, size_t Depth>
-inline void GRID_SGN::forAll(Func &func, Coords &coords)
+template<size_t Depth>
+void GRID_SGN::forAll(function_view<void(Coords)> &func, Coords &coords)
 {
 	if constexpr (Depth == N)
 	{ func(coords); }
 	else
 	{
 		for (size_t i = 0; i < Size[Depth]; i++, coords[Depth]++)
-		{ forAll<Func, Depth + 1>(func, coords); }
+		{ forAll<Depth + 1>(func, coords); }
 		coords[Depth] = 0;
 	}
 }
