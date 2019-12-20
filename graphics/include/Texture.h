@@ -131,7 +131,7 @@ namespace GL
 		void Bind() const { glBindTexture(type, ID); }
 		void Unbind() const { glBindTexture(type, 0); }
 
-		void Release() const { glDeleteTextures(1, &ID); }
+		void Release() const { if (ID != 0) { glDeleteTextures(1, &ID); } }
 
 
 		uint ID = 0;
