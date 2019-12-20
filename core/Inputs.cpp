@@ -58,13 +58,13 @@ void Inputs::ignoreInputs(bool ignore)
 	}
 }
 
-Inputs::State Inputs::GetKey(SDL_Scancode code)
+Inputs::State Inputs::GetKey(Key code)
 {
 	State state;
 	Locator::Call("Inputs/GetKey", code, state);
 	return state;
 }
-Inputs::State Inputs::GetMouseButton(byte button)
+Inputs::State Inputs::GetMouseButton(Button button)
 {
 	State state;
 	Locator::Call("Inputs/GetMouseButton", button, state);
@@ -89,23 +89,23 @@ dVec2 Inputs::GetMouseWheel()
 	return v;
 }
 
-bool Inputs::IsKeyPressed(SDL_Scancode code) { return GetKey(code) == Pressed; }
-bool Inputs::IsKeyReleased(SDL_Scancode code) { return GetKey(code) == Released; }
-bool Inputs::IsKeyDown(SDL_Scancode code) 
+bool Inputs::IsKeyPressed(Key code) { return GetKey(code) == Pressed; }
+bool Inputs::IsKeyReleased(Key code) { return GetKey(code) == Released; }
+bool Inputs::IsKeyDown(Key code) 
 {
 	State state = GetKey(code);
 	return state == Pressed || state == Held;
 }
-bool Inputs::IsKeyUp(SDL_Scancode code) { return !IsKeyDown(code); }
+bool Inputs::IsKeyUp(Key code) { return !IsKeyDown(code); }
 
-bool Inputs::IsMouseButtonPressed(byte button) { return GetMouseButton(button) == Pressed; }
-bool Inputs::IsMouseButtonReleased(byte button) { return GetMouseButton(button) == Released; }
-bool Inputs::IsMouseButtonDown(byte button)
+bool Inputs::IsMouseButtonPressed(Button button) { return GetMouseButton(button) == Pressed; }
+bool Inputs::IsMouseButtonReleased(Button button) { return GetMouseButton(button) == Released; }
+bool Inputs::IsMouseButtonDown(Button button)
 {
 	State state = GetMouseButton(button);
 	return state == Pressed || state == Held;
 }
-bool Inputs::IsMouseButtonUp(byte button) { return !IsMouseButtonDown(button); }
+bool Inputs::IsMouseButtonUp(Button button) { return !IsMouseButtonDown(button); }
 
 
 void Inputs::AddAxis(const std::string &name, AnyInput positive, AnyInput negative)
@@ -199,12 +199,12 @@ void Inputs::update()
 		double negVal, posVal;
 
 		if(axis.positive.IsKey()) 
-		{ posVal = IsKeyDown(std::get<SDL_Scancode>(axis.positive.value)); }
-		else { posVal = IsMouseButtonDown(std::get<byte>(axis.positive.value)); }
+		{ posVal = IsKeyDown(std::get<Key>(axis.positive.value)); }
+		else { posVal = IsMouseButtonDown(std::get<Button>(axis.positive.value)); }
 
 		if(axis.negative.IsKey())
-		{ negVal = IsKeyDown(std::get<SDL_Scancode>(axis.negative.value)); }
-		else { negVal = IsMouseButtonDown(std::get<byte>(axis.negative.value)); }
+		{ negVal = IsKeyDown(std::get<Key>(axis.negative.value)); }
+		else { negVal = IsMouseButtonDown(std::get<Button>(axis.negative.value)); }
 
 		axis.value = posVal - negVal;
 		axis.smoothValue = Math::TimedExpEase(axis.smoothValue, axis.value, smoothAxisSharpness, Time::DeltaTime());
@@ -213,10 +213,10 @@ void Inputs::update()
 	mouseMove = dVec2(0.0); 
 }
 
-void Inputs::GetKey_(SDL_Scancode code, State &state)
-{ state = keyStates[code]; }
+void Inputs::GetKey_(Key code, State &state)
+{ state = keyStates[static_cast<int>(code)]; }
 
-void Inputs::GetMouseButton_(byte button, State &state)
+void Inputs::GetMouseButton_(Button button, State &state)
 { state = buttonStates[button]; }
 
 void Inputs::GetMousePos_(dVec2 &v)
@@ -388,7 +388,7 @@ void Inputs::Recorder::simulateNextInput()
 	{
 	case SDL_KEYUP:
 	case SDL_KEYDOWN:
-	{ event.key.keysym.sym = std::any_cast<SDL_Scancode>(nextInput.Value); } break;
+	{ event.key.keysym.sym = static_cast<SDL_Keycode>(std::any_cast<Key>(nextInput.Value)); } break;
 	
 	case SDL_MOUSEBUTTONUP:
 	case SDL_MOUSEBUTTONDOWN:
