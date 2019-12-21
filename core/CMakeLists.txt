@@ -18,7 +18,7 @@ add_custom_command(
     TARGET Core
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
-        "${CMAKE_SOURCE_DIR}${GLEW_INCLUDE_DIRS}/../lib/${PLATFORM}/${CONFIG}/glew32.lib"
+        "${CMAKE_SOURCE_DIR}${GLEW_INCLUDE_DIR}/../lib/${PLATFORM}/${CONFIG}/glew32.lib"
 	"$<TARGET_FILE_DIR:Core>/glew32.dll"
 )
 

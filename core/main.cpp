@@ -36,78 +36,9 @@
 #define __WINDOWS_DS__
 #define __WINDOWS_ASIO__
 
-#define WIDTH (1920)
-#define HEIGHT (1080)
+#define WIDTH (1920 * 0.9)
+#define HEIGHT (1080 * 0.9)
 #define ASPECT ((float)WIDTH / HEIGHT)
-
-using Point = dVec2;
-using Shape = std::function<double(Point)>;
-
-static Shape u(Shape a, Shape b)
-{ return [a, b](Point v){ return std::min(a(v), b(v)); }; }
-
-static Shape n(Shape a, Shape b)
-{ return [a, b](Point v){ return std::max(a(v), b(v)); }; }
-
-static Shape inv(Shape a)
-{ return [a](Point v){ return -a(v); }; }
-
-struct Circle 
-{
-	constexpr Circle(Point coords, double r) : coords(coords), r(r) {}
-	Point coords; double r;
-	double operator()(Point v) const { return sqrtl(std::powl(coords.x - v.x, 2) + std::powl(coords.y - v.y, 2)) - r; }
-};
-
-struct Left
-{
-	constexpr Left(Point v) : x0(v.x) {}
-	double x0;
-	constexpr double operator()(Point v) const { return v.x - x0; }
-};
-
-struct Right
-{
-	constexpr Right(Point v) : x0(v.x) {}
-	double x0;
-	constexpr double operator()(Point v) const { return x0 - v.x; }
-};
-
-struct Lower
-{
-	constexpr Lower(Point v) : y0(v.y) {}
-	double y0;
-	constexpr double operator()(Point v) const { return v.y - y0; }
-};
-
-struct Upper
-{
-	constexpr Upper(Point v) : y0(v.y) {}
-	double y0;
-	constexpr double operator()(Point v) const { return y0 - v.y; }
-};
-
-struct Rectangle
-{
-	Rectangle(Point min, Point max) : Min(min), Max(max) {}
-	Point Min, Max;
-	Shape func = n(n(Right(Min), Left(Max)), n(Upper(Min), Lower(Max)));
-	double operator()(Point v) const { return func(v); }
-};
-
-Shape HShape = 
-	u(Rectangle(Point(0.1, 0.1), Point(0.25, 0.9)),
-		u(Rectangle(Point(0.45, 0.1), Point(0.6, 0.35)),
-			n(Circle(Point(0.35, 0.35), 0.25), 
-			inv(u(Circle(Point(0.35, 0.35), 0.1), 
-				Rectangle(Point(0.25, 0.1), Point(0.45, 0.35))))
-			)
-		)
-	);
-
-Shape IShape = u(Rectangle(Point(0.75, 0.1), Point(0.9, 0.55)), Circle(Point(0.825, 0.75), 0.1));
-
-Shape HIShape = u(HShape, IShape);
 
 template<typename Container>
 void Triangulate(Container &cont, const fVec2 &v0, const fVec2 &v1)
@@ -124,6 +55,16 @@ float f(FastNoise fn, fVec3 coords)
 	return fn.GetNoise(coords.x, coords.y, coords.z);
 }
 
+fVec2 fD(FastNoise fn, fVec3 coords)
+{
+	float epsilon = 0.001f;
+	fVec2 d;
+	d.x = f(fn, fVec3(coords.x + epsilon, coords.y, coords.z)) - f(fn, fVec3(coords.x - epsilon, coords.y, coords.z));
+	d.y = f(fn, fVec3(coords.x, coords.y + epsilon, coords.z)) - f(fn, fVec3(coords.x, coords.y - epsilon, coords.z));
+	return d.Normalize();
+}
+
+
 auto GenerateMarchingSquares(
 	uint VAO[4], float noiseZ, 
 	std::vector<fVec3> &msEdges, 
@@ -131,12 +72,26 @@ auto GenerateMarchingSquares(
 	std::vector<fVec3> &fullCells,
 	std::vector<fVec3> &btwCells)
 {
+	struct BorderInfo
+	{
+		float Value;
+		uchar Config;
+
+		BorderInfo() : Value(-1), Config(-1) {}
+		BorderInfo(float value, uchar config) : Value(value), Config(config) {}
+		bool operator ==(const BorderInfo &other) { return Config == other.Config; }
+		bool operator !=(const BorderInfo &other) { return Config != other.Config; }
+
+		BorderInfo operator +(const BorderInfo &other) { return BorderInfo((Value + other.Value) / 2., Config); }
+		BorderInfo operator /(uint other) { return BorderInfo(Value / other, Config); }
+	};
+
 #ifdef NDEBUG
-	Grid<float> gridTest(128, 128);
-	LinearTree<uchar, 7, CoordinateSystem::Normalized> tree(0);
+	Grid<float> gridTest(256, 256);
+	LinearTree<BorderInfo, 8, CoordinateSystem::Normalized> tree(BorderInfo(0, 0));
 #else
 	Grid<float> gridTest(64, 64);
-	LinearTree<uchar, 6, CoordinateSystem::Normalized> tree(0);
+	LinearTree<BorderInfo, 6, CoordinateSystem::Normalized> tree(BorderInfo(0, 0));
 #endif
 
 	Watch watchTotal(Watch::ms);
@@ -154,28 +109,32 @@ auto GenerateMarchingSquares(
 	fn.SetFractalGain(0.5);
 
 	gridTest.ForAll([&gridTest, &fn, noiseZ](decltype(gridTest)::Coords coords)
-		{ gridTest(coords) = f(fn, fVec3((float)coords[0] / gridTest.Size[0], (float)coords[1] / gridTest.Size[0], noiseZ) + fVec3(0.0001f, 0.0001f, 0)) < 0; });
+		{ 
+			fVec2 fCoords = fVec2(coords) / gridTest.Size[0];
+			gridTest(coords) = f(fn, fVec3(fCoords.x, fCoords.y, noiseZ));
+		});
 
 	for (uint xx = 0; xx < gridTest.Size[0]; xx++)
 	{
 		for (uint yy = 0; yy < gridTest.Size[1]; yy++)
 		{
+			float cornerValue = gridTest(xx, yy);
 			bool values[4] =
 			{
-				(gridTest(xx, yy) > 0),
+				(cornerValue > 0),
 				(gridTest(xx + 1, yy) > 0),
 				(gridTest(xx + 1, yy + 1) > 0),
 				(gridTest(xx, yy + 1) > 0),
 			};
 			int config = values[0] + (values[1] + (values[2] + (values[3] << 1) << 1) << 1);
-			uint value = 0;
+			uchar value = 0;
 			if (config)
 			{
 				value = 2;
 				if (config == 15) { value = 1; }
 			}
 
-			tree.Set(fVec2(yy, xx) / gridTest.Size[0], value);
+			tree.Set(fVec2(yy, xx) / gridTest.Size[0], { cornerValue, value });
 		}
 
 		if (xx % 60 == 0) { tree.Merge(); }
@@ -207,13 +166,13 @@ auto GenerateMarchingSquares(
 
 			std::array<float, 4> values =
 			{
-				f(fn, fVec3(BotLefCor.x, BotLefCor.y, noiseZ) + fVec3(0.0001f, 0.0001f, 0)),
-				f(fn, fVec3(BotRigCor.x, BotRigCor.y, noiseZ) + fVec3(0.0001f, 0.0001f, 0)),
-				f(fn, fVec3(TopRigCor.x, TopRigCor.y, noiseZ) + fVec3(0.0001f, 0.0001f, 0)),
-				f(fn, fVec3(TopLefCor.x, TopLefCor.y, noiseZ) + fVec3(0.0001f, 0.0001f, 0)),
+				info.Node.Data.Value,
+				f(fn, fVec3(BotRigCor.x, BotRigCor.y, noiseZ)/* + fVec3(0.0001f, 0.0001f, 0)*/),
+				f(fn, fVec3(TopRigCor.x, TopRigCor.y, noiseZ)/* + fVec3(0.0001f, 0.0001f, 0)*/),
+				f(fn, fVec3(TopLefCor.x, TopLefCor.y, noiseZ)/* + fVec3(0.0001f, 0.0001f, 0)*/),
 			};
 
-			int config = (values[0] > 0) + ((values[1] > 0) + ((values[2] > 0) + ((values[3] > 0) << 1) << 1) << 1);
+ 			int config = (values[0] > 0) + ((values[1] > 0) + ((values[2] > 0) + ((values[3] > 0) << 1) << 1) << 1);
 			//if (config == 15 || config == 0) { return; }
 
 			fVec2
@@ -222,27 +181,49 @@ auto GenerateMarchingSquares(
 				TopCenEdge = fVec2(TopRigCor.x + -((0 - values[2]) / (values[3] - values[2])) * size, TopRigCor.y),
 				CenLefEdge = fVec2(TopLefCor.x, TopLefCor.y + -((0 - values[3]) / (values[0] - values[3])) * size);
 
-			if (info.Node.Data == 1)
+
+			if(info.Node.Data.Config == 2)
 			{
-				Triangulate(fullCells, BotLefCor, BotRigCor);
-				Triangulate(fullCells, BotRigCor, TopRigCor);
-				Triangulate(fullCells, TopRigCor, TopLefCor);
-				Triangulate(fullCells, TopLefCor, BotLefCor);
+				std::array<fVec2, 4> intersections =
+				{
+					BotCenEdge,
+					CenRigEdge,
+					TopCenEdge,
+					CenLefEdge,
+				};
+
+				std::array<fVec2, 4> normals =
+				{
+					fD(fn, (fVec3)BotCenEdge),
+					fD(fn, (fVec3)CenRigEdge),
+					fD(fn, (fVec3)TopCenEdge),
+					fD(fn, (fVec3)CenLefEdge),
+				};
+
+				Triangulate(btwCells, pos, pos + fVec2(0.0001f, 0.f));
 			}
-			else if(info.Node.Data == 2)
-			{
-				Triangulate(btwCells, BotLefCor, BotRigCor);
-				Triangulate(btwCells, BotRigCor, TopRigCor);
-				Triangulate(btwCells, TopRigCor, TopLefCor);
-				Triangulate(btwCells, TopLefCor, BotLefCor);
-			}
-			else
-			{
-				Triangulate(emptyCells, BotLefCor, BotRigCor);
-				Triangulate(emptyCells, BotRigCor, TopRigCor);
-				Triangulate(emptyCells, TopRigCor, TopLefCor);
-				Triangulate(emptyCells, TopLefCor, BotLefCor);
-			}
+
+			//if (info.Node.Data.Config == 1)
+			//{
+			//	Triangulate(fullCells, BotLefCor, BotRigCor);
+			//	Triangulate(fullCells, BotRigCor, TopRigCor);
+			//	Triangulate(fullCells, TopRigCor, TopLefCor);
+			//	Triangulate(fullCells, TopLefCor, BotLefCor);
+			//}
+			//else if(info.Node.Data.Config == 2)
+			//{
+			//	Triangulate(btwCells, BotLefCor, BotRigCor);
+			//	Triangulate(btwCells, BotRigCor, TopRigCor);
+			//	Triangulate(btwCells, TopRigCor, TopLefCor);
+			//	Triangulate(btwCells, TopLefCor, BotLefCor);
+			//}
+			//else
+			//{
+			//	Triangulate(emptyCells, BotLefCor, BotRigCor);
+			//	Triangulate(emptyCells, BotRigCor, TopRigCor);
+			//	Triangulate(emptyCells, TopRigCor, TopLefCor);
+			//	Triangulate(emptyCells, TopLefCor, BotLefCor);
+			//}
 
 			switch (config)
 			{
@@ -285,7 +266,7 @@ auto GenerateMarchingSquares(
 
 	Grid<float> gridFromTree(gridTest.Size[0], gridTest.Size[1]);
 	gridFromTree.ForAll([&](decltype(gridFromTree)::Coords &coords)
-		{ gridFromTree(coords) = tree.Get<false>(fVec2(coords[1], coords[0]) / gridTest.Size[0]) > 0; });
+		{ gridFromTree(coords) = tree.Get<false>(fVec2(coords[1], coords[0]) / gridTest.Size[0]).Value > 0; });
 
 	watchTotal.Stop();
 	std::cout << "Total Time: " << watchTotal.sTime() << std::endl;
@@ -366,7 +347,6 @@ int main(int argc, char *argv[])
 	SDL_Event event;
 
 	Time::SetLimitFPS(false);
-	Time::SetMaxFPS(60);
 
 	Camera cam(Vector3(0.f, 0.f, 10.f), Vector3::Forward);
 
@@ -420,6 +400,8 @@ int main(int argc, char *argv[])
 		{ emptyCells, fullCells, btwCells, msEdges };
 
 	glPointSize(5);
+	glLineWidth(5);
+	glClearColor(0.f, 0.f, 0.5f, 0.f);
 
 	GL::Tex2D cpuTex;
 	cpuTex.Filter = GL::TexFilter::Nearest;
@@ -428,6 +410,8 @@ int main(int argc, char *argv[])
 	float noiseZ = 0;
 	while (!quit)
 	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		static bool pauseTime = false;
 		if (inputs.IsKeyPressed(Inputs::P)) { pauseTime = !pauseTime; }
 
@@ -438,8 +422,6 @@ int main(int argc, char *argv[])
 		cpuTex.Setup(gridFromTree.Size[0], gridFromTree.Size[1], GL::R32F, &gridFromTree.v[0]);
 		cpuTex.Bind();
 
-		glClearColor(0.f, 0.f, 0.5f, 0.f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		dVec2 move;
 		move.x = inputs.GetAxis("Horizontal", Inputs::Smooth);
@@ -459,7 +441,10 @@ int main(int argc, char *argv[])
 
 		texProg->Use();
 		texProg->Set("uColor", fVec4(0.2, 0.2, 0.2, 1));
-		texProg->Set("uModel", Math::GL::Rotate(Math::GL::Rotate(Math::Mat4(), 180.f * Math::Deg2Rad, fVec3::Right), 90.f * Math::Deg2Rad, fVec3::Forward));
+		texProg->Set("uModel", 
+			Math::GL::Rotate(Math::GL::Rotate(Math::Mat4(), 
+				180.f * Math::Deg2Rad, fVec3::Right), 
+				90.f * Math::Deg2Rad, fVec3::Forward));
 
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
@@ -467,7 +452,8 @@ int main(int argc, char *argv[])
 		solidProg->Use();
 		solidProg->Set("uModel", Math::Mat4());
 		// Empty | Full | Between | Edge
-		std::array<fVec3, 4> colors = { fVec3(1, 0, 0), fVec3(1, 1, 1), fVec3(0, 0.5, 0), fVec3(0, 1, 0) };
+		std::array<fVec3, 4> colors = 
+		{ fVec3(1, 0, 0), fVec3(0, 1, 0), fVec3(0, 0.5, 0.5), fVec3(0, 1, 0) };	
 		for (size_t i = 0; i < 4; i++)
 		{
 			solidProg->Set("uColor", colors[i]);
