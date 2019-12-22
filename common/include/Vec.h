@@ -80,7 +80,12 @@ struct Vec : public VecData<T, N>
 	static const size_t Count = N;
 
 	//// Constructors ////
-	constexpr Vec(), Vec(T n), Vec(const T *d);
+	constexpr Vec();
+
+	template<typename U>
+	constexpr Vec(U n);	
+	template<typename U>
+	constexpr Vec(const U *d);
 
 	constexpr Vec<T, N>(const VecData<T, N> &other);
 	constexpr Vec<T, N>(const Vec<T, N> &other);

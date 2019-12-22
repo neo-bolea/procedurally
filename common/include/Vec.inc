@@ -69,12 +69,14 @@ constexpr Vec<T, N>::Vec()
 { for(size_t i = 0; i < N; i++) { this->e[i] = static_cast<T>(0); } }
 
 template<typename T, size_t N>
-constexpr Vec<T, N>::Vec(T n) 
-{ for(size_t i = 0; i < N; i++) { this->e[i] = n; } }
+template<typename U>
+constexpr Vec<T, N>::Vec(U n) 
+{ for(size_t i = 0; i < N; i++) { this->e[i] = static_cast<T>(n); } }
 
 template<typename T, size_t N>
-constexpr Vec<T, N>::Vec(const T *d)
-{ for(size_t i = 0; i < N; i++) { this->e[i] = d[i]; } }
+template<typename U>
+constexpr Vec<T, N>::Vec(const U *d)
+{ for(size_t i = 0; i < N; i++) { this->e[i] = static_cast<T>(d[i]); } }
 
 template<typename T, size_t N>
 constexpr Vec<T, N>::Vec(const VecData<T, N> &other)
