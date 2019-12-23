@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Debug.h"
-#include "Templates.h"
 #include "Vec.h"
 #include "Util.h"
 
@@ -9,24 +8,36 @@
 #include <unordered_map>
 #include <vector>
 
+//TODO: Make Marching Squares work on a per 2x2 cells instead of inside each cell (as that creates duplicates).
+
+static constexpr int MaxNodeCount(const uint levels, const uint childrenPerNode)
+{
+	int total = 1, nodeCount = childrenPerNode;
+
+	for(uint i = 0; i < levels; i++)
+	{
+		total += nodeCount;
+		nodeCount *= childrenPerNode;
+	}
+
+	return total;
+}
+
 enum class CoordinateSystem { Resolution, Normalized };
 
 template<typename T, uchar Levels, CoordinateSystem System, uchar Dimensions = 2>
-class NTree 
+class LinearTree 
 {
 private:
 	template<CoordinateSystem>
 	struct TreeCoordTypes 
 	{ using type = uint; };
-	
+
 	template<>
 	struct TreeCoordTypes<CoordinateSystem::Normalized> 
 	{ using type = float; };
 
 public:
-	static const int Resolution = 2 << (Levels - 1);
-	static const int ChildrenPerNode = 2 << (Dimensions - 1);
-
 	struct Node;
 	using ChildIndex = uchar;
 	using NCode = uint;
@@ -34,15 +45,15 @@ public:
 	using Coords = Vec<Coord, Dimensions>;
 	using NodeCoord = bool;
 	using NodeCoords = Vec<NodeCoord, Dimensions>;
-	using NeighborCoords = Vec<bool, Dimensions>;
 	using CacheIndex = uint;
-	using DataType = T;
 
-	
+
 	struct Node 
 	{
-		Node(DataType data = DataType()) : Data(data) {}
-		DataType Data;
+		Node(T data = T()) : Data(data) {}
+
+		T Data;
+
 		union
 		{
 			uchar childExistMask;
@@ -50,217 +61,168 @@ public:
 		};
 	};
 
-	struct NodeInfo;
+	struct NodeInfo
+	{
+		Coords Pos;
+		Coord Size;
+		Node &Node;
+	};
 
-	NTree(DataType initial);
+	struct PassHash
+	{
+		uint operator()(const NCode &code) const
+		{ return code; }
+	};
+
+
+	LinearTree(T initial);
 
 	template<bool UseCache = true>
-	const DataType &Get(Coords coords);
-	void Set(Coords coords, DataType data);
+	const T &Get(Coords coords);
+	void Set(Coords coords, T data);
 
 	void Map(function_view<void(NodeInfo)> func);
-	void ForAllChildren(function_view<void(NodeInfo)> func, NodeInfo &code);
-	void Merge();
-	int NodeCount();
+	void Expand();
+	void Fill(function_view<T(Coords &)> func);
 
 	void ClearCache();
+	void Merge();
 
-	std::unordered_map<NCode, Node, PassHash<NCode>> Nodes;
-	using NodeIter = decltype(Nodes.find(-1));
-	void GetConnectionGraph(std::vector<NodeInfo> &vertices);
+	int NodeCount();
 
-	Coord TreeSize();
+	std::unordered_map<NCode, Node, PassHash> Nodes;
+	int Size;
 
 private:
-	template<REQUIRES(Dimensions == 2)>
-	void getConnectionGraph
-		(std::vector<NodeInfo> &vertices, NodeInfo &node);
-	void getConnectionHorizontal
-		(std::vector<NodeInfo> &vertices, NodeInfo &nodeA, NodeInfo &nodeB);
-	void getConnectionVertictal
-		(std::vector<NodeInfo> &vertices, NodeInfo &nodeA, NodeInfo &nodeB);
-
-	void map(function_view<void(NodeInfo)> &func, NodeInfo &node);
-	bool merge(NodeInfo &node);
-	int nodeCount(NodeInfo &node);
-	DataType foldAvg(NodeInfo &node);
-	DataType getNodeNeighbor(NCode node, NeighborCoords &direction);
-
-	auto getRoot();
-
-	Coords nodeCoordsToOffset(ChildIndex child, Coord levelSize) const;
-	void transformCoordsToDeeperLevel(Coords &coords, size_t sizeMask) const;
-	NodeCoords coordsToChildCoords(const Coords &coords, Coord levelSize) const;
-
-	bool childExists(NodeInfo &node, ChildIndex index, NodeInfo &childNode);
-	bool childExists(const Node &node, ChildIndex index) const;
-	ChildIndex getChildIndex(const Coords &coords, Coord levelSize) const;
-
-	NodeCoords childIndexToNodeCoords(ChildIndex index) const;
-	ChildIndex nodeCoordToChildIndex(NodeCoords coords) const;
-	NCode codeToChildCode(NCode parentCode, const NodeCoords &coords) const;
-	NCode codeToChildCode(NCode parentCode, ChildIndex i) const;
-
-	int MaxNodeCount(const uint levels, const uint ChildrenPerNode);
+	using NodeIter = decltype(Nodes.find(-1));
 
 
-	struct CacheHasher;
-	std::unordered_map<uint, T, CacheHasher> retrievalCache;
+	ChildIndex getRelLocCode(NodeCoords coords);
+	NCode getLocCode(NCode parentCode, const NodeCoords &coords);
+	NCode getLocCode(NCode parentCode, ChildIndex i);
+
+	uint getCacheHash(const Coords &pos);
+
+	void map(function_view<void(NodeInfo)> &func, NodeIter &node, Coords thisPos, Coord thisSize);
+	void expand(uint level, NodeIter& node);
+	bool merge(NodeIter &node);
+	int nodeCount(NodeIter &node);
+
+	bool nodeExists(NodeIter &node, ChildIndex index);
+	void canonalizeCoords(Coords &coords, size_t sizeMask);
+	NodeCoords getNodeCoords(Coords &coords, uchar level);
+
+	const int childrenPerNode = std::pow(2, Dimensions);
+	const NCode overMaxBit = 1 << ((Levels + 1) * Dimensions);
+
+	std::unordered_map<uint, T, PassHash> retrievalCache;
 };
+
 
 #define NTREE_TEMPLATE_SIGNATURE template<typename T, uchar Levels, CoordinateSystem System, uchar Dimensions>
-#define NTREE_SIGNATURE NTree<T, Levels, System, Dimensions>
-
-
-NTREE_TEMPLATE_SIGNATURE
-struct NTREE_SIGNATURE::NodeInfo
-{
-	NodeInfo() {}
-	NodeInfo(NodeIter &node, NTREE_SIGNATURE *tree, Coords pos, Coord size) 
-		: Pos(pos), Size(size)
-	{
-		if (node != tree->Nodes.end())
-		{
-			this->code = node->first;
-			this->node = &node->second;
-			isValid = true;
-		}
-		else
-		{ isValid = false; }
-	}
-	NodeInfo(NodeIter &node, NTREE_SIGNATURE *tree) 
-		: NodeInfo(node, tree, Coords(), Coord()) {}
-	NodeInfo(Node &node, NCode code, Coords pos, Coord size) 
-		: node(&node), Pos(pos), Size(size), code(code) {}
-	NodeInfo(NodeInfo &node, Coords pos, Coord size) 
-		: node(node.node), Pos(pos), Size(size), code(node.code) {}
-	NodeInfo(NodeInfo &node) 
-		: NodeInfo(node, node.Pos, node.Size) {}
-
-
-	NCode GetCode() { return code; }
-	Node &GetNode() { return *node; }
-
-	bool IsValid() { return isValid; }
-
-	Coords Pos;
-	Coord Size;
-
-private:
-	Node *node;
-	NCode code;
-	bool isValid = true;
-};
-
+#define NTREE_SIGNATURE LinearTree<T, Levels, System, Dimensions>
 
 NTREE_TEMPLATE_SIGNATURE
-struct NTREE_SIGNATURE::CacheHasher
+NTREE_SIGNATURE::LinearTree(T initial)
 {
-	uint operator()(const Coords &pos) const
-	{
-		uint sum = 0;
-		for (size_t i = 0; i < Dimensions; i++)
-		{ 
-			if constexpr (System == CoordinateSystem::Resolution)
-			{ sum |= (pos[i] << Levels * (Dimensions - i - 1)); }
-			else if constexpr (System == CoordinateSystem::Normalized)
-			{ sum |= (int(pos[i] * Resolution) << Levels * (Dimensions - i - 1)); }
-		}
-		return sum;
-	}
-};
-
-
-NTREE_TEMPLATE_SIGNATURE
-NTREE_SIGNATURE::NTree(DataType initial)
-{
-	Nodes.reserve(MaxNodeCount(Levels, ChildrenPerNode) / 2);
-	retrievalCache.reserve(MaxNodeCount(Levels, ChildrenPerNode) / 2);
+	Size = std::pow(2, Levels);
+	Nodes.reserve(MaxNodeCount(Levels, childrenPerNode) / 2);
+	retrievalCache.reserve(MaxNodeCount(Levels, childrenPerNode) / 2);
 	Nodes[1] = Node(initial);
 }
 
 
 NTREE_TEMPLATE_SIGNATURE
 template<bool UseCache>
-auto NTREE_SIGNATURE::Get(Coords coords) -> const DataType &
+const T &NTREE_SIGNATURE::Get(Coords coords)
 {
+	CacheIndex cacheHash;
 	if constexpr(UseCache)
 	{
 		// Check if the coordinates were previously cached.
 		// If they were, return their value.
-		auto cachedValue = retrievalCache.find(coords);
-		if (cachedValue != retrievalCache.end()) { return cachedValue.GetNode(); }
+		cacheHash = getCacheHash(coords);
+		auto cachedValue = retrievalCache.find(cacheHash);
+		if (cachedValue != retrievalCache.end()) { return cachedValue->second; }
 	}
 
-	int levelSize = Resolution;
-	NodeInfo &thisNode = NodeInfo(getRoot(), this);
+	uint sizeMask = Size - 1;
+	char level = Levels - 1;
+	NodeIter &thisNode = Nodes.find(1);
 
 	while (true)
 	{
-		NodeInfo childNode;
-		ChildIndex index = getChildIndex(coords, levelSize);
+		// Get the next node's coordinates inside this node.
+		NodeCoords nodeCoords;
+		for (size_t i = 0; i < Dimensions; i++)
+		{ nodeCoords[i] = coords[i] >= 0.5; }
+
+		ChildIndex relLocCode = getRelLocCode(nodeCoords);
 
 		// If the child exists, travel to it.
-		if (childExists(thisNode, index, childNode))
+		if (nodeExists(thisNode, relLocCode))
 		{
-			thisNode = childNode;
+			NCode childCode = getLocCode(thisNode->first, relLocCode);
+			thisNode = Nodes.find(getLocCode(thisNode->first, relLocCode));
 
 			// Make the coordinates relative to the next node.
-			levelSize /= 2;
-			transformCoordsToDeeperLevel(coords, levelSize - 1);
+			sizeMask >>= 1;
+			level--;
+
+			canonalizeCoords(coords, sizeMask);
 		}
 		else
 		{
 			// If the child doesn't exist, return this node's value.
 			if constexpr (UseCache)
-			{ retrievalCache[coords] = thisNode.GetNode().Data; }
-			return thisNode.GetNode().Data;
+			{ retrievalCache[cacheHash] = thisNode->second.Data; }
+			return thisNode->second.Data;
 		}
 	}
 }
 
 NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::Set(Coords coords, DataType data)
+void NTREE_SIGNATURE::Set(Coords coords, T data)
 {
+	uint sizeMask = Size - 1;
 	char level = Levels;
-	int levelSize = Resolution;
 
-	NodeInfo thisNode(getRoot(), this);
+	NodeIter &thisNode = Nodes.find(1);
 
 	while (true)
 	{
 		// Get the next node's coordinates inside this node.
-		NodeCoords nodeCoords = coordsToChildCoords(coords, levelSize);
-		ChildIndex relLocCode = nodeCoordToChildIndex(nodeCoords);
-		NCode child = codeToChildCode(thisNode.GetCode(), relLocCode);
+		NodeCoords nodeCoords = getNodeCoords(coords, level);
+		ChildIndex relLocCode = getRelLocCode(nodeCoords);
+		NCode child = getLocCode(thisNode->first, relLocCode);
 
 		// If we're on the last level (most detail), set the data.
 		if (level == 0)
 		{
-			thisNode.GetNode().Data = data;
+			thisNode->second.Data = data;
 			return;
 		}
 
-		bool isLeaf = !thisNode.GetNode().isParent;
+		bool isLeaf = !thisNode->second.isParent;
 		bool createNextNode = false, sameData = false;
 
 		// If this node is a leaf, split the node and travel to the new child.
 		if (isLeaf)
 		{
-			if(thisNode.GetNode().Data == data)
+			if(thisNode->second.Data == data)
 			{ sameData = true; }
 			else
 			{ createNextNode = true; }
 		}
 		else
 		{
-			NodeInfo nextNode(Nodes.find(child), this);
+			auto &nextNode = Nodes.find(child);
 
-			if (!nextNode.IsValid())
+			if (nextNode == Nodes.end())
 			{ createNextNode = true; }
 			else
 			{
-				if(nextNode.GetNode().Data == data)
+				if(nextNode->second.Data == data)
 				{ sameData = true; }
 				else
 				{
@@ -276,184 +238,121 @@ void NTREE_SIGNATURE::Set(Coords coords, DataType data)
 		// If the next node doesn't exist, create it and travel to it.
 		if (createNextNode)
 		{
-			thisNode.GetNode().childExistMask |= (1 << relLocCode);
-			thisNode = NodeInfo(Nodes.insert({ child, thisNode.GetNode().Data }).first, this);
+			thisNode->second.childExistMask |= (1 << relLocCode);
+			thisNode = Nodes.insert({ child, thisNode->second.Data }).first;
 		}
 
 		// Make the coordinates relative to the next node.
+		sizeMask >>= 1;
 		level--;
-		levelSize /= 2;
-		transformCoordsToDeeperLevel(coords, levelSize - 1);
+		canonalizeCoords(coords, sizeMask);
 	}
 }
 
 
 NTREE_TEMPLATE_SIGNATURE
 void NTREE_SIGNATURE::Map(function_view<void(NodeInfo)> func) 
-{ map(func, NodeInfo(getRoot(), this, Coords(), TreeSize())); }
+{
+	Coord startSize;
+	if constexpr (System == CoordinateSystem::Resolution)
+	{ startSize = Size; }
+	else if constexpr (System == CoordinateSystem::Normalized)
+	{ startSize = 1.0; }
 
+	map(func, Nodes.find(1), Coords(), startSize);
+}
 
 NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::Merge() { merge(NodeInfo(getRoot(), this)); }
+void NTREE_SIGNATURE::Expand() 
+{ 
+	Nodes.reserve(MaxNodeCount(Levels, childrenPerNode));
+	expand(Levels, Nodes.find(1));
+}
 
 NTREE_TEMPLATE_SIGNATURE
-int NTREE_SIGNATURE::NodeCount() { return nodeCount(NodeInfo(getRoot(), this)); }
-
+void NTREE_SIGNATURE::Fill(function_view<T(Coords &)> func)
+{
+	Map([&](NodeInfo &info)
+		{ 
+			Set(info.Pos, func(info.Pos));
+		});
+	//Merge();
+}
 
 NTREE_TEMPLATE_SIGNATURE
 void NTREE_SIGNATURE::ClearCache() { retrievalCache.clear(); }
 
+NTREE_TEMPLATE_SIGNATURE
+void NTREE_SIGNATURE::Merge() { merge(Nodes.find(1)); }
 
 NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::TreeSize() -> Coord
+int NTREE_SIGNATURE::NodeCount() { return nodeCount(Nodes.find(1)); }
+
+
+NTREE_TEMPLATE_SIGNATURE
+auto NTREE_SIGNATURE::getRelLocCode(NodeCoords coords) -> ChildIndex
 {
-	if constexpr (System == CoordinateSystem::Resolution)
-	{ return Resolution; } 
-	else if constexpr (System == CoordinateSystem::Normalized)
-	{ return 1.0; }
+	ChildIndex sum = 0;
+	for (size_t i = 0; i < Dimensions; i++)
+	{ sum |= (coords[i] << (Dimensions - i - 1)); }
+	return sum;
+}
+
+NTREE_TEMPLATE_SIGNATURE
+auto NTREE_SIGNATURE::getLocCode(NCode parentCode, const NodeCoords &coords) -> NCode
+{ return (parentCode << Dimensions) | getRelLocCode(coords); }
+
+NTREE_TEMPLATE_SIGNATURE
+auto NTREE_SIGNATURE::getLocCode(NCode parentCode, ChildIndex i) -> NCode
+{
+	assert(i < childrenPerNode);
+	return (parentCode << Dimensions) | i;
 }
 
 
 NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::GetConnectionGraph(std::vector<NodeInfo> &vertices)
+uint NTREE_SIGNATURE::getCacheHash(const Coords &pos)
 {
-	getConnectionGraph(vertices, NodeInfo(getRoot(), this, Coords(), TreeSize()));
-}
-
-NTREE_TEMPLATE_SIGNATURE
-template<typename>
-void NTREE_SIGNATURE::getConnectionGraph(
-	std::vector<NodeInfo> &vertices, NodeInfo &node)
-{
-	if (!node.GetNode().isParent) { return; }
-
-	Coords childOffset;
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
-	{
-		NodeInfo child;
-		if (childExists(node, i, child))
-		{
-			childOffset = static_cast<Coords>(childIndexToNodeCoords(i)) * (node.Size / 2.);
-
-			child.Pos = node.Pos + childOffset;
-			child.Size = node.Size / 2;
-			getConnectionGraph(vertices, child);
-		}
-	}
-
-	NodeInfo bl = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), 0)), this, node.Pos + Coords(0, 0) * node.Size / 2, node.Size / 2);
-	NodeInfo br = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), 1)), this, node.Pos + Coords(1, 0) * node.Size / 2, node.Size / 2);
-	NodeInfo tl = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), 2)), this, node.Pos + Coords(0, 1) * node.Size / 2, node.Size / 2);
-	NodeInfo tr = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), 3)), this, node.Pos + Coords(1, 1) * node.Size / 2, node.Size / 2);
-	getConnectionHorizontal(vertices, bl, br);
-	getConnectionHorizontal(vertices, tl, tr);
-	getConnectionVertictal(vertices, bl, tl);
-	getConnectionVertictal(vertices, br, tr);
-}
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::getConnectionHorizontal(
-	std::vector<NodeInfo> &vertices, NodeInfo &nodeA, NodeInfo &nodeB)
-{
-	if(!nodeA.IsValid() || !nodeB.IsValid()) { return; }
-
-	NodeInfo brA(Nodes.find(codeToChildCode(nodeA.GetCode(), 1)), this, nodeA.Pos + Coords(1, 0) * nodeA.Size / 2, nodeA.Size / 2);
-	NodeInfo trA(Nodes.find(codeToChildCode(nodeA.GetCode(), 3)), this, nodeA.Pos + Coords(1, 1) * nodeA.Size / 2, nodeA.Size / 2);
-	NodeInfo blB(Nodes.find(codeToChildCode(nodeB.GetCode(), 0)), this, nodeB.Pos + Coords(0, 0) * nodeB.Size / 2, nodeB.Size / 2);
-	NodeInfo tlB(Nodes.find(codeToChildCode(nodeB.GetCode(), 2)), this, nodeB.Pos + Coords(0, 1) * nodeB.Size / 2, nodeB.Size / 2);
-
-	bool aPar = nodeA.GetNode().isParent;
-	bool bPar = nodeB.GetNode().isParent;
-	if(aPar)
-	{
-		if (bPar)
-		{
-			getConnectionHorizontal(vertices, brA, blB);
-			getConnectionHorizontal(vertices, trA, tlB);
-		}
-		else
-		{
-			getConnectionHorizontal(vertices, brA, nodeB);
-			getConnectionHorizontal(vertices, trA, nodeB);
-		}
-	}
-	else if(bPar)
-	{
-		getConnectionHorizontal(vertices, nodeA, blB);
-		getConnectionHorizontal(vertices, nodeA, tlB);
-	}
-	else
-	{
-		if(nodeA.GetNode().Data.Config != 2 && nodeB.GetNode().Data.Config != 2) { return; }
-		vertices.push_back(NodeInfo(nodeA, nodeA.Pos + Coords(nodeA.Size / 2), nodeA.Size / 2));
-		vertices.push_back(NodeInfo(nodeB, nodeB.Pos + Coords(nodeB.Size / 2), nodeB.Size / 2));
-	}
-}
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::getConnectionVertictal(
-	std::vector<NodeInfo> &vertices, NodeInfo &nodeA, NodeInfo &nodeB)
-{
-	if(!nodeA.IsValid() || !nodeB.IsValid()) { return; }
-
-	NodeInfo blA(Nodes.find(codeToChildCode(nodeA.GetCode(), 2)), this, nodeA.Pos + Coords(0, 1) * nodeA.Size / 2, nodeA.Size / 2);
-	NodeInfo brA(Nodes.find(codeToChildCode(nodeA.GetCode(), 3)), this, nodeA.Pos + Coords(1, 1) * nodeA.Size / 2, nodeA.Size / 2);
-	NodeInfo tlB(Nodes.find(codeToChildCode(nodeB.GetCode(), 0)), this, nodeB.Pos + Coords(0, 0) * nodeB.Size / 2, nodeB.Size / 2);
-	NodeInfo trB(Nodes.find(codeToChildCode(nodeB.GetCode(), 1)), this, nodeB.Pos + Coords(1, 0) * nodeB.Size / 2, nodeB.Size / 2);
-
-	bool aPar = nodeA.GetNode().isParent;
-	bool bPar = nodeB.GetNode().isParent;
-	if(aPar)
-	{
-		if (bPar)
-		{
-			getConnectionVertictal(vertices, blA, tlB);
-			getConnectionVertictal(vertices, brA, trB);
-		}
-		else
-		{
-			getConnectionVertictal(vertices, blA, nodeB);
-			getConnectionVertictal(vertices, brA, nodeB);
-		}
-	}
-	else if(bPar)
-	{
-		getConnectionVertictal(vertices, nodeA, tlB);
-		getConnectionVertictal(vertices, nodeA, trB);
-	}
-	else
-	{
-		if(nodeA.GetNode().Data.Config != 2 && nodeB.GetNode().Data.Config != 2) { return; }
-		vertices.push_back(NodeInfo(nodeA, nodeA.Pos + Coords(nodeA.Size / 2), nodeA.Size / 2));
-		vertices.push_back(NodeInfo(nodeB, nodeB.Pos + Coords(nodeB.Size / 2), nodeB.Size / 2));
-	}
-}
-
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::map(function_view<void(NodeInfo)> &func, NodeInfo &node)
-{
-	if (!node.GetNode().isParent)
+	uint sum = 0;
+	for (size_t i = 0; i < Dimensions; i++)
 	{ 
-		func(NodeInfo(node, node.Pos, node.Size));
+		if constexpr (System == CoordinateSystem::Resolution)
+		{ sum |= (pos[i] << Levels * (Dimensions - i - 1)); }
+		else if constexpr (System == CoordinateSystem::Normalized)
+		{ sum |= (int(pos[i] * Size) << Levels * (Dimensions - i - 1)); }
+	}
+
+	return sum;
+}
+
+
+NTREE_TEMPLATE_SIGNATURE
+void NTREE_SIGNATURE::map(function_view<void(NodeInfo)> &func, NodeIter &node, Coords thisPos, Coord thisSize)
+{
+	Coords childOffset;
+	int currDim = 0;
+
+	if (!node->second.isParent)
+	{ 
+		func(NodeInfo{ thisPos, thisSize, node->second });
 		return;
 	}
 
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
+	for (ChildIndex i = 0; i < childrenPerNode; i++)
 	{
-		Coords childOffset = nodeCoordsToOffset(i, node.Size/2);
-		NodeInfo child;
-
-		if (childExists(node, i, child))
+		for (size_t j = 0; j < Dimensions; j++)
 		{
-			NodeInfo childInfo(child, node.Pos + childOffset, node.Size / 2);
-			map(func, childInfo);
+			childOffset[j] = ((i >> j) & 1) * (thisSize / 2);
+		}
+
+		if (nodeExists(node, i))
+		{
+			NCode childCode = getLocCode(node->first, i);
+			map(func, Nodes.find(childCode), thisPos + childOffset, thisSize / 2);
 		}
 		else
 		{
-			Node newChildNode(node.GetNode().Data);
-			NodeInfo childInfo(newChildNode, node.GetCode(), node.Pos + childOffset, node.Size / 2);
-			func(NodeInfo(childInfo));
+			func(NodeInfo{ thisPos + childOffset, thisSize / 2, node->second });
 		}
 
 		//childOffset[currDim] = (childOffset[currDim] + thisSize / 2) & (thisSize / 2);
@@ -462,18 +361,39 @@ void NTREE_SIGNATURE::map(function_view<void(NodeInfo)> &func, NodeInfo &node)
 }
 
 NTREE_TEMPLATE_SIGNATURE
-bool NTREE_SIGNATURE::merge(NodeInfo &nodeInfo)
+void NTREE_SIGNATURE::expand(uint level, NodeIter &node)
 {
+	for (ChildIndex i = 0; i < childrenPerNode; i++)
+	{
+		if (!nodeExists(node, i))
+		{ 
+			NCode childCode = getLocCode(node->first, i);
+			NodeIter &newNode = Nodes.insert({ childCode, Node(node->second.Data) }).first;
+			node->second.childExistMask |= (1 << i);
+			if (level >= 1) { expand(level - 1, newNode); }
+		}
+	}
+}
+
+NTREE_TEMPLATE_SIGNATURE
+bool NTREE_SIGNATURE::merge(NodeIter &node)
+{
+	T data = node->second.Data;
+	NCode code = node->first;
+
 	//If this node is a leaf, it is already merged.
-	if (!nodeInfo.GetNode().isParent) { return true; }
+	if (!node->second.isParent) { return true; }
 
 	//Try to merge all children (unless they are already leaves).
 	bool canMerge = true, hasChildren = false, hasAllChildren = true;
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
+	for (ChildIndex i = 0; i < childrenPerNode; i++)
 	{
-		NodeInfo child;
-		if (childExists(nodeInfo, i, child) && !merge(child))
-		{ canMerge = false; }
+		if (nodeExists(node, i))
+		{
+			NCode childCode = getLocCode(code, i);
+			NodeIter &child = Nodes.find(childCode);
+			if (!merge(child)) { canMerge = false; }
+		}
 		else { hasAllChildren = false; }
 	}
 
@@ -483,128 +403,62 @@ bool NTREE_SIGNATURE::merge(NodeInfo &nodeInfo)
 
 	//If the children can be merged, check if they all have the same data.
 	bool sameData = true, firstChild = true;
-	DataType tester, data = nodeInfo.GetNode().Data;
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
+	T tester;
+	for (ChildIndex i = 0; i < childrenPerNode; i++)
 	{
-		NodeInfo child;
-		if (childExists(nodeInfo, i, child))
+		if (nodeExists(node, i))
 		{
 			if (firstChild)
 			{
 				firstChild = false;
-				tester = child.GetNode().Data;
+				tester = Nodes[getLocCode(code, i)].Data;
 				if (!hasAllChildren && data != tester) { sameData = false; break; }
 			}
-			else if (child.GetNode().Data != tester) { sameData = false; break; }
+			else if (Nodes[getLocCode(code, i)].Data != tester) { sameData = false; break; }
 		}
 	}
 
 	//If all children have the same data, deallocate them and set the data of this tree.
 	if (sameData)
 	{
-		for (uint i = 0; i < ChildrenPerNode; i++)
+		for (uint i = 0; i < childrenPerNode; i++)
 		{
-			if (childExists(nodeInfo.GetNode(), i))
-			{ Nodes.erase(codeToChildCode(nodeInfo.GetCode(), i)); }
+			if (nodeExists(node, i))
+			{ Nodes.erase(getLocCode(code, i)); }
 		}
-		nodeInfo.GetNode().isParent = false;
-		nodeInfo.GetNode().Data = tester;
+		node->second.isParent = false;
+
+		Nodes[code].Data = tester;
 	}
 	return sameData;
 }
 
 NTREE_TEMPLATE_SIGNATURE
-int NTREE_SIGNATURE::nodeCount(NodeInfo &node)
+int NTREE_SIGNATURE::nodeCount(NodeIter &node)
 {
 	uint sum = 1;
-	if(!node.GetNode().isParent)
+	if(!node->second.isParent)
 	{ return sum; }
 
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
+	for (ChildIndex i = 0; i < childrenPerNode; i++)
 	{
-		NodeInfo child;
-		if (childExists(node, i, child))
-		{ sum += nodeCount(child); }
+		if (nodeExists(node, i))
+		{ 
+			NCode childCode = getLocCode(node->first, i);
+			sum += nodeCount(Nodes.find(childCode));
+		}
 	}
 	return sum;
 }
 
 NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::foldAvg(NodeInfo &node) -> DataType
+bool NTREE_SIGNATURE::nodeExists(NodeIter &node, ChildIndex index)
 {
-	if (!node.GetNode().isParent) { return node.GetNode().Data; }
-
-	DataType sum = DataType();
-	int count = 0;
-
-	for (size_t i = 0; i < ChildrenPerNode; i++)
-	{
-		NodeInfo child;
-		if(childExists(node.GetNode(), i, child))
-		{
-			sum = sum + foldAvg(child);
-			count++;
-		}
-	}
-
-	return sum / count;
+	return (node->second.childExistMask >> index) & 1;
 }
 
 NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::getNodeNeighbor(NCode code, NeighborCoords &direction) -> DataType
-{
-	if (direction.x == 0 && direction.y == 1)
-	{
-		if(!(code & 1))
-		{
-			NCode targetCode = code | 1;
-
-			auto &targetNode = Nodes.find(targetCode);
-			if(targetNode == Nodes.end())
-			{ return Nodes.find(targetCode >> Dimensions).GetNode().Data; }
-			else
-			{ return foldAvg(targetNode); }
-		} 
-		else
-		{
-			NCode targetCode = code;
-			int currIndex = 0;//Dependent
-			while (targetCode & (1 << currIndex))
-			{
-				targetCode &= ~(1 << currIndex);
-				currIndex += Dimensions;
-			}
-			targetCode |= (1 << currIndex);
-
-			auto &targetNode = Nodes.find(targetCode);
-			while(targetNode == Nodes.end())
-			{ 
-				targetCode >>= Dimensions; 
-				targetNode = Nodes.find(targetCode);
-			}
-			return targetNode.GetNode().Data;
-		}
-	}
-}
-
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::getRoot()
-{ return Nodes.find(1); }
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::nodeCoordsToOffset(ChildIndex child, Coord levelSize) const -> Coords
-{
-	Coords offset;
-
-	for (size_t j = 0; j < Dimensions; j++)
-	{ offset[j] = ((child >> j) & 1) * levelSize; }
-
-	return offset;
-}
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::transformCoordsToDeeperLevel(Coords &coords, size_t sizeMask) const
+void NTREE_SIGNATURE::canonalizeCoords(Coords &coords, size_t sizeMask)
 {
 	if constexpr (System == CoordinateSystem::Resolution)
 	{
@@ -622,95 +476,21 @@ void NTREE_SIGNATURE::transformCoordsToDeeperLevel(Coords &coords, size_t sizeMa
 }
 
 NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::coordsToChildCoords(const Coords &coords, Coord levelSize) const -> NodeCoords
+auto NTREE_SIGNATURE::getNodeCoords(Coords &coords, uchar level) -> NodeCoords
 {
-	NodeCoords childCoords;
-
+	NodeCoords nodeCoords;
 	if constexpr (System == CoordinateSystem::Resolution)
 	{
-		for (size_t i = 0; i < Dimensions; i++)
-		{ childCoords[i] = coords[i] >= levelSize; }
+		for(size_t i = 0; i < Dimensions; i++)
+		{ nodeCoords[i] = coords[i] >> (level - 1); }
 	}
 	else if constexpr (System == CoordinateSystem::Normalized)
 	{
 		for (size_t i = 0; i < Dimensions; i++)
-		{ childCoords[i] = coords[i] >= 0.5; }
+		{ nodeCoords[i] = coords[i] >= 0.5; }
 	}
-
-	return childCoords;
+	return nodeCoords;
 }
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::getChildIndex(const Coords &coords, Coord levelSize) const -> ChildIndex
-{
-	auto childCoords = coordsToChildCoords(coords, levelSize);
-	return nodeCoordToChildIndex(childCoords);
-}
-
-NTREE_TEMPLATE_SIGNATURE
-bool NTREE_SIGNATURE::childExists(
-	NodeInfo &node,
-	ChildIndex index,
-	NodeInfo &childNode)
-{ 
-	if (childExists(node.GetNode(), index))
-	{
-		childNode = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), index)), this);
-		return true;
-	}
-	else { return false; }
-}
-
-NTREE_TEMPLATE_SIGNATURE
-bool NTREE_SIGNATURE::childExists(const Node &node, ChildIndex index) const
-{ return (node.childExistMask >> index) & 1; }
-
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::childIndexToNodeCoords(ChildIndex index) const -> NodeCoords
-{
-	NodeCoords coords;
-	for (size_t j = 0; j < Dimensions; j++)
-	{ coords[j] = ((index >> j) & 1); }
-	return coords;
-}
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::nodeCoordToChildIndex(NodeCoords coords) const -> ChildIndex
-{
-	ChildIndex sum = 0;
-	for (size_t i = 0; i < Dimensions; i++)
-	{ sum |= (coords[i] << (Dimensions - i - 1)); }
-	return sum;
-}
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::codeToChildCode(NCode parentCode, const NodeCoords &coords) const -> NCode
-{ return (parentCode << Dimensions) | nodeCoordToChildIndex(coords); }
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::codeToChildCode(NCode parentCode, ChildIndex i) const -> NCode
-{
-	assert(i < ChildrenPerNode);
-	return (parentCode << Dimensions) | i;
-}
-
-
-NTREE_TEMPLATE_SIGNATURE
-int NTREE_SIGNATURE::MaxNodeCount
-(const uint levels, const uint ChildrenPerNode)
-{
-	int total = 1, nodeCount = ChildrenPerNode;
-
-	for(uint i = 0; i < levels; i++)
-	{
-		total += nodeCount;
-		nodeCount *= ChildrenPerNode;
-	}
-
-	return total;
-}
-
 
 /*
 #pragma once
@@ -723,767 +503,401 @@ int NTREE_SIGNATURE::MaxNodeCount
 #include <unordered_map>
 #include <vector>
 
-enum class CoordinateSystem { Resolution, Normalized };
-
-template<typename T, uchar Levels, CoordinateSystem System, uchar Dimensions = 2>
-class NTree 
+static constexpr int MaxNodeCount(const uint levels, const uint childrenPerNode)
 {
-private:
-	template<CoordinateSystem>
-	struct TreeCoordTypes 
-	{ using type = uint; };
-	
-	template<>
-	struct TreeCoordTypes<CoordinateSystem::Normalized> 
-	{ using type = float; };
+int total = 1, nodeCount = childrenPerNode;
 
-public:
-	static const int Resolution = 2 << (Levels - 1);
-	static const int ChildrenPerNode = 2 << (Dimensions - 1);
-
-	struct Node;
-	using ChildIndex = uchar;
-	using NCode = uint;
-	using Coord = typename TreeCoordTypes<System>::type;
-	using Coords = Vec<Coord, Dimensions>;
-	using NodeCoord = bool;
-	using NodeCoords = Vec<NodeCoord, Dimensions>;
-	using NeighborCoords = Vec<bool, Dimensions>;
-	using CacheIndex = uint;
-	using DataType = T;
-
-	
-	struct Node 
-	{
-		Node(DataType data = DataType()) : Data(data) {}
-		DataType Data;
-		union
-		{
-			uchar childExistMask;
-			bool isParent = false;
-		};
-	};
-
-	struct NodeInfo;
-
-	NTree(DataType initial);
-
-	template<bool UseCache = true>
-	const DataType &Get(Coords coords);
-	void Set(Coords coords, DataType data);
-
-	void Map(function_view<void(NodeInfo)> func);
-	void ForAllChildren(function_view<void(NodeInfo)> func, NodeInfo &code);
-	void Expand();
-	void Fill(function_view<DataType(Coords &)> func);
-	void Merge();
-	int NodeCount();
-
-	using NodeIter = typename std::unordered_map<NCode, Node>::iterator;
-	void GetConnectionGraph(std::vector<Coords> &vertices, std::vector<uint> &indices);
-
-	Coord TreeSize();
-
-protected:
-	template<REQUIRES(Dimensions == 2)>
-	void getConnectionGraph
-		(std::vector<Coords> &vertices, std::vector<uint> &indices, NodeInfo &node);
-	void getConnectionHorizontal
-		(std::vector<Coords> &vertices, std::vector<uint> &indices, NodeInfo &nodeA, NodeInfo &nodeB);
-	void getConnectionVertictal
-		(std::vector<Coords> &vertices, std::vector<uint> &indices, NodeInfo &nodeA, NodeInfo &nodeB);
-
-	void map(function_view<void(NodeInfo)> &func, NodeInfo &node);
-	void expand(uint level, NodeInfo& node);
-	bool merge(NodeInfo &node);
-	int nodeCount(NodeInfo &node);
-	DataType foldAvg(NodeInfo &node);
-	DataType getNodeNeighbor(NCode node, NeighborCoords &direction);
-
-
-	virtual NodeIter &setNode(NCode code, Node &node) = 0;
-	virtual NodeIter &getNode(NCode code) = 0;
-
-	virtual NodeIter &getRoot() = 0;
-
-	virtual Coords nodeCoordsToOffset(ChildIndex child, Coord levelSize) const = 0;
-	virtual void transformCoordsToDeeperLevel(Coords &coords, size_t sizeMask) const = 0;
-	virtual NodeCoords coordsToChildCoords(const Coords &coords, Coord levelSize) const = 0;
-
-	virtual bool getChild(NodeInfo &node, ChildIndex index, NodeInfo &childNode) = 0;
-	virtual bool childExists(const Node &node, ChildIndex index) const = 0;
-	virtual ChildIndex getChildIndex(const Coords &coords, Coord levelSize) const = 0;
-	virtual ChildIndex nodeCoordToChildIndex(NodeCoords coords) const = 0;
-
-
-	constexpr int MaxNodeCount(const uint levels, const uint ChildrenPerNode)
-	{
-		int total = 1, nodeCount = ChildrenPerNode;
-
-		for(uint i = 0; i < levels; i++)
-		{
-			total += nodeCount;
-			nodeCount *= ChildrenPerNode;
-		}
-
-		return total;
-	}
-};
-
-#define NTREE_TEMPLATE_SIGNATURE template<typename T, uchar Levels, CoordinateSystem System, uchar Dimensions>
-#define NTREE_SIGNATURE NTree<T, Levels, System, Dimensions>
-#define LINEARTREE_SIGNATURE LinearTree<T, Levels, System, Dimensions>
-
-
-NTREE_TEMPLATE_SIGNATURE
-struct NTREE_SIGNATURE::NodeInfo
+for(uint i = 0; i < levels; i++)
 {
-	NodeInfo() {}
+total += nodeCount;
+nodeCount *= childrenPerNode;
+}
 
-	NodeInfo(NodeIter &node) 
-		: NodeInfo(node->second, node->first, Coords(), Coord()) {}
-	NodeInfo(NodeIter &node, Coords pos, Coord size) 
-		: node(&node->second), Pos(pos), Size(size), code(node->first) {}
+return total;
+}
 
-	NodeInfo(Node &node, NCode code, Coords pos, Coord size) 
-		: node(&node), Pos(pos), Size(size), code(code) {}
-
-	NodeInfo(NodeInfo &node, Coords pos, Coord size) 
-		: node(node.node), Pos(pos), Size(size), code(node.code) {}
-	NodeInfo(NodeInfo &node) 
-		: NodeInfo(node, node.Pos, node.Size) {}
-
-
-	NCode GetCode() { return code; }
-	Node &GetNode() { return *node; }
-
-	Coords Pos;
-	Coord Size;
-
-private:
-	Node *node;
-	NCode code;
-};
-
-template<typename T, uchar Levels, CoordinateSystem System, uchar Dimensions = 2>
-struct LinearTree : NTree<T, Levels, System, Dimensions>
+template<typename T, uchar Levels, uchar Dimensions = 2>
+class LinearTree
 {
 public:
-	using Node = typename NTREE_SIGNATURE::Node;
-	using typename NTREE_SIGNATURE::ChildIndex;
-	using typename NTREE_SIGNATURE::NCode;
-	using typename NTREE_SIGNATURE::Coord;
-	using typename NTREE_SIGNATURE::Coords;
-	using typename NTREE_SIGNATURE::NodeCoord;
-	using typename NTREE_SIGNATURE::NodeCoords;
-	using typename NTREE_SIGNATURE::NeighborCoords;
-	using typename NTREE_SIGNATURE::CacheIndex;
-	using typename NTREE_SIGNATURE::DataType;
+struct Node;
+using NodePtr = Node&;
+using ChildIndex = uchar;
+using NCode = uint;
+using Coord = uint;
+using Coords = Vec<Coord, Dimensions>;
+using NodeCoord = bool;
+using NodeCoords = Vec<NodeCoord, Dimensions>;
+using CacheIndex = uint;
 
-	LinearTree(DataType initial) : NTree(initial)
-	{ 
-		Nodes.reserve(MaxNodeCount(Levels, ChildrenPerNode) / 2);
-		retrievalCache.reserve(MaxNodeCount(Levels, ChildrenPerNode) / 2);
-	}
 
-	void ClearCache() { retrievalCache.clear(); }
+struct Node
+{
+Node(T data = T()) : Data(data) {}
+Node(const Node &node) : Data(node.Data) {}
+
+T Data;
+};
+
+struct NodeInfo
+{
+Coords Pos;
+size_t Size;
+T Value;
+};
+
+struct PassHash
+{
+uint operator()(const NCode &code) const
+{ return code; }
+};
+
+public:
+LinearTree(T initial);
+
+const T &Get(Coords coords);
+void Set(Coords coords, T data);
+void SetDelayed(Coords coords, T data);
+
+void Map(function_view<void(NodeInfo)> func);
+
+void UpdateDelayed();
+void ClearCache();
+void Merge();
+
+int NodeCount();
+
+std::unordered_map<NCode, Node, PassHash> Nodes;
+int Size;
 
 private:
-	NodeIter &setNode(NCode code, Node &node);
-	NodeIter &getNode(NCode code);
+ChildIndex getRelLocCode(NodeCoords coords);
+NCode getLocCode(NCode parentCode, const NodeCoords &coords);
+NCode getLocCode(NCode parentCode, ChildIndex i);
 
-	NodeIter &getRoot();
+bool nodeExists(NCode code);
+Node getChildNode(NCode parCode, ChildIndex i);
 
-	Coords nodeCoordsToOffset(ChildIndex child, Coord levelSize) const;
-	void transformCoordsToDeeperLevel(Coords &coords, size_t sizeMask) const;
-	NodeCoords coordsToChildCoords(const Coords &coords, Coord levelSize) const;
+uint getCacheHash(const Coords &pos);
 
-	bool getChild(NodeInfo &node, ChildIndex index, NodeInfo &childNode);
-	bool childExists(const Node &node, ChildIndex index) const;
-	ChildIndex getChildIndex(const Coords &coords, Coord levelSize) const;
-
-
-	ChildIndex nodeCoordToChildIndex(NodeCoords coords) const;
-	NCode codeToChildCode(NCode parentCode, const NodeCoords &coords) const;
-	NCode codeToChildCode(NCode parentCode, ChildIndex i) const;
+void map(function_view<void(NodeInfo)> &func, NCode code, Coords nodePos, size_t nodeSize);
+bool merge(NCode code);
+int nodeCount(NCode code);
 
 
-	std::unordered_map<NCode, Node, PassHash<NCode>> Nodes;
+const int childrenPerNode = std::pow(2, Dimensions);
+const NCode overMaxBit = 1 << ((Levels + 1) * Dimensions);
 
-	struct CacheHasher;
-	std::unordered_map<uint, T, CacheHasher> retrievalCache;
-};
-
-NTREE_TEMPLATE_SIGNATURE
-struct LINEARTREE_SIGNATURE::CacheHasher
-{
-	uint operator()(const Coords &pos) const
-	{
-		uint sum = 0;
-		for (size_t i = 0; i < Dimensions; i++)
-		{ 
-			if constexpr (System == CoordinateSystem::Resolution)
-			{ sum |= (pos[i] << Levels * (Dimensions - i - 1)); }
-			else if constexpr (System == CoordinateSystem::Normalized)
-			{ sum |= (int(pos[i] * Resolution) << Levels * (Dimensions - i - 1)); }
-		}
-		return sum;
-	}
+std::vector<uint> pathsToUpdate;
+std::unordered_map<uint, T, PassHash> retrievalCache;
 };
 
 
+#define NTREE_TEMPLATE_SIGNATURE template<typename T, uchar Levels, uchar Dimensions>
+#define NTREE_SIGNATURE LinearTree<T, Levels, Dimensions>
+
 NTREE_TEMPLATE_SIGNATURE
-NTREE_SIGNATURE::NTree(DataType initial)
+NTREE_SIGNATURE::LinearTree(T initial)
 {
-	setNode(NodeInfo(getRoot()).GetCode(), Node(initial));
+Size = std::pow(2, Levels);
+Nodes.reserve(MaxNodeCount(Levels, childrenPerNode) / 2);
+retrievalCache.reserve(MaxNodeCount(Levels, childrenPerNode) / 2);
+Nodes[1] = Node(initial);
 }
 
 
 NTREE_TEMPLATE_SIGNATURE
-template<bool UseCache>
-auto NTREE_SIGNATURE::Get(Coords coords) -> const DataType &
+const T &NTREE_SIGNATURE::Get(Coords coords)
 {
-	if constexpr(UseCache)
-	{
-		// Check if the coordinates were previously cached.
-		// If they were, return their value.
-		auto cachedValue = retrievalCache.find(coords);
-		if (cachedValue != retrievalCache.end()) { return cachedValue.GetNode(); }
-	}
+//Check if the coordiantes were previously cached.
+//If they were, return their value.
+CacheIndex cacheHash = getCacheHash(coords);
+auto iter = retrievalCache.find(cacheHash);
+if (iter != retrievalCache.end()) { return iter->second; }
 
-	int levelSize = Resolution;
-	NodeInfo &thisNode = NodeInfo(getRoot());
+NCode code = 1;
+uint size_mask = Size - 1;
+char level = Levels;
 
-	while (true)
-	{
-		NodeInfo childNode;
-		ChildIndex index = getChildIndex(coords, levelSize);
-
-		// If the child exists, travel to it.
-		if (getChild(thisNode, index, childNode))
-		{
-			thisNode = childNode;
-
-			// Make the coordinates relative to the next node.
-			levelSize /= 2;
-			transformCoordsToDeeperLevel(coords, levelSize - 1);
-		}
-		else
-		{
-			// If the child doesn't exist, return this node's value.
-			if constexpr (UseCache)
-			{ retrievalCache[coords] = thisNode.GetNode().Data; }
-			return thisNode.GetNode().Data;
-		}
-	}
-}
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::Set(Coords coords, DataType data)
+while (true)
 {
-	char level = Levels;
-	int levelSize = Resolution;
+//Go down the tree and get the xyz for the next child node.
+size_mask >>= 1;
+level--;
+NodeCoords coords_;
+for (size_t i = 0; i < Dimensions; i++)
+{ coords_[i] = coords[i] >> level; }
 
-	NodeInfo thisNode(getRoot());
+NCode child = getLocCode(code, coords_);
 
-	while (true)
-	{
-		// Get the next node's coordinates inside this node.
-		NodeCoords nodeCoords = coordsToChildCoords(coords, levelSize);
-		ChildIndex childIndex = nodeCoordToChildIndex(nodeCoords);
-		NodeInfo child;
-
-		// If we're on the last level (most detail), set the data.
-		if (level == 0)
-		{
-			thisNode.GetNode().Data = data;
-			return;
-		}
-
-		bool isLeaf = !thisNode.GetNode().isParent;
-		bool createNextNode = false, sameData = false;
-
-		// If this node is a leaf, split the node and travel to the new child.
-		if (isLeaf)
-		{
-			if(thisNode.GetNode().Data == data)
-			{ sameData = true; }
-			else
-			{ createNextNode = true; }
-		}
-		else
-		{
-			if(getChild(thisNode, childIndex, child))
-			{
-				if(child.GetNode().Data == data)
-				{ sameData = true; }
-				else
-				{
-					// Travel to the next node.
-					thisNode = child;
-				}
-			}
-			else
-			{ createNextNode = true; }
-		}
-
-		// If the next node has the same data, there is no need to make changes.
-		if (sameData) { return; }
-
-		// If the next node doesn't exist, create it and travel to it.
-		if (createNextNode)
-		{
-			thisNode.GetNode().childExistMask |= (1 << childIndex);
-			auto &newNode = setNode(child.GetCode(), thisNode.GetNode());
-			thisNode = NodeInfo(newNode);
-		}
-
-		// Make the coordinates relative to the next node.
-		level--;
-		levelSize /= 2;
-		transformCoordsToDeeperLevel(coords, levelSize - 1);
-	}
-}
-
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::Map(function_view<void(NodeInfo)> func) 
+//If the child exists (and size >= 1, checked in NodeExists())
+if (nodeExists(child))
 {
-	NodeInfo rootInfo(getRoot(), Coords(), TreeSize());
-	map(func, rootInfo);
-}
+code = child;
 
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::Expand() 
-{ 
-	Nodes.reserve(MaxNodeCount(Levels, ChildrenPerNode));
-	expand(Levels, rootCode());
+for (size_t i = 0; i < Dimensions; i++)
+{ coords[i] &= size_mask; }
 }
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::Fill(function_view<DataType(Coords &)> func)
+else
 {
-	Map([&](NodeInfo &info)
-		{ 
-			Set(info.Pos, func(info.Pos));
-		});
-	//Merge();
+//Add the data to the cache and return.
+retrievalCache[cacheHash] = Nodes[code].Data;
+return Nodes[code].Data;
+}
+}
 }
 
-
 NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::Merge() { merge(NodeInfo(getRoot())); }
-
-NTREE_TEMPLATE_SIGNATURE
-int NTREE_SIGNATURE::NodeCount() { return nodeCount(NodeInfo(getRoot())); }
-
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::TreeSize() -> Coord
+void NTREE_SIGNATURE::Set(Coords coords, T data)
 {
-	if constexpr (System == CoordinateSystem::Resolution)
-	{ return Resolution; } 
-	else if constexpr (System == CoordinateSystem::Normalized)
-	{ return 1.0; }
-}
+NCode code = 1;
+Coord size_mask = Size - 1;
+char level = Levels;
 
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::GetConnectionGraph(std::vector<Coords> &vertices, std::vector<uint> &indices)
+while (true)
 {
-	NodeInfo rootInfo(getRoot(), Coords(), TreeSize());
-	getConnectionGraph(vertices, indices, rootInfo);
-}
+//Go down the tree and get the xyz for the next child node.
+NodeCoords coords_;
+for (size_t i = 0; i < Dimensions; i++)
+{ coords_[i] = coords[i] >> (level - 1); }
+ChildIndex i = getRelLocCode(coords_);
+NCode child = getLocCode(code, i);
 
-NTREE_TEMPLATE_SIGNATURE
-template<typename>
-void NTREE_SIGNATURE::getConnectionGraph(
-	std::vector<Coords> &vertices, std::vector<uint> &indices, NodeInfo &node)
+//If the child exists (and size >= 1, checked in NodeExists())
+if (nodeExists(child))
 {
-	if (!node.GetNode().isParent) { return; }
+//Get the next node and update xyz.
+code = getLocCode(code, i);
 
-	Coords childOffset;
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
-	{
-		if (childExists(node.GetNode(), i))
-		{
-			for (size_t j = 0; j < Dimensions; j++)
-			{ childOffset[j] = ((i >> j) & 1) * (node.Size / 2); }
-
-			NCode childCode = codeToChildCode(node.GetCode(), i);
-			getConnectionGraph(vertices, indices, NodeInfo(Nodes.find(childCode), this, node.Pos + childOffset, node.Size / 2.));
-		}
-	}
-
-	NodeInfo bl = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), 0)), this, node.Pos + Coords(0, 0) * node.Size / 2, node.Size / 2);
-	NodeInfo br = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), 1)), this, node.Pos + Coords(1, 0) * node.Size / 2, node.Size / 2);
-	NodeInfo tl = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), 2)), this, node.Pos + Coords(0, 1) * node.Size / 2, node.Size / 2);
-	NodeInfo tr = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), 3)), this, node.Pos + Coords(1, 1) * node.Size / 2, node.Size / 2);
-	getConnectionHorizontal(vertices, indices, bl, br);
-	getConnectionHorizontal(vertices, indices, tl, tr);
-	getConnectionVertictal(vertices, indices, bl, tl);
-	getConnectionVertictal(vertices, indices, br, tr);
+size_mask >>= 1;
+level--;
+for (size_t i = 0; i < Dimensions; i++)
+{ coords[i] &= size_mask; }
 }
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::getConnectionHorizontal(
-	std::vector<Coords> &vertices, std::vector<uint> &indices, NodeInfo &nodeA, NodeInfo &nodeB)
+else
 {
-	if(!nodeA.IsValid() || !nodeB.IsValid()) { return; }
-
-	NodeInfo brA(Nodes.find(codeToChildCode(nodeA.GetCode(), 1)), this, nodeA.Pos + Coords(1, 0) * nodeA.Size / 2, nodeA.Size / 2);
-	NodeInfo trA(Nodes.find(codeToChildCode(nodeA.GetCode(), 3)), this, nodeA.Pos + Coords(1, 1) * nodeA.Size / 2, nodeA.Size / 2);
-	NodeInfo blB(Nodes.find(codeToChildCode(nodeB.GetCode(), 0)), this, nodeB.Pos + Coords(0, 0) * nodeB.Size / 2, nodeB.Size / 2);
-	NodeInfo tlB(Nodes.find(codeToChildCode(nodeB.GetCode(), 2)), this, nodeB.Pos + Coords(0, 1) * nodeB.Size / 2, nodeB.Size / 2);
-
-	bool aPar = nodeA.GetNode().isParent;
-	bool bPar = nodeB.GetNode().isParent;
-	if(aPar)
-	{
-		if (bPar)
-		{
-			getConnectionHorizontal(vertices, indices, brA, blB);
-			getConnectionHorizontal(vertices, indices, trA, tlB);
-		}
-		else
-		{
-			getConnectionHorizontal(vertices, indices, brA, nodeB);
-			getConnectionHorizontal(vertices, indices, trA, nodeB);
-		}
-	}
-	else if(bPar)
-	{
-		getConnectionHorizontal(vertices, indices, nodeA, blB);
-		getConnectionHorizontal(vertices, indices, nodeA, tlB);
-	}
-	else
-	{
-		if(nodeA.GetNode().Data.Config != 2 && nodeB.GetNode().Data.Config != 2) { return; }
-		vertices.push_back(nodeA.Pos + Coords(nodeA.Size / 2));
-		vertices.push_back(nodeB.Pos + Coords(nodeB.Size / 2));
-	}
-}
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::getConnectionVertictal(
-	std::vector<Coords> &vertices, std::vector<uint> &indices, NodeInfo &nodeA, NodeInfo &nodeB)
+//If we're on the last level (most detail), set the data.
+if (level == 0)
 {
-	if(!nodeA.IsValid() || !nodeB.IsValid()) { return; }
+Nodes[code].Data = data;
+return;
+}
+else
+{	//Else, split the required child.
+Nodes[child] = Node(child);
+code = child;
 
-	NodeInfo blA(Nodes.find(codeToChildCode(nodeA.GetCode(), 2)), this, nodeA.Pos + Coords(0, 1) * nodeA.Size / 2, nodeA.Size / 2);
-	NodeInfo brA(Nodes.find(codeToChildCode(nodeA.GetCode(), 3)), this, nodeA.Pos + Coords(1, 1) * nodeA.Size / 2, nodeA.Size / 2);
-	NodeInfo tlB(Nodes.find(codeToChildCode(nodeB.GetCode(), 0)), this, nodeB.Pos + Coords(0, 0) * nodeB.Size / 2, nodeB.Size / 2);
-	NodeInfo trB(Nodes.find(codeToChildCode(nodeB.GetCode(), 1)), this, nodeB.Pos + Coords(1, 0) * nodeB.Size / 2, nodeB.Size / 2);
-
-	bool aPar = nodeA.GetNode().isParent;
-	bool bPar = nodeB.GetNode().isParent;
-	if(aPar)
-	{
-		if (bPar)
-		{
-			getConnectionVertictal(vertices, indices, blA, tlB);
-			getConnectionVertictal(vertices, indices, brA, trB);
-		}
-		else
-		{
-			getConnectionVertictal(vertices, indices, blA, nodeB);
-			getConnectionVertictal(vertices, indices, brA, nodeB);
-		}
-	}
-	else if(bPar)
-	{
-		getConnectionVertictal(vertices, indices, nodeA, tlB);
-		getConnectionVertictal(vertices, indices, nodeA, trB);
-	}
-	else
-	{
-		if(nodeA.GetNode().Data.Config != 2 && nodeB.GetNode().Data.Config != 2) { return; }
-		vertices.push_back(nodeA.Pos + Coords(nodeA.Size / 2));
-		vertices.push_back(nodeB.Pos + Coords(nodeB.Size / 2));
-	}
+size_mask >>= 1;
+level--;
+for (size_t i = 0; i < Dimensions; i++)
+{ coords[i] &= size_mask; }
+}
+}
+}
 }
 
-
 NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::map(function_view<void(NodeInfo)> &func, NodeInfo &node)
+void NTREE_SIGNATURE::SetDelayed(Coords coords, T data)
 {
-	if (!node.GetNode().isParent)
-	{ 
-		func(NodeInfo(node, node.Pos, node.Size));
-		return;
-	}
+NCode code = 1;
+uint size_mask = Size - 1;
+char level = Levels;
 
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
-	{
-		Coords childOffset = nodeCoordsToOffset(i, node.Size/2);
-		NodeInfo child;
-
-		if (getChild(node, i, child))
-		{
-			NodeInfo childInfo(child, node.Pos + childOffset, node.Size / 2);
-			map(func, childInfo);
-		}
-		else
-		{
-			Node newChildNode(node.GetNode().Data);
-			NodeInfo childInfo(newChildNode, node.GetCode(), node.Pos + childOffset, node.Size / 2);
-			func(NodeInfo(childInfo));
-		}
-
-		//childOffset[currDim] = (childOffset[currDim] + thisSize / 2) & (thisSize / 2);
-		//currDim = (currDim + 1) & (Dimensions - 1);
-	}
-}
-
-NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::expand(uint level, NodeInfo &node)
+//Generate the code for the node to be written to.
+while (level != 0)
 {
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
-	{
-		if (!childExists(node.GetNode(), i))
-		{ 
-			NCode childCode = codeToChildCode(node->first, i);
-			NodeIter &newNode = Nodes.insert({ childCode, Node(node.GetNode().Data) }).first;
-			node.GetNode().childExistMask |= (1 << i);
-			if (level >= 1) { expand(level - 1, newNode); }
-		}
-	}
+//Go down the tree and get the xyz for the next child node.
+size_mask >>= 1;
+level--;
+NodeCoords coords_;
+for (size_t i = 0; i < Dimensions; i++)
+{ coords_[i] = coords[i] >> level; }
+
+//Get the child node.
+ChildIndex i = getRelLocCode(coords_);
+code = getLocCode(code, i);
+
+//Update xyz.
+for (size_t i = 0; i < Dimensions; i++)
+{ coords[i] &= size_mask; }
 }
 
+//Write to that node without creating it's parents.
+//Pushing the path will make UpdateDelayed() create the parents.
+pathsToUpdate.push_back(code);
+Nodes[code].Data = data;
+}
+
+
 NTREE_TEMPLATE_SIGNATURE
-bool NTREE_SIGNATURE::merge(NodeInfo &nodeInfo)
+void NTREE_SIGNATURE::Map(function_view<void(NodeInfo)> func) { map(func, 1, Coords(), Size); }
+
+
+NTREE_TEMPLATE_SIGNATURE
+void NTREE_SIGNATURE::UpdateDelayed()
 {
-	//If this node is a leaf, it is already merged.
-	if (!nodeInfo.GetNode().isParent) { return true; }
-
-	//Try to merge all children (unless they are already leaves).
-	bool canMerge = true, hasChildren = false, hasAllChildren = true;
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
-	{
-		NodeInfo child;
-		if (getChild(nodeInfo, i, child))
-		{ 
-			if (!merge(child)) { canMerge = false; }
-		}
-		else { hasAllChildren = false; }
-	}
-
-	//If they couldn't be merged, that means that not all data was the same,
-	//	since the first false returned from Merge() must be because sameData == false.
-	if (!canMerge) { return false; }
-
-	//If the children can be merged, check if they all have the same data.
-	bool sameData = true, firstChild = true;
-	DataType tester, data = nodeInfo.GetNode().Data;
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
-	{
-		NodeInfo child;
-		if (getChild(nodeInfo, i, child))
-		{
-			if (firstChild)
-			{
-				firstChild = false;
-				tester = child.GetNode().Data;
-				if (!hasAllChildren && data != tester) { sameData = false; break; }
-			}
-			else if (child.GetNode().Data != tester) { sameData = false; break; }
-		}
-	}
-
-	//If all children have the same data, deallocate them and set the data of this tree.
-	if (sameData)
-	{
-		for (uint i = 0; i < ChildrenPerNode; i++)
-		{
-			if (childExists(nodeInfo.GetNode(), i))
-			{ Nodes.erase(codeToChildCode(nodeInfo.GetCode(), i)); }
-		}
-		nodeInfo.GetNode().isParent = false;
-		NodeInfo(getNode(nodeInfo.GetCode())).GetNode().Data = tester;
-	}
-	return sameData;
-}
-
-NTREE_TEMPLATE_SIGNATURE
-int NTREE_SIGNATURE::nodeCount(NodeInfo &node)
+for (uint code : pathsToUpdate)
 {
-	uint sum = 1;
-	if(!node.GetNode().isParent)
-	{ return sum; }
+ChildIndex child;
 
-	for (ChildIndex i = 0; i < ChildrenPerNode; i++)
-	{
-		NodeInfo child;
-		if (getChild(node.GetNode(), i, child))
-		{ 
-			sum += nodeCount(NodeInfo(child));
-		}
-	}
-	return sum;
-}
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::foldAvg(NodeInfo &node) -> DataType
+while (code != 1)
 {
-	if (!node.GetNode().isParent) { return node.GetNode().Data; }
-
-	DataType sum = DataType();
-	int count = 0;
-
-	for (size_t i = 0; i < ChildrenPerNode; i++)
-	{
-		if(childExists(node.GetNode(), i))
-		{
-			NCode childCode = codeToChildCode(node->first, i);
-			sum = sum + foldAvg(Nodes.find(childCode));
-			count++;
-		}
-	}
-
-	return sum / count;
+code = code >> Dimensions;
+if (!nodeExists(code))
+{ Nodes[code] = Node(); }
+else { break; }
+}
+}
 }
 
 NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::getNodeNeighbor(NCode code, NeighborCoords &direction) -> DataType
+void NTREE_SIGNATURE::ClearCache() { retrievalCache.clear(); }
+
+NTREE_TEMPLATE_SIGNATURE
+void NTREE_SIGNATURE::Merge() { merge(1); }
+
+NTREE_TEMPLATE_SIGNATURE
+int NTREE_SIGNATURE::NodeCount() { return nodeCount(1); }
+
+
+NTREE_TEMPLATE_SIGNATURE
+auto NTREE_SIGNATURE::getRelLocCode(NodeCoords coords) -> ChildIndex
 {
-	if (direction.x == 0 && direction.y == 1)
-	{
-		if(!(code & 1))
-		{
-			NCode targetCode = code | 1;
-
-			auto &targetNode = Nodes.find(targetCode);
-			if(targetNode == Nodes.end())
-			{ return Nodes.find(targetCode >> Dimensions).GetNode().Data; }
-			else
-			{ return foldAvg(targetNode); }
-		} 
-		else
-		{
-			NCode targetCode = code;
-			int currIndex = 0;//Dependent
-			while (targetCode & (1 << currIndex))
-			{
-				targetCode &= ~(1 << currIndex);
-				currIndex += Dimensions;
-			}
-			targetCode |= (1 << currIndex);
-
-			auto &targetNode = Nodes.find(targetCode);
-			while(targetNode == Nodes.end())
-			{ 
-				targetCode >>= Dimensions; 
-				targetNode = Nodes.find(targetCode);
-			}
-			return targetNode.GetNode().Data;
-		}
-	}
+ChildIndex sum = 0;
+for (size_t i = 0; i < Dimensions; i++)
+{ sum |= (coords[i] << (Dimensions - i - 1)); }
+return sum;
 }
 
+NTREE_TEMPLATE_SIGNATURE
+auto NTREE_SIGNATURE::getLocCode(NCode parentCode, const NodeCoords &coords) -> NCode
+{ return (parentCode << Dimensions) | getRelLocCode(coords); }
 
 NTREE_TEMPLATE_SIGNATURE
-auto LINEARTREE_SIGNATURE::setNode(NCode code, Node &node) -> NodeIter &
-{ return Nodes.insert({ code, node }).first; }
-
-NTREE_TEMPLATE_SIGNATURE
-auto LINEARTREE_SIGNATURE::getNode(NCode code) -> NodeIter &
-{ return Nodes.find(code); }
-
-NTREE_TEMPLATE_SIGNATURE
-auto LINEARTREE_SIGNATURE::getRoot() -> NodeIter &
-{ return getNode(1); }
-
-NTREE_TEMPLATE_SIGNATURE
-auto NTREE_SIGNATURE::nodeCoordsToOffset(ChildIndex child, Coord levelSize) const -> Coords
+auto NTREE_SIGNATURE::getLocCode(NCode parentCode, ChildIndex i) -> NCode
 {
-	Coords offset;
-
-	for (size_t j = 0; j < Dimensions; j++)
-	{ offset[j] = ((child >> j) & 1) * levelSize; }
-
-	return offset;
+assert(i < childrenPerNode);
+return (parentCode << Dimensions) | i;
 }
 
+
 NTREE_TEMPLATE_SIGNATURE
-void NTREE_SIGNATURE::transformCoordsToDeeperLevel(Coords &coords, size_t sizeMask) const
+bool NTREE_SIGNATURE::nodeExists(NCode code)
+{ return !(code & overMaxBit) && Nodes.find(code) != Nodes.end(); }
+
+NTREE_TEMPLATE_SIGNATURE
+auto NTREE_SIGNATURE::getChildNode(NCode parCode, ChildIndex i) -> Node
 {
-	if constexpr (System == CoordinateSystem::Resolution)
-	{
-		for (size_t i = 0; i < Dimensions; i++)
-		{ coords[i] &= sizeMask; }
-	}
-	else if constexpr (System == CoordinateSystem::Normalized)
-	{
-		for (size_t i = 0; i < Dimensions; i++)
-		{
-			if (coords[i] >= 0.5) { coords[i] -= 0.5; }
-			coords[i] = coords[i] * 2.0;
-		}
-	}
+NCode code = getLocCode(parCode, i);
+return nodeExists(code) ? Nodes[code] : NULL;
 }
 
+
 NTREE_TEMPLATE_SIGNATURE
-auto LINEARTREE_SIGNATURE::coordsToChildCoords(const Coords &coords, Coord levelSize) const -> NodeCoords
+uint NTREE_SIGNATURE::getCacheHash(const Coords &pos)
 {
-	NodeCoords childCoords;
-
-	if constexpr (System == CoordinateSystem::Resolution)
-	{
-		for (size_t i = 0; i < Dimensions; i++)
-		{ childCoords[i] = coords[i] >= levelSize; }
-	}
-	else if constexpr (System == CoordinateSystem::Normalized)
-	{
-		for (size_t i = 0; i < Dimensions; i++)
-		{ childCoords[i] = coords[i] >= 0.5; }
-	}
-
-	return childCoords;
+uint sum = 0;
+for (size_t i = 0; i < Dimensions; i++)
+{ sum |= (pos[i] << Levels * (Dimensions - i - 1)); }
+return sum;
 }
 
+
 NTREE_TEMPLATE_SIGNATURE
-auto LINEARTREE_SIGNATURE::getChildIndex(const Coords &coords, Coord levelSize) const -> ChildIndex
+void NTREE_SIGNATURE::map(function_view<void(NodeInfo)> &func, NCode thisCode, Coords thisPos, size_t thisSize)
 {
-	auto childCoords = coordsToChildCoords(coords, levelSize);
-	return nodeCoordToChildIndex(childCoords);
-}
-
-NTREE_TEMPLATE_SIGNATURE
-bool LINEARTREE_SIGNATURE::getChild(
-	NodeInfo &node,
-	ChildIndex index,
-	NodeInfo &childNode)
-{ 
-	if (childExists(node.GetNode(), index))
-	{
-		childNode = NodeInfo(Nodes.find(codeToChildCode(node.GetCode(), index)));
-		return true;
-	}
-	else { return false; }
-}
-
-NTREE_TEMPLATE_SIGNATURE
-bool LINEARTREE_SIGNATURE::childExists(const Node &node, ChildIndex index) const
-{ return (node.childExistMask >> index) & 1; }
-
-
-NTREE_TEMPLATE_SIGNATURE
-auto LINEARTREE_SIGNATURE::nodeCoordToChildIndex(NodeCoords coords) const -> ChildIndex
+bool isParent = false;
+Coords childOffset;
+int currDim = 0;
+for (ChildIndex i = 0; i < childrenPerNode; i++)
 {
-	ChildIndex sum = 0;
-	for (size_t i = 0; i < Dimensions; i++)
-	{ sum |= (coords[i] << (Dimensions - i - 1)); }
-	return sum;
+NCode child = getLocCode(thisCode, i);
+if (nodeExists(child))
+{
+map(func, child, thisPos + childOffset, thisSize / 2);
+isParent = true;
+}
+
+childOffset[currDim] = (childOffset[currDim] + thisSize / 2) & (thisSize / 2);
+currDim = (currDim + 1) & (Dimensions - 1);
+}
+
+if (!isParent)
+{
+auto &node = Nodes.find(thisCode);
+func({ thisPos, thisSize, node->second.Data });
+}
 }
 
 NTREE_TEMPLATE_SIGNATURE
-auto LINEARTREE_SIGNATURE::codeToChildCode(NCode parentCode, const NodeCoords &coords) const -> NCode
-{ return (parentCode << Dimensions) | nodeCoordToChildIndex(coords); }
+bool NTREE_SIGNATURE::merge(NCode code)
+{
+T data = Nodes[code].Data;
+//TODO: Pick the correct type, based on how many children there are (e.g. 2D->4->uchar, 4D->16->ushort).
+uchar childrenExist = 0;
+
+//Try to merge all children (unless they are already leaves).
+bool canMerge = true, hasChildren = false, hasAllChildren = true;
+for (ChildIndex i = 0; i < childrenPerNode; i++)
+{
+NCode child = getLocCode(code, i);
+if (nodeExists(child))
+{
+hasChildren = true;
+childrenExist |= (1 << i);
+if (!merge(child)) { canMerge = false; }
+}
+else { hasAllChildren = false; }
+}
+
+//If this node is a leaf, it is already merged.
+if (!hasChildren) { return true; }
+
+//If they couldn't be merged, that means that not all data was the same,
+//	since the first false returned from Merge() must be because sameData == false.
+if (!canMerge) { return false; }
+
+//If the children can be merged, check if they all have the same data.
+bool sameData = true, firstChild = true;
+T tester;
+for (ChildIndex i = 0; i < childrenPerNode; i++)
+{
+if ((childrenExist >> i) & 1)
+{
+if (firstChild)
+{
+firstChild = false;
+tester = Nodes[getLocCode(code, i)].Data;
+if (!hasAllChildren && data != tester) { sameData = false; break; }
+}
+else if (Nodes[getLocCode(code, i)].Data != tester) { sameData = false; break; }
+}
+}
+
+//If all children have the same data, deallocate them and set the data of this tree.
+if (sameData)
+{
+for (uint i = 0; i < childrenPerNode; i++)
+{
+if ((childrenExist >> i) & 1)
+{ Nodes.erase(getLocCode(code, i)); }
+}
+
+Nodes[code].Data = tester;
+}
+return sameData;
+}
 
 NTREE_TEMPLATE_SIGNATURE
-auto LINEARTREE_SIGNATURE::codeToChildCode(NCode parentCode, ChildIndex i) const -> NCode
+int NTREE_SIGNATURE::nodeCount(NCode code)
 {
-	assert(i < ChildrenPerNode);
-	return (parentCode << Dimensions) | i;
+uint sum = 1;
+for (ChildIndex i = 0; i < childrenPerNode; i++)
+{
+NCode child = getLocCode(code, i);
+if (nodeExists(child))
+{ sum += nodeCount(child); }
+}
+return sum;
 }
 */
