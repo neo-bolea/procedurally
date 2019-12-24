@@ -155,6 +155,22 @@ template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
 constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs);
 
 
+template<typename T, size_t N>
+constexpr Vec<T, N> &operator +=(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N>
+constexpr Vec<T, N> &operator -=(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N>
+constexpr Vec<T, N> &operator *=(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+constexpr Vec<T, N> &operator *=(const Vec<T, N> &lhs, const U &rhs);
+
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+constexpr Vec<T, N> &operator /=(const Vec<T, N> &lhs, const U &rhs);
+
+
 //// Typedefs ////
 template<typename T = float>
 using Vec2 = Vec<T, 2>;

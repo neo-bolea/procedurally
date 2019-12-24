@@ -233,6 +233,42 @@ constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs)
 }
 
 
+template<typename T, size_t N>
+constexpr Vec<T, N> &operator +=(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
+{
+	lhs = lhs + rhs;
+	return lhs;
+}
+
+template<typename T, size_t N>
+constexpr Vec<T, N> &operator -=(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
+{
+	lhs = lhs - rhs;
+	return lhs;
+}
+
+template<typename T, size_t N>
+constexpr Vec<T, N> &operator *=(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
+{
+	lhs = lhs * rhs;
+	return lhs;
+}
+
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+constexpr Vec<T, N> &operator *=(const Vec<T, N> &lhs, const U &rhs)
+{
+	lhs = lhs * rhs;
+	return lhs;
+}
+
+template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
+constexpr Vec<T, N> &operator /=(const Vec<T, N> &lhs, const U &rhs)
+{
+	lhs = lhs / rhs;
+	return lhs;
+}
+
+
 //// Functions ////
 template<typename T, size_t N>
 constexpr std::string Vec<T, N>::ToString() const

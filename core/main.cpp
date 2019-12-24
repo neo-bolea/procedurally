@@ -1,7 +1,6 @@
 ﻿#pragma region Includes
 #define GLEW_STATIC
 #define SDL_MAIN_HANDLED
-#include "Bezier.h"
 #include "Camera.h"
 #include "Core.h"
 #include "GL.h"
@@ -40,6 +39,81 @@
 #define HEIGHT (1080 * 0.9)
 #define ASPECT ((float)WIDTH / HEIGHT)
 
+using Point = dVec2;
+using Shape = std::function<double(Point)>;
+
+static Shape u(Shape a, Shape b)
+{
+	return [a, b](Point v) { return std::min(a(v), b(v)); };
+}
+
+static Shape n(Shape a, Shape b)
+{
+	return [a, b](Point v) { return std::max(a(v), b(v)); };
+}
+
+static Shape inv(Shape a)
+{
+	return [a](Point v) { return -a(v); };
+}
+
+struct Circle
+{
+	constexpr Circle(Point coords, double r) : coords(coords), r(r) {}
+	Point coords; double r;
+	double operator()(Point v) const { return sqrtl(std::powl(coords.x - v.x, 2) + std::powl(coords.y - v.y, 2)) - r; }
+};
+
+struct Left
+{
+	constexpr Left(Point v) : x0(v.x) {}
+	double x0;
+	constexpr double operator()(Point v) const { return v.x - x0; }
+};
+
+struct Right
+{
+	constexpr Right(Point v) : x0(v.x) {}
+	double x0;
+	constexpr double operator()(Point v) const { return x0 - v.x; }
+};
+
+struct Lower
+{
+	constexpr Lower(Point v) : y0(v.y) {}
+	double y0;
+	constexpr double operator()(Point v) const { return v.y - y0; }
+};
+
+struct Upper
+{
+	constexpr Upper(Point v) : y0(v.y) {}
+	double y0;
+	constexpr double operator()(Point v) const { return y0 - v.y; }
+};
+
+struct Rectangle
+{
+	Rectangle(Point min, Point max) : Min(min), Max(max) {}
+	Point Min, Max;
+	Shape func = n(n(Right(Min), Left(Max)), n(Upper(Min), Lower(Max)));
+	double operator()(Point v) const { return func(v); }
+};
+
+Shape HShape =
+u(Rectangle(Point(0.1, 0.1), Point(0.25, 0.9)),
+	u(Rectangle(Point(0.45, 0.1), Point(0.6, 0.35)),
+		n(Circle(Point(0.35, 0.35), 0.25),
+			inv(u(Circle(Point(0.35, 0.35), 0.1),
+				Rectangle(Point(0.25, 0.1), Point(0.45, 0.35))))
+		)
+	)
+);
+
+Shape IShape = u(Rectangle(Point(0.75, 0.1), Point(0.9, 0.55)), Circle(Point(0.825, 0.75), 0.1));
+
+Shape HIShape = u(HShape, IShape);
+
 template<typename Container>
 void Triangulate(Container &cont, const fVec2 &v0, const fVec2 &v1)
 {
@@ -51,13 +125,16 @@ void Triangulate(Container &cont, const fVec2 &v0, const fVec2 &v1)
 
 float f(FastNoise fn, fVec3 coords)
 {
+	//return !(int(coords.x * 64) % 2 == 0 && int(coords.y * 64) % 2 == 0);
+	//return std::max(std::max((0.2 - coords.x), (coords.x - 0.8)), std::max((0.2 - coords.y), (coords.y - 0.8)));
+	return HIShape((Point)coords);
 	fn.GradientPerturb(coords.x, coords.y, coords.z);
 	return fn.GetNoise(coords.x, coords.y, coords.z);
 }
 
 fVec2 fD(FastNoise fn, fVec3 coords)
 {
-	float epsilon = 0.001f;
+	float epsilon = 0.0001f;
 	fVec2 d;
 	d.x = f(fn, fVec3(coords.x + epsilon, coords.y, coords.z)) - f(fn, fVec3(coords.x - epsilon, coords.y, coords.z));
 	d.y = f(fn, fVec3(coords.x, coords.y + epsilon, coords.z)) - f(fn, fVec3(coords.x, coords.y - epsilon, coords.z));
@@ -66,7 +143,7 @@ fVec2 fD(FastNoise fn, fVec3 coords)
 
 
 auto GenerateMarchingSquares(
-	uint VAO[4], float noiseZ, 
+	uint VAO[4], float noiseZ, float QEFEpsilon,
 	std::vector<fVec3> &msEdges, 
 	std::vector<fVec3> &emptyCells,
 	std::vector<fVec3> &fullCells,
@@ -80,18 +157,18 @@ auto GenerateMarchingSquares(
 		BorderInfo() : Value(-1), Config(-1) {}
 		BorderInfo(float value, uchar config) : Value(value), Config(config) {}
 		bool operator ==(const BorderInfo &other) { return Config == other.Config; }
-		bool operator !=(const BorderInfo &other) { return Config != other.Config; }
+		bool operator !=(const BorderInfo &other) { return !(*this == other); }
 
 		BorderInfo operator +(const BorderInfo &other) { return BorderInfo((Value + other.Value) / 2., Config); }
 		BorderInfo operator /(uint other) { return BorderInfo(Value / other, Config); }
 	};
 
 #ifdef NDEBUG
-	Grid<float> gridTest(256, 256);
-	LinearTree<BorderInfo, 8, CoordinateSystem::Normalized> tree(BorderInfo(0, 0));
+	Grid<float> gridTest(1024, 1024);
+	NTree<BorderInfo, 10, CoordinateSystem::Normalized> tree(BorderInfo(0, 0));
 #else
 	Grid<float> gridTest(64, 64);
-	LinearTree<BorderInfo, 6, CoordinateSystem::Normalized> tree(BorderInfo(0, 0));
+	NTree<BorderInfo, 6, CoordinateSystem::Normalized> tree(BorderInfo(0, 0));
 #endif
 
 	Watch watchTotal(Watch::ms);
@@ -102,7 +179,7 @@ auto GenerateMarchingSquares(
 	fn.SetCellularReturnType(FastNoise::Distance);
 	fn.SetCellularDistanceFunction(FastNoise::Euclidean);
 
-	fn.SetFrequency(4);
+	fn.SetFrequency(8);
 	fn.SetGradientPerturbAmp(0.0);
 	fn.SetFractalOctaves(4);
 	fn.SetFractalLacunarity(2.0);
@@ -151,13 +228,32 @@ auto GenerateMarchingSquares(
 	fullCells.reserve(nodeCount);
 	btwCells.reserve(nodeCount);
 
-	tree.Map(
-		[&](decltype(tree)::NodeInfo info)
-		{
-			//if (info.Node.Data != 2) { return; }
+	struct VecHash
+	{ size_t operator()(const iVec2 &v) const { return v.x * 8192 * 8192 + v.y; } };
+	std::unordered_map<iVec2, fVec2, VecHash> edgePoints;
 
-			fVec2 pos = fVec2(info.Pos) + fVec2(info.Size / 2);
+	//std::vector<decltype(tree)::NodeInfo> edgePoints;
+	//std::vector<fVec2> solvePoints;
+	//std::vector<uint> indices;
+	//tree.GetConnectionGraph(edgePoints, indices);
+	//for (size_t i = 0; i < vertices.size(); i += 2)
+	//{
+	//	auto &a = edgePoints.find(iVec2(vertices[i] * gridTest.Size[0]));
+	//	auto &b = edgePoints.find(iVec2(vertices[i+1] * gridTest.Size[0]));
+	//
+	//	if(a != edgePoints.end() && b != edgePoints.end())
+	//		Triangulate(msEdges, a->second, b->second);
+	//}
+
+	tree.Map([&](auto &info)
+	//gridTest.ForAll([&](auto coords)
+	//for (size_t i = 0; i < edgePoints.size(); i++)
+		{
+			//auto info = edgePoints[i];
+			if (info.GetNode().Data.Config != 2) { return; }
+
 			float size = info.Size;
+			fVec2 pos = fVec2(info.Pos) + fVec2(info.Size / 2.f);
 			fVec2
 				BotLefCor = pos + fVec2(-size, -size) / 2,
 				BotRigCor = pos + fVec2(size, -size) / 2,
@@ -166,89 +262,119 @@ auto GenerateMarchingSquares(
 
 			std::array<float, 4> values =
 			{
-				info.Node.Data.Value,
+				f(fn, fVec3(BotLefCor.x, BotLefCor.y, noiseZ)/* + fVec3(0.0001f, 0.0001f, 0)*/),
 				f(fn, fVec3(BotRigCor.x, BotRigCor.y, noiseZ)/* + fVec3(0.0001f, 0.0001f, 0)*/),
 				f(fn, fVec3(TopRigCor.x, TopRigCor.y, noiseZ)/* + fVec3(0.0001f, 0.0001f, 0)*/),
 				f(fn, fVec3(TopLefCor.x, TopLefCor.y, noiseZ)/* + fVec3(0.0001f, 0.0001f, 0)*/),
 			};
 
- 			int config = (values[0] > 0) + ((values[1] > 0) + ((values[2] > 0) + ((values[3] > 0) << 1) << 1) << 1);
-			//if (config == 15 || config == 0) { return; }
+			int config = (values[0] > 0) + ((values[1] > 0) + ((values[2] > 0) + ((values[3] > 0) << 1) << 1) << 1);
+			if (config == 15 || config == 0) { return; }
 
-			fVec2
-				BotCenEdge = fVec2(BotRigCor.x + -((0 - values[1]) / (values[0] - values[1])) * size, BotLefCor.y),
-				CenRigEdge = fVec2(BotRigCor.x, TopRigCor.y + -((0 - values[2]) / (values[1] - values[2])) * size),
-				TopCenEdge = fVec2(TopRigCor.x + -((0 - values[2]) / (values[3] - values[2])) * size, TopRigCor.y),
-				CenLefEdge = fVec2(TopLefCor.x, TopLefCor.y + -((0 - values[3]) / (values[0] - values[3])) * size);
+			Triangulate(btwCells, BotLefCor, BotRigCor);
+			Triangulate(btwCells, BotRigCor, TopRigCor);
+			Triangulate(btwCells, TopRigCor, TopLefCor);
+			Triangulate(btwCells, TopLefCor, BotLefCor);
 
-
-			if(info.Node.Data.Config == 2)
+			std::array<std::array<uchar, 2>, 4> indices =
 			{
-				std::array<fVec2, 4> intersections =
-				{
-					BotCenEdge,
-					CenRigEdge,
-					TopCenEdge,
-					CenLefEdge,
-				};
+				std::array<uchar, 2>{ 0, 2 },
+				std::array<uchar, 2>{ 0, 1 },
+				std::array<uchar, 2>{ 1, 3 },
+				std::array<uchar, 2>{ 2, 3 }
+			};
 
-				std::array<fVec2, 4> normals =
-				{
-					fD(fn, (fVec3)BotCenEdge),
-					fD(fn, (fVec3)CenRigEdge),
-					fD(fn, (fVec3)TopCenEdge),
-					fD(fn, (fVec3)CenLefEdge),
-				};
+			std::vector<fVec2> intersections, normals;
 
-				Triangulate(btwCells, pos, pos + fVec2(0.0001f, 0.f));
-			}
-
-			//if (info.Node.Data.Config == 1)
-			//{
-			//	Triangulate(fullCells, BotLefCor, BotRigCor);
-			//	Triangulate(fullCells, BotRigCor, TopRigCor);
-			//	Triangulate(fullCells, TopRigCor, TopLefCor);
-			//	Triangulate(fullCells, TopLefCor, BotLefCor);
-			//}
-			//else if(info.Node.Data.Config == 2)
-			//{
-			//	Triangulate(btwCells, BotLefCor, BotRigCor);
-			//	Triangulate(btwCells, BotRigCor, TopRigCor);
-			//	Triangulate(btwCells, TopRigCor, TopLefCor);
-			//	Triangulate(btwCells, TopLefCor, BotLefCor);
-			//}
-			//else
-			//{
-			//	Triangulate(emptyCells, BotLefCor, BotRigCor);
-			//	Triangulate(emptyCells, BotRigCor, TopRigCor);
-			//	Triangulate(emptyCells, TopRigCor, TopLefCor);
-			//	Triangulate(emptyCells, TopLefCor, BotLefCor);
-			//}
-
-			switch (config)
+			for (size_t i = 0; i < 4; i++)
 			{
-			case 1:  Triangulate(msEdges, CenLefEdge, BotCenEdge); return;
-			case 2:  Triangulate(msEdges, BotCenEdge, CenRigEdge); return;
-			case 4:  Triangulate(msEdges, CenRigEdge, TopCenEdge); return;
-			case 8:  Triangulate(msEdges, TopCenEdge, CenLefEdge); return;
+				int c1 = indices[i][0];
+				int c2 = indices[i][1];
 
-			//4 Vertices      
-			case 3:  Triangulate(msEdges, CenLefEdge, CenRigEdge); return;
-			case 6:  Triangulate(msEdges, BotCenEdge, TopCenEdge); return;
-			case 9:  Triangulate(msEdges, BotCenEdge, TopCenEdge); return;
-			case 12: Triangulate(msEdges, CenRigEdge, CenLefEdge); return;
+				fVec2 rp1(c1 / 2, c1 % 2);
+				fVec2 rp2(c2 / 2, c2 % 2);
 
-			//5 Vertices   
-			case 7:  Triangulate(msEdges, CenLefEdge, TopCenEdge); return;
-			case 11: Triangulate(msEdges, TopCenEdge, CenRigEdge); return;
-			case 13: Triangulate(msEdges, CenRigEdge, BotCenEdge); return;
-			case 14: Triangulate(msEdges, BotCenEdge, CenLefEdge); return;
+				fVec2 ap1 = pos + ((rp1 - fVec2::One * 0.5) * size);
+				fVec2 ap2 = pos + ((rp2 - fVec2::One * 0.5) * size);
 
-			//6 Vertices      
-			case 5:  Triangulate(msEdges, CenLefEdge, TopCenEdge); Triangulate(msEdges, CenRigEdge, BotCenEdge); return;
-			case 10: Triangulate(msEdges, TopCenEdge, CenRigEdge); Triangulate(msEdges, BotCenEdge, CenLefEdge); return;
+				float v1 = f(fn, fVec3(ap1.x, ap1.y, noiseZ));
+				float v2 = f(fn, fVec3(ap2.x, ap2.y, noiseZ));
+
+				int cfg1 = (config >> c1) & 1;
+				int cfg2 = (config >> c2) & 1;
+
+				if ((v1 > 0) == (v2 > 0)) { continue; }
+
+				float t = (-v1) / (v2 - v1);
+				t = std::max(0.0001f, t);
+
+				fVec2 intersection = rp1 + (rp2 - rp1) * t;
+				fVec2 normalPos = pos + (intersection - fVec2::One * 0.5f) * size;
+				fVec2 normal = fD(fn, fVec3(normalPos.x, normalPos.y, noiseZ));
+				intersections.push_back(intersection);
+				normals.push_back(normal);
 			}
+			if(normals.size() != 2){return;}
+			auto qef = [&](fVec2 v)
+			{
+				float total = 0;
+				for (size_t i = 0; i < intersections.size(); i++)
+				{
+					fVec2 rp = v - intersections[i];
+					float dot = fVec2::Dot(normals[i], rp);
+					total += dot * dot;
+				}
+				return total + (v - fVec2::One * 0.5).LenSqr() * 0.1f;
+			};
+
+			fVec2 solvePos(0., 0.);
+			//float lr = 1.41421356;
+			//for (size_t i = 0; i < 8; i++)
+			//{
+			//	lr /= 2.;
+			//	fVec2 gradDir;
+			//	gradDir.x = qef(solvePos + fVec2(0.001f, 0.f)) - qef(solvePos - fVec2(0.001f, 0.f));
+			//	gradDir.y = qef(solvePos + fVec2(0.f, 0.001f)) - qef(solvePos - fVec2(0.f, 0.001f));
+			//	solvePos = solvePos - gradDir.Normalize() * lr;
+			//}
+
+			fVec2 p1 = intersections[0], p3 = intersections[1];
+			fVec2 n1 = normals[0], n2 = normals[1];
+			fVec2 p2 = p1 + fVec2(n1.y, -n1.x), p4 = p3 + fVec2(n2.y, -n2.x);
+			float t = (p1.x - p3.x)*(p3.y - p4.y)-(p1.y - p3.y)*(p3.x-p4.x)
+				/ std::max(((p1.x - p2.x)*(p3.y - p4.y)-(p1.y - p2.y)*(p3.x-p4.x)), FLT_EPSILON);
+			
+			solvePos = p1 + (p2 - p1) * t;
+
+			solvePos.x = Math::Clamp(solvePos.x, 0.f, 1.f);
+			solvePos.y = Math::Clamp(solvePos.y, 0.f, 1.f);
+			solvePos = pos + (solvePos - fVec2::One * 0.5) * size;
+			//Triangulate(emptyCells, solvePos, solvePos + fVec2(0.0001f, 0.f));
+
+			Triangulate(emptyCells, pos + (p1 - fVec2::One * 0.5) * size, pos + (p2 - fVec2::One * 0.5) * size + fVec2(0.0001f, 0.f));
+			Triangulate(fullCells, pos + (p3 - fVec2::One * 0.5) * size, pos + (p4 - fVec2::One * 0.5) * size + fVec2(0.0001f, 0.f));
+
+
+			//solvePoints.push_back(solvePos);
+			edgePoints.insert({iVec2(info.Pos * gridTest.Size[0]), solvePos});
 		});
+
+	//std::vector<decltype(tree)::NodeInfo> connections;
+	//tree.GetConnectionGraph(connections);
+	//for (size_t i = 0; i < connections.size(); i += 2)
+	//{
+	//	//Triangulate(msEdges, connections[i].Pos, connections[i+1].Pos);
+	//	auto &a = edgePoints.find(iVec2(connections[i].Pos * gridTest.Size[0]));
+	//	auto &b = edgePoints.find(iVec2(connections[i+1].Pos * gridTest.Size[0]));
+	//	
+	//	//if(a != edgePoints.end() && b != edgePoints.end())
+	//	//	Triangulate(msEdges, a->second, b->second);
+	//}
+
+	//for (size_t i = 0; i < solvePoints.size(); i += 2)
+	//{
+	//	Triangulate(msEdges, solvePoints[i], solvePoints[i + 1]);
+	//}
 
 	uint VAOEmpty;
 	std::array<std::reference_wrapper<std::vector<fVec3>>, 4> containers = 
@@ -407,7 +533,7 @@ int main(int argc, char *argv[])
 	cpuTex.Filter = GL::TexFilter::Nearest;
 	cpuTex.Data = GL::DataType::Float;
 
-	float noiseZ = 0;
+	float noiseZ = 0, QEFEpsilon = 0.001f;
 	while (!quit)
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -415,11 +541,17 @@ int main(int argc, char *argv[])
 		static bool pauseTime = false;
 		if (inputs.IsKeyPressed(Inputs::P)) { pauseTime = !pauseTime; }
 
-		noiseZ += Time::DeltaTime() * 0.03 * !pauseTime;
-		glDeleteVertexArrays(4, VAOMS);
-		auto gridFromTree = GenerateMarchingSquares(VAOMS, noiseZ, msEdges, emptyCells, fullCells, btwCells);
-		cpuTex.Release();
-		cpuTex.Setup(gridFromTree.Size[0], gridFromTree.Size[1], GL::R32F, &gridFromTree.v[0]);
+		if (inputs.IsKeyPressed(Inputs::T)) { QEFEpsilon *= 10.f; std::cout << "New Epsilon: " << QEFEpsilon << std::endl; }
+		if (inputs.IsKeyPressed(Inputs::G)) { QEFEpsilon *= 0.1f; std::cout << "New Epsilon: " << QEFEpsilon << std::endl; }
+
+		if (!pauseTime)
+		{
+			noiseZ += Time::DeltaTime() * 0.03;
+			glDeleteVertexArrays(4, VAOMS);
+			auto gridFromTree = GenerateMarchingSquares(VAOMS, noiseZ, QEFEpsilon, msEdges, emptyCells, fullCells, btwCells);
+			cpuTex.Release();
+			cpuTex.Setup(gridFromTree.Size[0], gridFromTree.Size[1], GL::R32F, &gridFromTree.v[0]);
+		}
 		cpuTex.Bind();
 
 
