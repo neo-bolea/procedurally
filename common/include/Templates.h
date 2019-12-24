@@ -92,3 +92,12 @@ public:
 	decltype(auto) operator()(TArgs... xs) const
 	{ return _erased_fn(_ptr, std::forward<TArgs>(xs)...); }
 };
+
+
+// Dummy Template for passing values without hashing.
+template<typename T>
+struct PassHash
+{
+	uint operator()(const T &value) const
+	{ return value; }
+};

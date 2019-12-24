@@ -149,7 +149,9 @@ GRID_TEMPLATE_SIGNATURE
 template<typename ...Args>
 T &GRID_SGN::operator()(Args ...coords)
 {
-	static_assert(sizeof...(Args) == N,
+	static_assert(!(sizeof...(Args) < N),
+		"Grid cannot be accessed with less coordinates than dimensions.");
+	static_assert(!(sizeof...(Args) > N),
 		"Grid cannot be accessed with more coordinates than dimensions.");
 	return this->operator()({ static_cast<CoordType>(coords)... }); 
 }

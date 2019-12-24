@@ -216,7 +216,6 @@ namespace GL
 
 			glBindBuffer(STORAGE_BUFFER_TYPE, id);
 
-
 			return (float*)glMapBufferRange(STORAGE_BUFFER_TYPE, 0, byteSize, GL_MAP_READ_BIT);
 		}
 	
