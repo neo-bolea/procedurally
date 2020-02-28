@@ -22,7 +22,6 @@
 
 namespace Rscs
 {
-	using FileContent = std::string;
 	using Path = std::string;
 	using PathID = uint;
 	using WriteTime = std::filesystem::file_time_type;
@@ -30,19 +29,75 @@ namespace Rscs
 	void log(const std::string &msg, Debug::InfoType type = Debug::Error);
 	WriteTime getLastWriteTime(const Path &path);
 
+	enum FileType { Binary, Text };
+	//struct FileContent
+	//{
+	//public:
+	//	FileContent() {}
+	//	FileContent(const FileContent &other) { *this = other; }
+	//	FileContent(const std::string &&text) : TextData(std::move(text)), type(Text) {}
+	//	FileContent(const std::vector<char> &&bytes) : ByteData(std::move(bytes)), type(Binary) {}
+	//	FileContent(const char *bytes, uint size) : type(Binary) 
+	//	{
+	//		ByteData.reserve(size);
+	//		for(size_t i = 0; i < size; i++)
+	//		{
+	//			ByteData.push_back(bytes[i]);
+	//		}
+	//	}
+	//
+	//	~FileContent() {}
+	//
+	//	void operator =(const FileContent &other)
+	//	{
+	//		type = other.type;
+	//		if(type == Text) { TextData = other.TextData; }
+	//		else if(type == Binary) { ByteData = other.ByteData; }
+	//		else UNDEFINED_CODE_PATH
+	//	}
+	//
+	//	FileType Type() { return type; }
+	//
+	//	union
+	//	{
+	//		std::string TextData;
+	//		std::vector<char> ByteData;
+	//	};
+	//
+	//private:
+	//	FileType type;
+	//};
+
 	struct FileInfo
 	{
+		//FileInfo() {}
+		//FileInfo(const Path &path, FileContent &&contents)
+		//	: FileInfo(path, std::forward<FileContent>(contents), WriteTime()) {}
+		//FileInfo(const Path &path, FileContent &&contents, WriteTime lastWriteTime)
+		//	: Path_(path), Contents(contents), LastWriteTime(lastWriteTime) {}
+
 		Path Path_;
-		FileContent Contents;
+		//FileContent Contents;
 		WriteTime LastWriteTime;
 
+	protected:
 		FileInfo() {}
-		FileInfo(const Path &path, FileContent &&contents)
-			: FileInfo(path, std::forward<FileContent>(contents), WriteTime()) {}
-		FileInfo(const Path &path, FileContent &&contents, WriteTime lastWriteTime)
-			: Path_(path), Contents(contents), LastWriteTime(lastWriteTime) {}
 	};
 	using FileRef = std::shared_ptr<FileInfo>;
+
+	struct TextFileInfo : FileInfo
+	{
+		std::string Contents;
+	};
+	using TextFileRef = std::shared_ptr<TextFileInfo>;
+
+	struct ImageFileInfo : FileInfo
+	{
+		std::vector<uchar> Contents;
+		int width, height;
+		int nrChannels;
+	};
+	using ImageFileRef = std::shared_ptr<ImageFileInfo>;
 
 	struct ResourceBase
 	{
@@ -94,7 +149,8 @@ namespace Rscs
 		void update();
 
 		FileRef getFile(const Path &path);
-		FileInfo loadFile(const Path &path);
+		FileRef loadFile(const Path &path);
+		FileType getFileType(const Path &path);
 
 		std::unordered_map<Path, FileRef> loadedFiles;
 		std::vector<std::weak_ptr<ResourceBase>> loadedResources;
