@@ -5,7 +5,7 @@
 #include "MathExt.h"
 #include "MathGL.h"
 #include "Mat.h"
-#include "Pool.h"
+#include "../Resources/ResourceManager.h"
 #include "Vec.h"
 
 #include "GL/glew.h"
@@ -28,24 +28,46 @@ namespace GL
 
 	typedef std::vector<std::string> ShaderPaths;
 
-	struct Uniform
+	using UniformID = int;
+	struct UniformInfo
 	{
-		int ID;
+		UniformID ID;
 		DataType Type;
+
+		UniformInfo(UniformID id) : ID(id) {}
+		UniformInfo(UniformID id, const DataType &type) : ID(id), Type(type) {}
+		UniformInfo(const UniformInfo &other) : ID(other.ID), Type(other.Type) {}
+
+		struct Hasher
+		{ uint operator()(const UniformInfo &info) const { return info.ID; } };
 	};
 
-	struct UniformData
-	{
-		UniformData(float value) : Float_(value) {}
-		UniformData(const Vector2 &value) : Vector2_(&value) {}
-		UniformData(const Vector3 &value) : Vector3_(&value) {}
-		UniformData(const Vector4 &value) : Vector4_(&value) {}
-		UniformData(int value) : Int_(value) {}
-		UniformData(uint value) : Uint_(value) {}
-		UniformData(bool value) : Bool_(value) {}
-		UniformData(const Math::Mat4 &value) : Mat_(&value) {}
+	static bool operator ==(const UniformInfo &lhs, const UniformInfo &rhs) 
+	{ return lhs.ID == rhs.ID; }
 
-		~UniformData() {}
+	struct UniformValue
+	{
+		UniformValue() : Type((DataType)-1) {}
+		UniformValue(const UniformValue &other) : Mat4(other.Mat4), Type(other.Type) {}
+
+		UniformValue(float value) : Float_(value), Type(DataType::Float) {}
+		UniformValue(const Vector2 &value) : Vector2_(&value), Type(DataType::Vec2) {}
+		UniformValue(const Vector3 &value) : Vector3_(&value), Type(DataType::Vec3) {}
+		UniformValue(const Vector4 &value) : Vector4_(&value), Type(DataType::Vec4) {}
+		UniformValue(int value) : Int_(value), Type(DataType::Int) {}
+		UniformValue(uint value) : Uint_(value), Type(DataType::UInt) {}
+		UniformValue(bool value) : Bool_(value), Type(DataType::Bool) {}
+		UniformValue(const Math::Mat2 &value) : Mat2(&value), Type(DataType::Mat2) {}
+		UniformValue(const Math::Mat3 &value) : Mat3(&value), Type(DataType::Mat2) {}
+		UniformValue(const Math::Mat4 &value) : Mat4(&value), Type(DataType::Mat2) {}
+
+		~UniformValue() {}
+
+		void operator =(const UniformValue &other)
+		{
+			Mat4 = other.Mat4;
+			Type = other.Type;
+		}
 
 		union
 		{
@@ -56,29 +78,35 @@ namespace GL
 			const int Int_;
 			const uint Uint_;
 			const bool Bool_;
-			const Math::Mat4 *Mat_;
+			const Math::Mat2 *Mat2;
+			const Math::Mat3 *Mat3;
+			const Math::Mat4 *Mat4;
 		};
+
+		DataType Type;
 	};
 }
 
 namespace GL
 {
 	class Program;
-	class ProgramPool;
 	typedef std::shared_ptr<Program> ProgRef;
 
 	extern ProgRef activeProgram;
 	inline ProgRef ActiveProgram() { return activeProgram; }
 
 	typedef std::unordered_map<std::string, DataType> PropertyMap;
-	class Program : UniqueMessageRaiser
+	struct DataInfo { DataType Type; UniformValue Value; };
+
+	class Program : UniqueMessageRaiser, public Rscs::ResourceBase
 	{
 	public:
-		Program::Program(const Program &other);
+		Program() {}
+		Program(const Program &other);
 
 
 		int GetID(const std::string &uniformName) const;
-		Uniform GetUniform(const std::string &uniformName);
+		UniformInfo GetUniform(const std::string &uniformName) const;
 
 		void Use() const;
 		static void Push(const Program &prog), Pop();
@@ -86,87 +114,36 @@ namespace GL
 		void Dispatch(uint x, uint y, uint z) const;
 
 		///<summary> Sets a uniform by name. </summary>
-		void Set(const std::string &name, UniformData value);
+		void Set(const std::string &name, UniformValue &&value) const;
 		///<summary> Sets a uniform by ID. Faster than by name, when used together with GetUniform(). </summary>
-		void Set(const Uniform &unif, UniformData value) const;
+		void Set(const UniformInfo &unif, UniformValue &&value) const;
 
-		static void SetGlobal(const std::string &name, UniformData value);
 
-		const ProgID ID;
+		static void SetGlobal(const std::string &name, UniformValue &&value);
+
+		ProgID ID;
 
 	private:
 		enum class ProgramType { Graphical, Compute };
 
-		template<typename, typename>
-		friend class Pool;
-		friend class ProgramPool;
+		
+		virtual void setup(std::unordered_set<Rscs::FileRef> &files);
 
-		Program(const ShaderPaths &shaderPaths, ProgramPool *pool);
+		PropertyMap getProgramUniforms(uint program) const;
+		DataType getProperty(const std::string &name) const;
+		ShaderType getShaderType(const std::string &path) const;
 
+		std::string loadTxtFile(const std::string &filePath) const;
+		ShadID createShader(const std::string &src, 
+								  GL::ShaderType shaderType, 
+								  const std::string &filePath) const;
+		ProgID createProgram(const std::vector<ShadID> &shaderIDs) const;
+		ShadID setupProgram(const std::unordered_set<Rscs::FileRef> &files) const;
 
-		PropertyMap GetProgramUniforms(uint program) const;
-		DataType GetProp(const std::string &name);
-		ShaderType GetShaderType(const std::string &path) const;
-
-		std::string LoadTxtFile(const std::string &filePath) const;
-		ShadID CreateShader(const std::string &src, GL::ShaderType shaderType, const std::string &filePath) const;
-		ProgID CreateProgram(const std::vector<ShadID> &shaderIDs) const;
-		ProgID LoadProgram(const ShaderPaths &shaderInfos) const;
-
-
-		ProgramPool *pool;
-		PropertyMap properties;
+		mutable std::unordered_map<UniformInfo, DataInfo, UniformInfo::Hasher> properties;
 		ProgramType type;
 		std::vector<ShaderType> shaders;
 
 		std::array<int, 3> localComputeWorkGroupSize;
-	};
-
-	class ProgramPool : private Pool<ProgramPool, Program>
-	{
-	public:
-		enum DefaultProgram
-		{
-			eSolid3D,
-			eTex3D,
-
-			eScreen,
-			eSolidTex,
-			eDefaultTex,
-			eScreenTex,
-			eRampTex,
-
-			MAX
-		};
-
-		ProgRef Load(const ShaderPaths &paths)
-		{ return ((Pool *)this)->Load(paths); }
-
-		ProgRef LoadByName(const std::string &name, const ShaderPaths &paths)
-		{ return ((Pool *)this)->LoadByName(name, paths); }
-
-		ProgRef Get(const std::string &name)
-		{ return ((Pool *)this)->Get(name); }
-
-
-		ProgRef LoadDefaultProgram(DefaultProgram libShader);
-
-	private:
-		template<typename, typename>
-		friend class Pool;
-		friend Program;
-
-		size_t GetHash(const ShaderPaths &paths)
-		{
-			std::string concPaths = "";
-			for(uint i = 0; i < paths.size(); i++)
-			{ concPaths += paths[i]; }
-
-			return std::hash<std::string>{}(concPaths);
-		}
-
-
-		std::vector<std::string> tags = { "Graphics", "Shader" };
-		static const std::array<ShaderPaths, DefaultProgram::MAX> LibShaders;
 	};
 }

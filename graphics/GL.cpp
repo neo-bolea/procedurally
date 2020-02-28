@@ -14,8 +14,6 @@
 
 namespace GL
 {
-	ProgramPool Programs;
-
 	void GLAPIENTRY
 		ErrorCallback( GLenum source,
 			GLenum type,

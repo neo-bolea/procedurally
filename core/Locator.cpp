@@ -1,5 +1,5 @@
-#include "Systems/Locator.h"
-#include "Systems/cmdNode.h"
+#include "Systems/Locator/Locator.h"
+#include "Systems/Locator/cmdNode.h"
 
 #include "StringUtils.h"
 

@@ -99,6 +99,8 @@ namespace Math
 	template<size_t ROWS, size_t COLS>
 	using fMat = Mat<real32, ROWS, COLS>;
 	using fMat3x3 = Mat<real32, 3, 3>;
+	using fMat2 = Mat<real32, 2, 2>;
+	using fMat3 = Mat<real32, 3, 3>;
 	using fMat4 = Mat<real32, 4, 4>;
 
 	template<size_t ROWS, size_t COLS>
@@ -107,6 +109,8 @@ namespace Math
 	using dMat4 = Mat<real64, 4, 4>;
 
 	using Mat3x3 = fMat3x3;
+	using Mat2 = fMat2;
+	using Mat3 = fMat3;
 	using Mat4 = fMat4;
 
 #include "Mat.inc"

@@ -1,12 +1,12 @@
 //#include <string>
 //#include <unordered_map>
 //
-//class ResourceManager
+//class ResourceManager::Get()
 //{
 //public:
 //	using DataType = int *;
 //
-//	ResourceManager(size_t startSize = 1);
+//	ResourceManager::Get()(size_t startSize = 1);
 //
 //	const DataType *Load(const std::string &path);
 //

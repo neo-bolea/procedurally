@@ -1,3 +1,5 @@
+#include "cmdNode.h"
+
 template<typename ...Args>
 Locator::CmdNode::CmdNode(const char *cmd, const Args &...inners) : levelKey(cmd)
 {

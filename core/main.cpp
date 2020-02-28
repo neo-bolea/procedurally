@@ -39,20 +39,28 @@
 
 Grid<float, 2, BorderPolicy::Clamp> Caves(1024, 1024);
 GL::Mesh CaveMesh;
-uint totalVertCount;
 
-void CreateMesh(int pyrW, int pyrH, 
+
+//TODO: ResourceManager: Cache paths (so each resource doesn't have to save all it's dependencies).
+//TODO: ResourceManager: Add option to make files temporary or permanent (whether to unload them with 0 refs).
+//TODO: Locator: Change name
+//TODO: Locator: Make "update" work with optional ticks / time intervals (e.g. for ResourceManager).
+//TODO: Shader: Keep values for uniforms when updating shader (in setup()).
+
+uint CreateMesh(int pyrW, int pyrH, 
 	std::shared_ptr<GL::StorageBuffer> &vertBuffer)
 {
+	uint totalVertCount;
 	int texMaxSize = GL::TextureMaxSize();
 
 	//Create the PH texture.
 	GL::Tex2D vertCountTex;
-	vertCountTex.Setup(std::fminf(pyrW * 2, texMaxSize), std::fmaxf((pyrW * 2) / texMaxSize, 1), GL::R32UI);
+	vertCountTex.Setup(std::fminf(pyrW * 2, texMaxSize), std::max((pyrW * 2) / texMaxSize, 1), GL::R32UI);
 	glBindImageTexture(1, vertCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, vertCountTex.Format);
 
 	//Generate the base level (based on the configuration of the squares).
-	GL::ProgRef baseLvlProg = GL::Programs.Load({ { "HPBaseLevel.comp" } });
+	GL::ProgRef baseLvlProg =
+		Rscs::Manager::Get().loadResource<GL::Program>({ { "HPBaseLevel.comp" } });
 	baseLvlProg->Use();
 	baseLvlProg->Dispatch(Caves.Size[0], Caves.Size[1], 1);
 
@@ -60,7 +68,8 @@ void CreateMesh(int pyrW, int pyrH,
 	GL::StorageBuffer vertexCount(0, sizeof(uint), NULL);
 
 	uint lowerOffset = 0, upperOffset = pyrW;
-	GL::ProgRef reducProg = GL::Programs.Load({ { "HPReduction.comp" } });
+	GL::ProgRef reducProg =
+		Rscs::Manager::Get().loadResource<GL::Program>({ { "HPReduction.comp" } });
 	//Reduce the PH levels until we reach the top level (which has a single node with the total vertex count).
 	{
 		glBindImageTexture(1, vertCountTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, vertCountTex.Format);
@@ -101,7 +110,8 @@ void CreateMesh(int pyrW, int pyrH,
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 	{
-		GL::ProgRef expandVert = GL::Programs.Load({ { "HPExpansion.comp" } });
+		GL::ProgRef expandVert = 
+			Rscs::Manager::Get().loadResource<GL::Program>({ { "HPExpansion.comp" } });
 		expandVert->Use();
 		expandVert->Set("uMaxY", pyrH - 1);
 		expandVert->Set("VertCount", totalVertCount);
@@ -110,6 +120,8 @@ void CreateMesh(int pyrW, int pyrH,
 	}
 
 	glDeleteBuffers(1, &vertexCount.id);
+
+	return totalVertCount;
 }
 
 int main(int argc, char* argv[])
@@ -153,22 +165,15 @@ int main(int argc, char* argv[])
 
 	glViewport(0, 0, WIDTH, HEIGHT);
 
-	// Culling
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
 	glEnable(GL_CULL_FACE);
 
-	// Blending
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// Depth Test
 	glEnable(GL_DEPTH_TEST);
-
-	// Multi Sampling
 	glEnable(GL_MULTISAMPLE);
-
-	// Errors
 	glEnable(GL_DEBUG_OUTPUT);
 
 	// VSync
@@ -190,10 +195,11 @@ int main(int argc, char* argv[])
 	float isoThresh = -0.f;
 
 #pragma region Shader Setup
-	GL::ProgRef texShader = GL::Programs.Load({ { "Texture.vert" }, { "Tex.frag"} });
-	GL::ProgRef meshShader = GL::Programs.Load({ { "Min3D.vert" }, { "Solid.frag"} });
+	GL::ProgRef texShader =
+		Rscs::Manager::Get().loadResource<GL::Program>({ { "Texture.vert" }, { "Tex.frag" } });
+	GL::ProgRef meshShader =
+		Rscs::Manager::Get().loadResource<GL::Program>({ { "Min3D.vert" }, { "Solid.frag" } });
 	meshShader->Use();
-	Math::Mat4 ident;
 	meshShader->Set("uColor", Vector3(1.f));
 
 #pragma region Compute Cave
@@ -203,9 +209,6 @@ int main(int argc, char* argv[])
 	noiseTex.Filter = GL::Nearest;
 	noiseTex.Setup(Caves.Size[0], Caves.Size[1], GL::R16F);
 	glBindImageTexture(0, noiseTex.ID, 0, GL_FALSE, 0, GL_READ_WRITE, noiseTex.Format);
-
-	//SpriteRef caveSpr = rend.CreateSprite();
-	//caveSpr->SetTex(std::make_shared<GL::Tex2D>(noiseTex));
 
 	Compute::Noise cn;
 	cn.SetOctaves(4);
@@ -220,13 +223,11 @@ int main(int argc, char* argv[])
 
 	int pyrW = Math::NextPowerOfTwo(Caves.Size[0] * Caves.Size[1]);
 	int pyrH = (int)log2(pyrW);
-	//Debug::Log(IntVector2(pyrW, pyrH).ToString());
 	std::shared_ptr<GL::StorageBuffer> vertBuffer;
-	CreateMesh(pyrW, pyrH, vertBuffer);
+	uint totalVertCount = CreateMesh(pyrW, pyrH, vertBuffer);
 	caveWatch.Stop();
 	std::cout << "Caves: " << caveWatch.sTime() << std::endl;
 #pragma endregion
-
 
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	std::vector<Vector2> caveMesh;
@@ -258,7 +259,19 @@ int main(int argc, char* argv[])
 
 	Camera cam(Vector3(0.f, 0.f, 10.f), Vector3::Forward);
 
-	while (!quit)
+	auto file = Rscs::Manager::Get().loadResource<GL::Program>({ "HPBaseLevel.comp" });
+
+	//auto file = Resource1::Manager::Get().Load<StringWrapper>("HPBaseLevel.comp");
+	////file = ResourceManager::inst().Load<StringWrapper>("HPBaseLevel.comp");
+	//file->Test();
+	//file->dependencies.push_back(Resource1::FileInfo());
+	//auto &rsc = Resource1::Manager::Get();
+
+	auto &cx = Rscs::Manager::Get();
+	meshShader->Use();		
+	meshShader->Set("uColor", Vector3(0.f, 0.f, 0.f));
+	meshShader->Set("uAlpha", 1.f);
+ 	while (!quit)
 	{
 		glClearColor(0.f, 0.f, 0.5f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -287,7 +300,6 @@ int main(int argc, char* argv[])
 		//mat = Math::GL::Scale(mat, /*Vector3(tex->Ratio(), 1.f) */ Vector3(tf.Scale) / (8.f * ASPECT));
 		meshShader->Set("uModel", mat);
 
-		meshShader->Set("uColor", fVec4(1.f));
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, totalVertCount);
 

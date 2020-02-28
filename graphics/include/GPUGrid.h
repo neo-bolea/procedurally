@@ -2,6 +2,7 @@
 
 #include "GL.h"
 #include "MathExt.h"
+#include "../Resources/ResourceManager.h"
 #include "Vec.h"
 
 #include <GL/glew.h>
@@ -12,7 +13,7 @@ namespace Compute
 	struct Noise
 	{
 	private:
-		uint octaves    = 1;
+		uint octaves     = 1;
 		float	lacunarity = 1.f; 
 		float	gain       = 1.f;
 		float	frequency  = 1.f;
@@ -27,7 +28,8 @@ namespace Compute
 	public:
 		Noise(uint seed = 42069)
 		{
-			program = GL::Programs.Load({ { "Noise.comp" } });
+			//Resource<std::string> str = ResourceManager::inst().Load<std::string>((std::string)"Noise.comp");
+			program = Rscs::Manager::Get().loadResource<GL::Program>({ { "Noise.comp" } });
 			glGetProgramiv(program->ID, GL_COMPUTE_WORK_GROUP_SIZE, &workSize.e[0]);
 
 			SetOctaves(octaves);

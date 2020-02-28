@@ -6,12 +6,12 @@
 //#include <fstream>
 //#include <sstream>
 //
-//ResourceManager::ResourceManager(size_t startSize)
+//ResourceManager::Get()::ResourceManager::Get()(size_t startSize)
 //{
 //	yardBottom = malloc(startSize);
 //}
 //
-//const ResourceManager::DataType *ResourceManager::Load(const std::string &path)
+//const ResourceManager::Get()::DataType *ResourceManager::Get()::Load(const std::string &path)
 //{
 //	stringHash pathHash = hash(path);
 //	auto &file = files.find(pathHash);
@@ -26,7 +26,7 @@
 //	}
 //}
 //
-//const ResourceManager::DataType *ResourceManager::loadTxtFile(const std::string &path)
+//const ResourceManager::Get()::DataType *ResourceManager::Get()::loadTxtFile(const std::string &path)
 //{
 //	std::string data;
 //	std::ifstream stream(path, std::ios::in);
@@ -47,7 +47,7 @@
 //	return data;
 //}
 //
-//void ResourceManager::storeToYard(void *toStore, size_t byteSize)
+//void ResourceManager::Get()::storeToYard(void *toStore, size_t byteSize)
 //{
 //	if (std::distance(yardBottom, yardTop) + byteSize >= yardSize)
 //	{
@@ -55,7 +55,7 @@
 //	}
 //}
 //
-//void ResourceManager::allocate()
+//void ResourceManager::Get()::allocate()
 //{
 //	void *tmp = malloc(yardSize * 2);
 //	std::copy(yardBottom, yardTop, tmp);
@@ -64,5 +64,5 @@
 //
 //
 //
-//ResourceManager::stringHash ResourceManager::hash(const std::string &str)
+//ResourceManager::Get()::stringHash ResourceManager::Get()::hash(const std::string &str)
 //{ return CRC32::Get(str.data(), str.size()); }

@@ -1,5 +1,50 @@
 #pragma once
 
+#include "Preprocessor.h"
+
+#include <type_traits>
+
+namespace ext
+{
+	template<typename Container, typename Key>
+	bool contains(const Container &cont, const Key &toFind)
+	{
+		return std::find(cont.begin(), cont.end(), toFind) == cont.end();
+	}
+
+	/*template<typename Container, typename Key, typename Value>
+	bool find(
+		const Container &cont, 
+		const Key &toFind, 
+		Value &result)
+	{
+		auto &it = std::find(cont.begin(), cont.end(), toFind);
+		if (it != cont.end())
+		{
+			result = it->second;
+			return true;
+		}
+		return false;
+	}*/
+
+	/*template<typename Value, typename From>
+	const Value &retrieve(const From &from)
+	{
+		if constexpr (std::is_convertible_v<From, Value>)
+		{
+			return from;
+		}
+		else if constexpr (std::is_convertible_v<decltype(*from), Value>)
+		{
+			return *from;
+		}
+		else
+		{
+			return from->second;
+		}
+	}*/
+}
+
 #pragma region 2D/3D Sliced For Loops
 
 #define LeftDecl   xStart = 0;          xEnd = 1;

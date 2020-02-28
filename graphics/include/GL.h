@@ -14,8 +14,6 @@
 #define GLDEFINED
 namespace GL
 {
-	extern ProgramPool Programs;
-
 	void GLAPIENTRY
 		ErrorCallback(
 			GLenum source,

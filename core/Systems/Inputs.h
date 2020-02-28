@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Locator.h"
+#include "Locator/Locator.h"
 #include "Time.h"
 #include "Vec.h"
 

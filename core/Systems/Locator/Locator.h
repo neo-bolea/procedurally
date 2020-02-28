@@ -23,7 +23,7 @@
 
 #include "cmdKeys.h"
 
-#include "MathHelpers.h"
+#include "./math/include/MathHelpers.h"
 #include "Templates.h"
 
 #include <assert.h>

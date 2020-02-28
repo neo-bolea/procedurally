@@ -10,24 +10,19 @@ namespace GL
 	class Program
 	{
 	private:
-		ProgramPool *pool;
 		const ProgID ID;
 		PropertyMap properties;
 
-		PropertyMap GetProgramUniforms(uint program) const;
+		PropertyMap getProgramUniforms(uint program) const;
 		DataType GetProp(const std::string &name) const;
 
 		std::string LoadTxtFile(const std::string &filePath) const;
-		ShadID CreateShader(const std::string &src, GL::ShaderType shaderType, const std::string &filePath) const;
-		ProgID CreateProgram(const std::vector<ShadID> &shaderIDs) const;
-		ProgID LoadProgram(const ShaderPaths &shaderInfos) const;
+		ShadID createShader(const std::string &src, GL::ShaderType shaderType, const std::string &filePath) const;
+		ProgID createProgram(const std::vector<ShadID> &shaderIDs) const;
+		ProgID loadProgram(const ShaderPaths &shaderInfos) const;
 
-		Program(const ShaderPaths &shaderPaths, ProgramPool *pool)
-			: ID(LoadProgram(shaderPaths)), properties(GetProgramUniforms(ID)), pool(pool) {}
-
-		template<typename, typename>
-		friend class Pool;
-		friend class ProgramPool;
+		Program(const ShaderPaths &shaderPaths)
+			: ID(loadProgram(shaderPaths)), properties(getProgramUniforms(ID)) {}
 
 	public:
 		void Use() const;

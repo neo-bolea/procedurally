@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <numeric>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -95,9 +96,21 @@ public:
 
 
 // Dummy Template for passing values without hashing.
-template<typename T>
-struct PassHash
+template<typename T, typename Result = uint>
+struct PassHasher
 {
-	uint operator()(const T &value) const
+	Result operator()(const T &value) const
 	{ return value; }
+};
+
+template<typename Hasher, typename Container,
+	typename Result = decltype(Hasher())>
+struct AccumulateHasher
+{
+	Result operator()(const Container &container) const
+	{
+		std::vector<Result> tmp(container.size());
+		std::transform(container.begin(), container.end(), tmp.begin(), Hasher());
+		return std::accumulate(tmp.begin(), tmp.end(), size_t());
+	}
 };

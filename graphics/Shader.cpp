@@ -10,14 +10,33 @@ namespace GL
 {
 	ProgRef activeProgram;
 
-	Program::Program(const ShaderPaths &shaderPaths, ProgramPool *pool)
-	: ID(LoadProgram(shaderPaths)), properties(GetProgramUniforms(ID)), pool(pool)
-	{
+	void Program::setup(std::unordered_set<Rscs::FileRef> &files)
+	{	
+		//decltype(properties) previousProperties;
+		if(previouslyInitialized)
+		{
+			glDeleteProgram(ID);
+			//previousProperties = properties;
+			properties.clear();
+			shaders.clear();
+		}
+
+		ID = setupProgram(files);
+		PropertyMap &propertyTypes = getProgramUniforms(ID);
+		properties.reserve(propertyTypes.size());
+		for(auto &propIter : propertyTypes)
+		{
+			UniformID uniformID = GetID(propIter.first);
+			{
+				properties.emplace(UniformInfo(uniformID, propIter.second), DataInfo{ propIter.second, UniformValue() });
+			}
+		}
+
 		int matrices = glGetUniformBlockIndex(ID, "Matrices");
 		if(matrices != -1) { glUniformBlockBinding(ID, matrices, 0); }
 
-		for(size_t i = 0; i < shaderPaths.size(); i++)
-		{ shaders.push_back(GetShaderType(shaderPaths[i])); }
+		for(auto &file : files)
+		{ shaders.push_back(getShaderType(file->Path_)); }
 
 		if(shaders.size() == 1 && shaders[0] == ShaderType::Compute)
 		{ 
@@ -35,10 +54,20 @@ namespace GL
 			}
 		}
 		else { type = ProgramType::Graphical; }
+
+		//if(previouslyInitialized)
+		//{
+		//	Push(*this);
+		//	for(auto &property : previousProperties)
+		//	{
+		//		Set(property.first, std::forward<UniformValue>(property.second.Value));
+		//	}
+		//	Pop();
+		//}
 	}
 
 	Program::Program(const Program &other)
-		: ID(other.ID), properties(other.properties), pool(pool)
+		: ID(other.ID), properties(other.properties)
 	{
 		type = other.type;
 		shaders = other.shaders;
@@ -46,14 +75,14 @@ namespace GL
 	}
 
 	/*
-			ProgramPool *pool;
-		PropertyMap properties;
-		ProgramType type;
-		std::vector<ShaderType> shaders;
+	ProgramPool *pool;
+	PropertyMap properties;
+	ProgramType type;
+	std::vector<ShaderType> shaders;
 
-		std::unordered_set<std::string> erroneousUniforms;
+	std::unordered_set<std::string> erroneousUniforms;
 
-		std::unique_ptr<int[]> localComputeWorkGroupSize;
+	std::unique_ptr<int[]> localComputeWorkGroupSize;
 	*/
 
 
@@ -96,12 +125,12 @@ namespace GL
 		glDispatchCompute(x, y, z);
 	}
 
-	DataType Program::GetProp(const std::string &name)
+	DataType Program::getProperty(const std::string &name) const
 	{
-		auto it = properties.find(name);
+		auto it = properties.find(UniformInfo{ GetID(name), DataType() });
 		if (it != properties.end())
 		{
-			return it->second;
+			return it->second.Type;
 		}
 		else
 		{
@@ -111,32 +140,63 @@ namespace GL
 		}
 	}
 
-	int Program::GetID(const std::string& uniformName) const
+	int Program::GetID(const std::string &uniformName) const
 	{
 		return glGetUniformLocation(ID, uniformName.c_str());
 	}
 
-	Uniform Program::GetUniform(const std::string& uniformName)
+	UniformInfo Program::GetUniform(const std::string &uniformName) const
 	{
-		auto prop = GetProp(uniformName);
+		DataType prop = getProperty(uniformName);
 		if (prop == (DataType)-1)
 		{
-			return Uniform{ -1, prop };
+			return UniformInfo{ -1, prop };
 		}
 
-		return Uniform{ GetID(uniformName), prop };
+		return UniformInfo{ GetID(uniformName), prop };
 	}
 
-	void Program::Set(const std::string& name, UniformData value)
+	enum DataClass { Number, Vector, Matrix };
+	std::unordered_map<DataType, DataClass> DataClasses =
 	{
-		Uniform unif = GetUniform(name);
+		{ DataType::Float, Number },
+		{ DataType::Vec2, Vector },
+		{ DataType::Vec3, Vector },
+		{ DataType::Vec4, Vector },
+		{ DataType::Int, Number },
+		{ DataType::UInt, Number },
+		{ DataType::Bool, Number },
+		{ DataType::Mat2, Matrix },
+		{ DataType::Mat3, Matrix },
+		{ DataType::Mat4, Matrix },
+	};
+
+	void Program::Set(const std::string &name, UniformValue &&value) const
+	{
+		UniformInfo unif = GetUniform(name);
 		if (unif.ID == -1) { return; }
 
-		Set(unif, value);
+		if(DataClasses[unif.Type] != DataClasses[value.Type])
+		{
+			log("The given uniform value is not of the same type as the uniform '" + name + "'.",
+				Debug::Error, { "Graphics", "Shader" });
+			return;
+		}
+
+		Set(unif, std::forward<UniformValue>(value));
 	}
 
-	void Program::Set(const Uniform& unif, UniformData value) const
+	void Program::Set(const UniformInfo &unif, UniformValue &&value) const
 	{
+		if(DataClasses[unif.Type] != DataClasses[value.Type])
+		{
+			log("The given uniform value is not of the same type as the uniform with the ID "
+				+ std::to_string(unif.ID) + ".", Debug::Error, { "Graphics", "Shader" });
+			return;
+		}
+
+		//properties[unif.ID].Value = value;
+
 		if (activeProgram == nullptr || activeProgram->ID != ID)
 		{
 			log("The program has to be active for it's uniforms to be changed.",
@@ -146,33 +206,33 @@ namespace GL
 
 		switch (unif.Type)
 		{
-		case DataType::Float: { auto v = value.Float_; glUniform1f (unif.ID, v); break; }
-		case DataType::Vec2: { auto v = value.Vector2_; glUniform2f (unif.ID, v->x, v->y); break; }
-		case DataType::Vec3: { auto v = value.Vector3_; glUniform3f (unif.ID, v->x, v->y, v->z); break; }
-		case DataType::Vec4: { auto v = value.Vector4_; glUniform4f (unif.ID, v->x, v->y, v->z, v->w); break; }
-		case DataType::Int: { auto v = value.Int_; glUniform1i (unif.ID, v); break; }
+		case DataType::Float: { auto v = value.Float_; glUniform1f(unif.ID, v); break; }
+		case DataType::Vec2: { auto v = value.Vector2_; glUniform2f(unif.ID, v->x, v->y); break; }
+		case DataType::Vec3: { auto v = value.Vector3_; glUniform3f(unif.ID, v->x, v->y, v->z); break; }
+		case DataType::Vec4: { 
+			auto v = value.Vector4_; 
+			glUniform4f (unif.ID, v->x, v->y, v->z, v->w);
+			break; }
+		case DataType::Int: { auto v = value.Int_; glUniform1i(unif.ID, v); break; }
 		case DataType::UInt: { auto v = value.Uint_; glUniform1ui(unif.ID, v); break; }
-		case DataType::Bool: { auto v = value.Bool_; glUniform1i (unif.ID, v); break; }
-
-		case DataType::Mat2: { auto v = value.Mat_; assert(v->Rows == 2 && v->Cols == 2);
+		case DataType::Bool: { auto v = value.Bool_; glUniform1i(unif.ID, v); break; }
+		case DataType::Mat2: { auto v = value.Mat2; 
 			glUniformMatrix2fv(unif.ID, 1, false, &v->v[0]); break; }
-
-		case DataType::Mat3: { auto v = value.Mat_; assert(v->Rows == 3 && v->Cols == 3);
+		case DataType::Mat3: { auto v = value.Mat3; 
 			glUniformMatrix3fv(unif.ID, 1, false, &v->v[0]); break; }
-
-		case DataType::Mat4: { auto v = value.Mat_; assert(v->Rows == 4 && v->Cols == 4);
+		case DataType::Mat4: { auto v = value.Mat4; 
 			glUniformMatrix4fv(unif.ID, 1, false, &v->v[0]); break; }
 		default: UNDEFINED_CODE_PATH
 		}
 	}
 
-	void Program::SetGlobal(const std::string& name, UniformData value)
+	void Program::SetGlobal(const std::string &name, UniformValue &&value)
 	{
-		activeProgram->Set(name, value);
+		activeProgram->Set(name, std::forward<UniformValue>(value));
 	}
 
 
-	std::string Program::LoadTxtFile(const std::string &filePath) const
+	std::string Program::loadTxtFile(const std::string &filePath) const
 	{
 		std::string shaderCode;
 		std::ifstream shaderStream(filePath, std::ios::in);
@@ -193,7 +253,7 @@ namespace GL
 		return shaderCode;
 	}
 
-	ShadID Program::CreateShader(
+	ShadID Program::createShader(
 		const std::string &src,
 		GL::ShaderType shaderType, 
 		const std::string &filePath) const
@@ -226,7 +286,7 @@ namespace GL
 		return shaderID;
 	}
 
-	ShadID Program::CreateProgram(const std::vector<ShadID> &shaderIDs) const
+	ShadID Program::createProgram(const std::vector<ShadID> &shaderIDs) const
 	{
 		//Link the program
 		ProgID programID = glCreateProgram();
@@ -261,36 +321,40 @@ namespace GL
 	const std::unordered_map<ShaderType, std::string> shaderTypeStrings
 	{ 
 		{ ShaderType::Compute, "compute" }, { ShaderType::Fragment, "fragment" },
-		{ ShaderType::Geometry, "geometry" }, { ShaderType::Vertex, "vertex" } 
+	{ ShaderType::Geometry, "geometry" }, { ShaderType::Vertex, "vertex" } 
 	};
 
-	ShadID Program::LoadProgram(const ShaderPaths &shaderInfos) const
+	ShadID Program::setupProgram(const std::unordered_set<Rscs::FileRef> &files) const
 	{
 		std::vector<ShadID> shaderIDs;
-		shaderIDs.resize(shaderInfos.size());
+		shaderIDs.resize(files.size());
 
+		int i = 0;
 		//Create the shaders
-		for(uint i = 0; i < shaderIDs.size(); i++)
+		for(auto &file : files)
 		{
-			ShaderType type = GetShaderType(shaderInfos[i]);
-			shaderIDs[i] = CreateShader(LoadTxtFile(shaderInfos[i]), type, shaderInfos[i]);
+			ShaderType type = getShaderType(file->Path_);
+			shaderIDs[i] = createShader(file->Contents, type, file->Path_);
 			if(shaderIDs[i] == -1)
 			{
-				log("Not able to load " + shaderTypeStrings.at(type) + " shader: " + shaderInfos[i],
+				log("Not able to load " + shaderTypeStrings.at(type) + " shader: " + file->Path_,
 					Debug::Error, { "Graphics", "Shader", "IO" });
 				return -1;
 			}
+
+			i++;
 		}
 
-		return CreateProgram(shaderIDs);
+		return createProgram(shaderIDs);
 	}
 
+
 #define MAX_PROPERTY_NAME_LENGTH 32
-	PropertyMap Program::GetProgramUniforms(uint program) const
+	PropertyMap Program::getProgramUniforms(uint program) const
 	{
 		if (ID == -1) { return PropertyMap(); }
 
-		PropertyMap properties;
+		PropertyMap propertyMap;
 
 		GLchar buffer[MAX_PROPERTY_NAME_LENGTH];
 		int uniCount, length, size;
@@ -300,13 +364,13 @@ namespace GL
 		{
 			glGetActiveUniform(program, i, MAX_PROPERTY_NAME_LENGTH, &length, &size, 
 				(GLenum *)&prop, buffer);
-			properties[buffer] = prop;
+			propertyMap[buffer] = prop;
 		}
 
-		return properties;
+		return propertyMap;
 	}
 
-	ShaderType Program::GetShaderType(const std::string &path) const
+	ShaderType Program::getShaderType(const std::string &path) const
 	{
 		uint lastPos = (uint)path.find_last_of(".");
 		std::string extension = path.substr(lastPos, path.size() - lastPos);
@@ -333,44 +397,3 @@ namespace GL
 		glUseProgram(shaderPrior);
 	}
 }
-
-////Default Programs
-//namespace GL
-//{
-//	std::string libShaderPath()
-//	{
-//		static std::string path = CGE::LibRscsLoc + "shaders\\";
-//		return path;
-//	}
-//
-//	const ShaderPaths Solid3DShader{ { "Min3D.vert" }, { "Solid.frag" } };
-//	const ShaderPaths Tex3DShader{ { "Min3D.vert" }, { "Tex.frag" } };
-//
-//	const ShaderPaths ScreenShader{ { "PassThrough.vert" }, { "Solid.frag" } };
-//	const ShaderPaths SolidTexShader{ { "Texture.vert" }, { "Solid.frag" } };
-//	const ShaderPaths DefaultTexShader{ { "Texture.vert" }, { "Tex.frag" } };
-//	const ShaderPaths ScreenTexShader{ { "ScreenPos.vert" }, { "Tex.frag" } };
-//	const ShaderPaths TexRampShader{ { "Texture.vert" }, { "TexRamp.frag" } };
-//
-//	const std::array<ShaderPaths, ProgramPool::MAX> ProgramPool::LibShaders =
-//	{
-//		Solid3DShader,
-//		Tex3DShader,
-//
-//		ScreenShader,
-//		SolidTexShader,
-//		DefaultTexShader,
-//		ScreenTexShader,
-//		TexRampShader,
-//	};
-//
-//	ProgRef ProgramPool::LoadDefaultProgram(ProgramPool::DefaultProgram libShader)
-//	{
-//		ShaderPaths paths = ProgramPool::LibShaders[(uint)libShader];
-//
-//		for(size_t i = 0; i < paths.size(); i++)
-//		{ paths[i] = CGE::LibRscsLoc + "shaders\\" + paths[i]; }
-//
-//		return Load(paths);
-//	}
-//}
