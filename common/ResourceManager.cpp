@@ -1,5 +1,7 @@
 #include "../Resources/ResourceManager.h"
 
+#include "stb_image.h"
+
 namespace Rscs 
 {
 	void log(const std::string &msg, Debug::InfoType type)
@@ -31,33 +33,85 @@ namespace Rscs
 		}
 		else
 		{
-			auto *file = new FileInfo(loadFile(path));
+			FileRef file = loadFile(path);
 			filePtr = loadedFiles.emplace(path, file).first->second;
 		}
 		return filePtr;
 	}
 
-	FileInfo	Manager::loadFile(const Path &path)
+	FileRef Manager::loadFile(const Path &path)
 	{
-		FileInfo result;
+		FileType fileType = getFileType(path);
+		FileRef result;
 
-		std::ifstream stream(path, std::ios::in);
-		if (stream.is_open())
+		if(fileType == Text)
 		{
-			std::stringstream sstr;
-			sstr << stream.rdbuf();
+			std::ifstream stream(path, std::ios::in);
 
-			result = FileInfo(path, sstr.str(), getLastWriteTime(path));
+			if (stream.is_open())
+			{
+				std::stringstream sstr;
+				sstr << stream.rdbuf();
 
-			stream.close();
+				TextFileInfo file;
+				file.Path_ = path;
+				file.Contents = sstr.str();
+				file.LastWriteTime = getLastWriteTime(path);
+				result = std::make_shared<FileInfo>(new FileInfo(dynamic_cast<FileInfo &>(file)));
+
+				stream.close();
+			}
+			else
+			{
+				log("Could not open file at " + path + ".", Debug::Error);
+			}
 		}
-		else
+		else if(fileType == Binary)
 		{
-			log("Could not open file at " + path + ".", Debug::Error);
+			//TODO: Add option for binary files that aren't images.
+			stbi_set_flip_vertically_on_load(true);
+			ImageFileInfo file;
+
+			unsigned char *data = 
+				stbi_load(path.c_str(), &file.width, &file.height, 
+					&file.nrChannels, STBI_rgb_alpha);
+
+			file.Path_ = path;
+			std::copy(data, data + (file.width * file.height * file.nrChannels), file.Contents);
+			file.LastWriteTime = getLastWriteTime(path);
+			//TODO: Add option to change forceNrChannels.
+			
+			result = std::make_shared<FileInfo>(new FileInfo(dynamic_cast<FileInfo &>(file)));
 		}
 
 		return result;
 	}
+	
+	//TODO: Add file to flag file extensions as either text or binary.
+	FileType Manager::getFileType(const Path &path)
+	{
+		static const std::unordered_set<std::string> textExts =
+		{
+			".txt",
+			".vert",
+			".frag",
+			".comp",
+		};
+
+		static const std::unordered_set<std::string> binaryExts =
+		{
+			".png",
+			".jpg",
+			".jpeg",
+			".bmp",
+		};
+
+		auto ext = std::filesystem::path(path).extension().string();
+		if(binaryExts.find(ext) != binaryExts.end()) { return Binary; }
+		else if(textExts.find(ext) != textExts.end()) { return Text; }
+		else { return Text; }
+	}
+
 
 	void Manager::update()
 	{
@@ -67,7 +121,7 @@ namespace Rscs
 			auto lastWriteTime = getLastWriteTime(file->Path_);
  			if (file->LastWriteTime == lastWriteTime) { continue; }
 
-			*file = FileInfo(loadFile(file->Path_));
+			file = loadFile(file->Path_);
 
 			// If the file changed, check for all resources if this file is a dependency 
 			// and they need to be reinitialized.
@@ -80,126 +134,3 @@ namespace Rscs
 		}
 	}
 }
-
-/*
-namespace Resource1
-{
-	PathID hashPath::operator()(const Path &path) const
-	{
-		return CRC32::Get(path.data(), path.size());
-	}
-
-	std::filesystem::file_time_type getLastWriteTime(const Path &path)
-	{
-		return std::filesystem::last_write_time(path);
-	}
-	
-
-	Resource::Resource() 
-	{
-		
-	}
-	
-	//template<typename ...Args>
-	//void Resource::Setup(Args &...fileContents)
-	//{
-	//	...
-	//}
-	
-	void Resource::onFileChanged(const ResourceDependency &path)
-	{
-		if (ext::contains(dependencies, path))
-		{
-			update();
-		}
-	}
-
-	void Resource::update()
-	{
-		Setup(dependencies);
-	}
-
-
-	FileContent loader::Load(const Path &path)
-	{
-		auto &contents = loadedFiles.find(path);
-		if (contents != loadedFiles.end())
-		{
-			return getContents(contents->second);
-		}
-		else
-		{
-			return loadFile(path);
-		}
-	}
-	
-	auto loader::createFileInfo(const Path &path, const FileContent &contents) const -> FileInfo
-	{
-		FileInfo info;
-		info.Content = contents;
-		info.Path_ = path;
-		info.lastWriteTime = getLastWriteTime(path);
-		return info;
-	}
-	
-	FileContent &loader::getContents(FileInfo &info) const
-	{ return info.Content; }
-	
-	FileContent loader::loadFile(const Path &path)
-	{
-		FileInfo result;
-	
-		std::ifstream stream(path, std::ios::in);
-		if (stream.is_open())
-		{
-			std::stringstream sstr;
-			sstr << stream.rdbuf();
-	
-			result = createFileInfo(path, sstr.str());
-	
-			stream.close();
-		}
-		else
-		{
-			Debug::Log("Could not open file at " + path + ".", Debug::Error, { "Resources", "IO" });
-		}
-	
-		return getContents(loadedFiles.emplace(path, result).first->second);
-	}
-	
-	Manager &Manager::Get()
-	{
-		static Manager instance;
-		return instance;
-	}
-
-	Manager::Manager() : loader_(new loader()), monitor_(new monitor(*this, loader_))
-	{
-
-	}
-	
-
-
-	monitor::monitor(Manager &manager, std::shared_ptr<loader> loader_) 
-		: manager(&manager), loader_(loader_)
-	{ Locator::Add(Locator::CmdNode("Update", this, &monitor::update)); }
-
-	void monitor::update()
-	{
-		for (auto &filePair : loader_->loadedFiles)
-		{
-			auto &file = filePair.second;
-			if (file.lastWriteTime == getLastWriteTime(file.Path_)) { continue; }
-	
-			auto hash = hashPath()(file.Path_);
-	
-			// If the file changde, check for all resources if this file is a dependency 
-			// and they need to be reinitialized.
-			for(auto &resourceItem : manager->loadedIndices)
-			{
-				auto &resource = resourceItem.second;
-				manager->loadedResources[resource]->onFileChanged(file);
-			}
-		}
-	}
-}*/

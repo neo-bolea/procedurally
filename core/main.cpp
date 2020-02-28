@@ -198,9 +198,10 @@ int main(int argc, char* argv[])
 	GL::ProgRef texShader =
 		Rscs::Manager::Get().loadResource<GL::Program>({ { "Texture.vert" }, { "Tex.frag" } });
 	GL::ProgRef meshShader =
-		Rscs::Manager::Get().loadResource<GL::Program>({ { "Min3D.vert" }, { "Solid.frag" } });
-	meshShader->Use();
-	meshShader->Set("uColor", Vector3(1.f));
+		Rscs::Manager::Get().loadResource<GL::Program>({ { "Texture.vert" }, { "Tex.frag" } });
+
+	GL::Tex2D loadTex;
+	loadTex.Setup("TestTex.png");
 
 #pragma region Compute Cave
 	GL::Tex2D noiseTex;
@@ -233,7 +234,7 @@ int main(int argc, char* argv[])
 	std::vector<Vector2> caveMesh;
 
 	caveMesh.resize(totalVertCount);
-	void* mesh = vertBuffer->Map();
+	void *mesh = vertBuffer->Map();
 	memcpy(&caveMesh[0], (Vector2*)mesh, totalVertCount * sizeof(Vector2));
 	vertBuffer->Unmap();
 
@@ -248,6 +249,7 @@ int main(int argc, char* argv[])
 
 		glBindBuffer(GL_ARRAY_BUFFER, vertBuffer->id);
 		GLHelper::SetVBOData(caveMesh, 2, 0);
+		GLHelper::SetVBOData(caveMesh, 2, 1);
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
@@ -269,7 +271,7 @@ int main(int argc, char* argv[])
 
 	auto &cx = Rscs::Manager::Get();
 	meshShader->Use();		
-	meshShader->Set("uColor", Vector3(0.f, 0.f, 0.f));
+	meshShader->Set("uColor", Vector3(1.f));
 	meshShader->Set("uAlpha", 1.f);
  	while (!quit)
 	{
@@ -292,6 +294,8 @@ int main(int argc, char* argv[])
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 
+		glActiveTexture(GL::Texture0);
+		loadTex.Bind();
 		meshShader->Use();
 		Math::Mat4 mat;
 		//mat = Math::GL::Translate(mat, Vector3(tf.Pos.x / ASPECT, tf.Pos.y, 0.f));

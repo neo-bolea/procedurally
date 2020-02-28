@@ -268,6 +268,13 @@ namespace GL
 		PopBind();
 	}
 
+	void Tex1D::setup(std::unordered_set<Rscs::FileRef> &files)
+	{
+		assert(files.size() == 1, "A Tex1D can only be constructed with a single image.");
+		Setup()
+	}
+
+
 	void Tex2D::Setup(int w, int h, Channel format, void *data)
 	{
 		Size = iVec2(w, h);
@@ -345,6 +352,7 @@ namespace GL
 
 		PopBind();
 	}
+
 
 	void Tex3D::Setup(int w, int h, int depth, Channel format, void *data)
 	{

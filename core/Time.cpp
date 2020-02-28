@@ -1,6 +1,6 @@
 #include "Time.h"
 
-#include "Systems/Locator.h"
+#include "Systems/Locator/Locator.h"
 
 #include "SDL.h"
 
