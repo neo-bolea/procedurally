@@ -31,12 +31,14 @@ namespace GL
 	using UniformID = int;
 	struct UniformInfo
 	{
-		UniformID ID;
+		std::string Name;
 		DataType Type;
+		UniformID ID;
 
-		UniformInfo(UniformID id) : ID(id) {}
-		UniformInfo(UniformID id, const DataType &type) : ID(id), Type(type) {}
-		UniformInfo(const UniformInfo &other) : ID(other.ID), Type(other.Type) {}
+		UniformInfo(const std::string &name, UniformID id) : Name(name), ID(id) {}
+		UniformInfo(const std::string &name, UniformID id, const DataType &type) 
+			: Name(name), ID(id), Type(type) {}
+		UniformInfo(const UniformInfo &other) : Name(other.Name), ID(other.ID), Type(other.Type) {}
 
 		struct Hasher
 		{ uint operator()(const UniformInfo &info) const { return info.ID; } };
@@ -85,12 +87,27 @@ namespace GL
 
 		DataType Type;
 	};
+
+
+	struct ShaderInfo
+	{
+		ShaderInfo(const std::string &path, const std::string &code, ShaderType type) 
+			: Path(path), Code(code), Type(type) {}
+		ShaderInfo(const std::string &code, ShaderType type) 
+			: ShaderInfo("Unknown Path", code, type) {}
+
+
+		std::string Path;
+		std::string Code;
+		ShaderType Type;
+	};
 }
 
 namespace GL
 {
 	class Program;
 	typedef std::shared_ptr<Program> ProgRef;
+	typedef std::shared_ptr<const Program> ProgConstRef;
 
 	extern ProgRef activeProgram;
 	inline ProgRef ActiveProgram() { return activeProgram; }
@@ -104,6 +121,7 @@ namespace GL
 		Program() {}
 		Program(const Program &other);
 
+		void Setup(std::vector<ShaderInfo> &shaderInfos);
 
 		int GetID(const std::string &uniformName) const;
 		UniformInfo GetUniform(const std::string &uniformName) const;
@@ -138,7 +156,7 @@ namespace GL
 								  GL::ShaderType shaderType, 
 								  const std::string &filePath) const;
 		ProgID createProgram(const std::vector<ShadID> &shaderIDs) const;
-		ShadID setupProgram(const std::unordered_set<Rscs::FileRef> &files) const;
+		ShadID setupProgram(std::vector<ShaderInfo> &shaderInfos) const;
 
 		mutable std::unordered_map<UniformInfo, DataInfo, UniformInfo::Hasher> properties;
 		ProgramType type;

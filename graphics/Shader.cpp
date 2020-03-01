@@ -10,33 +10,52 @@ namespace GL
 {
 	ProgRef activeProgram;
 
+	Program::Program(const Program &other)
+		: ID(other.ID), properties(other.properties)
+	{
+		type = other.type;
+		shaders = other.shaders;
+		localComputeWorkGroupSize = other.localComputeWorkGroupSize;
+	}
+
 	void Program::setup(std::unordered_set<Rscs::FileRef> &files)
 	{	
-		//decltype(properties) previousProperties;
+		std::vector<ShaderInfo> shaderInfos;
+		for(auto &file : files)
+		{
+			shaderInfos.push_back(ShaderInfo(file->Path_, file->Contents, getShaderType(file->Path_)));
+		}
+
+		Setup(shaderInfos);
+	}
+
+	void Program::Setup(std::vector<ShaderInfo> &shaderInfos)
+	{	
 		if(previouslyInitialized)
 		{
 			glDeleteProgram(ID);
-			//previousProperties = properties;
 			properties.clear();
 			shaders.clear();
 		}
 
-		ID = setupProgram(files);
+		for(auto &shader : shaderInfos)
+		{ shaders.push_back(shader.Type); }
+
+		ID = setupProgram(shaderInfos);
 		PropertyMap &propertyTypes = getProgramUniforms(ID);
 		properties.reserve(propertyTypes.size());
 		for(auto &propIter : propertyTypes)
 		{
 			UniformID uniformID = GetID(propIter.first);
 			{
-				properties.emplace(UniformInfo(uniformID, propIter.second), DataInfo{ propIter.second, UniformValue() });
+				UniformInfo unifInfo = UniformInfo(propIter.first, uniformID, propIter.second);
+				DataInfo dataInfo = DataInfo{ propIter.second, UniformValue() };
+				properties.emplace(unifInfo, dataInfo);
 			}
 		}
 
 		int matrices = glGetUniformBlockIndex(ID, "Matrices");
 		if(matrices != -1) { glUniformBlockBinding(ID, matrices, 0); }
-
-		for(auto &file : files)
-		{ shaders.push_back(getShaderType(file->Path_)); }
 
 		if(shaders.size() == 1 && shaders[0] == ShaderType::Compute)
 		{ 
@@ -54,37 +73,7 @@ namespace GL
 			}
 		}
 		else { type = ProgramType::Graphical; }
-
-		//if(previouslyInitialized)
-		//{
-		//	Push(*this);
-		//	for(auto &property : previousProperties)
-		//	{
-		//		Set(property.first, std::forward<UniformValue>(property.second.Value));
-		//	}
-		//	Pop();
-		//}
 	}
-
-	Program::Program(const Program &other)
-		: ID(other.ID), properties(other.properties)
-	{
-		type = other.type;
-		shaders = other.shaders;
-		localComputeWorkGroupSize = other.localComputeWorkGroupSize;
-	}
-
-	/*
-	ProgramPool *pool;
-	PropertyMap properties;
-	ProgramType type;
-	std::vector<ShaderType> shaders;
-
-	std::unordered_set<std::string> erroneousUniforms;
-
-	std::unique_ptr<int[]> localComputeWorkGroupSize;
-	*/
-
 
 	void Program::Use() const
 	{
@@ -127,7 +116,7 @@ namespace GL
 
 	DataType Program::getProperty(const std::string &name) const
 	{
-		auto it = properties.find(UniformInfo{ GetID(name), DataType() });
+		auto it = properties.find(UniformInfo{ name, GetID(name), DataType() });
 		if (it != properties.end())
 		{
 			return it->second.Type;
@@ -150,10 +139,10 @@ namespace GL
 		DataType prop = getProperty(uniformName);
 		if (prop == (DataType)-1)
 		{
-			return UniformInfo{ -1, prop };
+			return UniformInfo{ "", -1, prop };
 		}
 
-		return UniformInfo{ GetID(uniformName), prop };
+		return UniformInfo{ uniformName, GetID(uniformName), prop };
 	}
 
 	enum DataClass { Number, Vector, Matrix };
@@ -194,8 +183,6 @@ namespace GL
 				+ std::to_string(unif.ID) + ".", Debug::Error, { "Graphics", "Shader" });
 			return;
 		}
-
-		//properties[unif.ID].Value = value;
 
 		if (activeProgram == nullptr || activeProgram->ID != ID)
 		{
@@ -321,24 +308,23 @@ namespace GL
 	const std::unordered_map<ShaderType, std::string> shaderTypeStrings
 	{ 
 		{ ShaderType::Compute, "compute" }, { ShaderType::Fragment, "fragment" },
-	{ ShaderType::Geometry, "geometry" }, { ShaderType::Vertex, "vertex" } 
+		{ ShaderType::Geometry, "geometry" }, { ShaderType::Vertex, "vertex" } 
 	};
 
-	ShadID Program::setupProgram(const std::unordered_set<Rscs::FileRef> &files) const
+	ShadID Program::setupProgram(std::vector<ShaderInfo> &shaderInfos) const
 	{
 		std::vector<ShadID> shaderIDs;
-		shaderIDs.resize(files.size());
+		shaderIDs.resize(shaderInfos.size());
 
 		int i = 0;
 		//Create the shaders
-		for(auto &file : files)
+		for(auto &shader : shaderInfos)
 		{
-			ShaderType type = getShaderType(file->Path_);
-			shaderIDs[i] = createShader(file->Contents, type, file->Path_);
+			shaderIDs[i] = createShader(shader.Code, shader.Type, shader.Path);
 			if(shaderIDs[i] == -1)
 			{
-				log("Not able to load " + shaderTypeStrings.at(type) + " shader: " + file->Path_,
-					Debug::Error, { "Graphics", "Shader", "IO" });
+				log("Not able to load " + shaderTypeStrings.at(shader.Type) + " shader: " 
+					+ shader.Path, Debug::Error, { "Graphics", "Shader", "IO" });
 				return -1;
 			}
 
