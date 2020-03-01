@@ -1,38 +1,31 @@
 #include "Camera.h"
 
+#include "GL.h"
 #include "MathExt.h"
 #include "MathGL.h"
 #include "Time.h"
 
+#include "GL/glew.h"
+
 #include <iostream>
 
-void Camera::Update(float speed, bool lockView, const dVec2 &move, const dVec2 &mouseMove, float scroll, double deltaTime)
+
+Camera2D::Camera2D(float screenRatio) : Ratio(screenRatio)
 {
-	Vector3 right = (Vector3::Cross(Front, Vector3::Up)).Normalize();
-	Vector3 up = (Vector3::Cross(Front, right)).Normalize();
-	Pos = Pos + speed * Front * move.y * deltaTime;
-	Pos = Pos + speed * right * move.x * deltaTime;
-	Pos = Pos + speed * up * scroll * deltaTime;
-
-	if(!lockView)
-	{
-		Yaw   +=  static_cast<float>(mouseMove.x);
-		Pitch +=  static_cast<float>(mouseMove.y);
-		FOV   += -scroll;
-	}
-
-	Pitch = Math::Clamp(Pitch, -89.5f, 89.5f);
-
-	Front.x = static_cast<float>(cos(Math::Deg2Rad * static_cast<double>(Pitch))
-		* cos(Math::Deg2Rad * static_cast<double>(Yaw)));
-	Front.y = static_cast<float>(-sin(Math::Deg2Rad * static_cast<double>(Pitch)));
-	Front.z = static_cast<float>(cos(Math::Deg2Rad * static_cast<double>(Pitch))
-		* sin(Math::Deg2Rad * static_cast<double>(Yaw)));
-	Front = Front.Normalize();
+	ubo = GLHelper::CreateUBO(0, (16 * sizeof(float)) * 3);
 }
 
-//Math::fMat4 Camera::GetProjection()
-//{ return Math::GL::Perspective(Math::Deg2Rad * FOV, Screen::AspectRatio(), Near, Far); }
-//
-//Math::fMat4 Camera::GetView()
-//{ return Math::GL::LookAt(Pos, Pos + Front, Vector3::Up); }
+void Camera2D::Update(fVec2 movement, float dt)
+{
+	Pos += (fVec3)movement * Speed * VertSize * dt;
+	Pos.z = 1.f;
+
+	view = Math::GL::LookAt(Pos, Pos - fVec3::Forward);
+	proj = Math::GL::Orthographic(-VertSize * Ratio, VertSize * Ratio, -VertSize, VertSize, Near, Far);
+
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+	GLHelper::BindUBOData(0, 16 * sizeof(float), &view.v[0]);
+	GLHelper::BindUBOData(16 * sizeof(float), 16 * sizeof(float), &proj.v[0]);
+	GLHelper::BindUBOData(16 * sizeof(float) * 2, 16 * sizeof(float), &(proj * view).v[0]);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
