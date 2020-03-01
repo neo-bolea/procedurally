@@ -7,6 +7,194 @@
 #include "GLTypes.h"
 #include "GPUGrid.h"
 #include "Grid.h"
+#include "Graphics.h"
+#include "MathExt.h"
+#include "MathGL.h"
+#include "Mesh.h"
+#include "SDL.h"
+#include "Shader.h"
+#include "StringUtils.h"
+#include "Systems/Inputs.h"
+#include "Time.h"
+#include "Watch.h"
+#include "framework.h"
+#include "pch.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "FastNoise.h"
+#include "GL/glew.h"
+#include "stb_image.h"
+
+#include <charconv>
+#include <fstream>
+#include <iostream>
+#include <random>
+
+#define __WINDOWS_WASAPI__
+#define __WINDOWS_DS__
+#define __WINDOWS_ASIO__
+
+#define WIDTH (1920/2)
+#define HEIGHT (1080/2)
+#define ASPECT ((float)WIDTH / HEIGHT)
+
+//TODO: ResourceManager: Cache paths (so each resource doesn't have to save all it's dependencies).
+//TODO: ResourceManager: Add option to make files temporary or permanent (whether to unload them with 0 refs).
+//TODO: Locator: Change name
+//TODO: Locator: Make "update" work with optional ticks / time intervals (e.g. for ResourceManager).
+//TODO: Shader: Keep values for uniforms when updating shader (in setup()).
+
+int main(int argc, char* argv[])
+{
+#pragma region SDL
+	// SDL
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+
+	// OpenGL 3.3
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
+	// Anti-Aliasing
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+
+	// Window
+	auto window = SDL_CreateWindow("TestTitle", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH,
+		HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+
+	if (window == NULL)
+	{
+		std::cout << "Failed to open an SDL window: " << std::endl << SDL_GetError() << std::endl;
+		SDL_Quit();
+		return EXIT_FAILURE;
+	}
+
+	auto context = SDL_GL_CreateContext(window);
+#pragma endregion
+
+#pragma region GLEW
+	glewExperimental = GL_TRUE;
+
+	if (glewInit() != GLEW_OK)
+	{
+		std::cout << "Failed to initialize GLEW" << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	glViewport(0, 0, WIDTH, HEIGHT);
+
+	glCullFace(GL_NONE);
+	glFrontFace(GL_CCW);
+	glEnable(GL_CULL_FACE);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_MULTISAMPLE);
+	glEnable(GL_DEBUG_OUTPUT);
+
+	// VSync
+	SDL_GL_SetSwapInterval(0);
+#pragma endregion
+
+	Inputs inputs;
+	inputs.AddAxis("Horizontal", Inputs::D, Inputs::A);
+	inputs.AddAxis("Vertical", Inputs::W, Inputs::S);
+	inputs.AddAxis("Scroll", Inputs::E, Inputs::Q);
+	Time time;
+
+	bool quit = false;
+	SDL_Event event;
+
+	Time::SetLimitFPS(true);
+	Time::SetMaxFPS(60);
+
+	uint ubo = GLHelper::CreateUBO(0, (16 * sizeof(float)) * 3);
+	GL::ProgRef blockProg =
+		Rscs::Manager::Get().loadResource<GL::Program>({ "Texture.vert", "Tex.frag" });
+
+	iVec2 tileSize(5, 20);
+
+	Camera2D camera(ASPECT);
+	camera.Speed = 1.f;
+	camera.VertSize = std::max<float>((tileSize.x + 2) / ASPECT, (tileSize.y + 2)) / 2.f;
+
+	while (!quit)
+	{
+		glClearColor(0.f, 0.26f, 0.2f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		fVec2 movement(inputs.GetAxis("Horizontal", Inputs::Smooth),
+			inputs.GetAxis("Vertical", Inputs::Smooth));
+		camera.Update(movement, Time::DeltaTime());
+		blockProg->Use();
+		blockProg->Set("uModel", Math::Mat4());
+
+		//Math::fMat4 view = Math::GL::LookAt(camera.Pos, camera.Pos + fVec3::Forward, Vector3::Up),
+		//	proj = Math::GL::Orthographic(-5.f * ASPECT, 5.f * ASPECT, -5.f, 5.f, 0.f, 100.f);
+		//glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+		//GLHelper::BindUBOData(0, 16 * sizeof(float), &view.v[0]);
+		//GLHelper::BindUBOData(16 * sizeof(float), 16 * sizeof(float), &proj.v[0]);
+		//GLHelper::BindUBOData(16 * sizeof(float) * 2, 16 * sizeof(float), &(proj * view).v[0]);
+		//glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+		for(float x = -tileSize.x / 2.f; x <= tileSize.x / 2.f; x++)
+		{
+			for(float y = -tileSize.y / 2.f; y <= tileSize.y / 2.f; y++)
+			{
+				Graphics::DrawCube(fVec2(x, y), fVec2::One*0.1f, fVec3(1.f, 0.f, 0.f));
+			}
+		}
+
+		Locator::Call("Update");
+
+		while (SDL_PollEvent(&event))
+		{
+			switch (event.type)
+			{
+			case SDL_QUIT: quit = true; break;
+
+			case SDL_KEYDOWN:
+			case SDL_KEYUP:
+			{ Locator::Call("Inputs/SetKey", event); }
+			break;
+			case SDL_MOUSEMOTION:
+			{ Locator::Call("Inputs/SetMousePos", event); }
+			break;
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+			{ Locator::Call("Inputs/SetMouseButton", event); }
+			break;
+			case SDL_MOUSEWHEEL:
+			{ Locator::Call("Inputs/SetMouseWheel", event); }
+			break;
+			}
+		}
+
+		SDL_GL_SwapWindow(window);
+	}
+
+	SDL_GL_DeleteContext(context);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
+
+	return 0;
+}
+
+
+/*
+#define GLEW_STATIC
+#define SDL_MAIN_HANDLED
+#include "Bezier.h"
+#include "Camera.h"
+#include "Core.h"
+#include "GL.h"
+#include "GLTypes.h"
+#include "GPUGrid.h"
+#include "Grid.h"
 #include "MathExt.h"
 #include "MathGL.h"
 #include "Mesh.h"
@@ -297,7 +485,7 @@ int main(int argc, char* argv[])
 		//mat = Math::GL::Translate(mat, Vector3(tf.Pos.x / ASPECT, tf.Pos.y, 0.f));
 		mat = Math::GL::Scale(mat, Vector3(0.1f));
 		//mat = Math::GL::Rotate(mat, Math::Deg2Rad * tf.Rot, Vector3::Forward);
-		//mat = Math::GL::Scale(mat, /*Vector3(tex->Ratio(), 1.f) */ Vector3(tf.Scale) / (8.f * ASPECT));
+		//mat = Math::GL::Scale(mat, /*Vector3(tex->Ratio(), 1.f) * / Vector3(tf.Scale) / (8.f * ASPECT));
 		meshShader->Set("uModel", mat);
 
 		glBindVertexArray(VAO);
@@ -337,3 +525,4 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+*/
