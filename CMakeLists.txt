@@ -64,6 +64,14 @@ add_subdirectory(graphics)
 add_subdirectory(core)
 add_subdirectory(tests)
 
+
+set_target_properties(Core
+    PROPERTIES
+    #ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    #RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
 set(ALL_PROJECTS Common Graphics Core Math)
 
 foreach(project ${ALL_PROJECTS})
