@@ -144,7 +144,7 @@ namespace GL
 	private:
 		enum class ProgramType { Graphical, Compute };
 
-		
+
 		virtual void setup(std::unordered_set<Rscs::FileRef> &files);
 
 		PropertyMap getProgramUniforms(uint program) const;
@@ -153,8 +153,8 @@ namespace GL
 
 		std::string loadTxtFile(const std::string &filePath) const;
 		ShadID createShader(const std::string &src, 
-								  GL::ShaderType shaderType, 
-								  const std::string &filePath) const;
+			GL::ShaderType shaderType, 
+			const std::string &filePath) const;
 		ProgID createProgram(const std::vector<ShadID> &shaderIDs) const;
 		ShadID setupProgram(std::vector<ShaderInfo> &shaderInfos) const;
 

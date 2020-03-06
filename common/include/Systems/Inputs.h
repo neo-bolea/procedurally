@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Locator/Locator.h"
-#include "Time.h"
+#include "GameTime.h"
 #include "Vec.h"
 
 #include "SDL.h"

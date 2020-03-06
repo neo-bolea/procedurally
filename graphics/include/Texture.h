@@ -14,8 +14,7 @@ namespace GL
 {
 #pragma region Enums
 	enum TexUse { Diffuse, Specular, Normal, Height, MAX };
-	const std::string TexTypeStrs[(uint)TexUse::MAX] 
-		= { "diffuse", "specular", "normal", "height" };
+	const std::string TexTypeStrs[(uint)TexUse::MAX] = { "diffuse", "specular", "normal", "height" };
 
 	enum Channel
 	{
@@ -123,10 +122,11 @@ namespace GL
 #pragma endregion
 
 	//TODO: Add TexArrays.
-	class Tex : Rscs::ResourceBase
+	class Tex
 	{
 	public:
 		~Tex() { Release(); }
+
 
 		void Bind() const { glBindTexture(type, ID); }
 		void Unbind() const { glBindTexture(type, 0); }
@@ -147,14 +147,11 @@ namespace GL
 		int MipmapMaxLevel = 1000;
 
 	protected:
-		virtual void setup(std::unordered_set<Rscs::FileRef> &files) = 0;
-
 		void Gen(uint type), InitFormat(Channel format);
 		void PushBind(), PopBind();
 
 
-		uchar *Load(const char *path, int *width, int *height, 
-			int *nrChannels, int forcedNrChannels = 0)
+		uchar *Load(const char *path, int *width, int *height, int *nrChannels, int forcedNrChannels = 0)
 		{
 			stbi_set_flip_vertically_on_load(true);
 			unsigned char *data = stbi_load(path, width, height, nrChannels, forcedNrChannels);
@@ -185,9 +182,6 @@ namespace GL
 		void Setup(const std::string &path);
 
 		int Size;
-
-	protected:
-		virtual void setup(std::unordered_set<Rscs::FileRef> &files);
 	};
 	typedef std::shared_ptr<Tex1D> Tex1DRef;
 	//TODO: Add option to make multisampled Tex2D
@@ -195,9 +189,7 @@ namespace GL
 	{
 	public:
 		void Setup(int w, int h, Channel format, void *data = NULL);
-		void Setup(const std::string &path, 
-			const uint forcedNrChannels = 0, 
-			const Channel forcedFormat = (Channel)0);
+		void Setup(const std::string &path, const uint forcedNrChannels = 0, const Channel forcedFormat = (Channel)0);
 
 		inline float Ratio() { return (float)Size.x / Size.y; }
 
@@ -205,9 +197,6 @@ namespace GL
 
 		bool Multisamples = false;
 		uint Samples = 4;
-
-	protected:
-		virtual void setup(std::unordered_set<Rscs::FileRef> &files);
 	};
 	typedef std::shared_ptr<Tex2D> Tex2DRef;
 
@@ -217,9 +206,6 @@ namespace GL
 		void Setup(int w, int h, int depth, Channel format, void *data = NULL);
 
 		iVec3 Size;
-
-	protected:
-		virtual void setup(std::unordered_set<Rscs::FileRef> &files);
 	};
 	typedef std::shared_ptr<Tex3D> Tex3DRef;
 
@@ -227,14 +213,9 @@ namespace GL
 	{
 	public:
 		void Setup(int w, int h, Channel format, void *data = NULL);
-		void Setup(const std::array<std::string, 6> &faces, 
-			const uint forcedNrChannels = 0,
-			const Channel forcedFormat = (Channel)0);
+		void Setup(const std::array<std::string, 6> &faces, const uint forcedNrChannels = 0, const Channel forcedFormat = (Channel)0);
 
 		iVec2 Size;
-
-	protected:
-		virtual void setup(std::unordered_set<Rscs::FileRef> &files);
 	};
 	typedef std::shared_ptr<Cubemap> CubemapRef;
 }
@@ -257,8 +238,7 @@ namespace GL
 			StencilIndex8     = GL_STENCIL_INDEX8    ,
 		};
 
-		Framebuffer(int width, int height, Channel colorFormat, 
-			Format depthStencilFormat, const Tex2DRef colorBuffer);
+		Framebuffer(int width, int height, Channel colorFormat, Format depthStencilFormat, const Tex2DRef colorBuffer);
 		void Release();
 
 		uint ID;

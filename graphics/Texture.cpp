@@ -9,102 +9,102 @@ namespace GL
 	std::unordered_map<Channel, uchar> channelToNr =
 	{
 		{ Red , 1 },
-		{ RG	, 2 },
-		{ RGB	, 3 },
-		{ RGBA, 4 },
+	{ RG	, 2 },
+	{ RGB	, 3 },
+	{ RGBA, 4 },
 
-		{ RedInt , 1 },
-		{ RGInt	, 2 },
-		{ RGBInt	, 3 },
-		{ RGBAInt, 4 },
+	{ RedInt , 1 },
+	{ RGInt	, 2 },
+	{ RGBInt	, 3 },
+	{ RGBAInt, 4 },
 	};
 
 	std::unordered_map<uchar, Channel> nrToChannel =
 	{
 		{ 1, Red  },
-		{ 2, RG	 },
-		{ 3, RGB	 },
-		{ 4, RGBA },
+	{ 2, RG	 },
+	{ 3, RGB	 },
+	{ 4, RGBA },
 	};
 
 	std::unordered_map<Channel, Channel> sizedToBasedFormat =
 	{
 		{ DepthComponent, DepthComponent },
-		{ DepthStencil  , DepthStencil   },
-		{ Red           , Red            },
-		{ RG	          , RG	            },
-		{ RGB	          , RGB	         },
-		{ RGBA          , RGBA           },
-	
-		{ R8	          , Red  },
-		{ R8_SNORM	    , Red  },
-		{ R16				 , Red  },
-		{ R16_SNORM		 , Red  },
-		{ RG8				 , RG   },
-		{ RG8_SNORM		 , RG   },
-		{ RG16	       , RG   },
-		{ RG16_SNORM	 , RG   },
-		{ R3_G3_B2	    , RGB  },
-		{ RGB4	       , RGB  },
-		{ RGB5	       , RGB  },
-		{ RGB8	       , RGB  },
-		{ RGB8_SNORM	 , RGB  },
-		{ RGB10	       , RGB  },
-		{ RGB12	       , RGB  },
-		{ RGB16_SNORM	 , RGB  },
-		{ RGBA2	       , RGB  },
-		{ RGBA4	       , RGB  },
-		{ RGB5_A1	    , RGBA },
-		{ RGBA8	       , RGBA },
-		{ RGBA8_SNORM	 , RGBA },
-		{ RGB10_A2	    , RGBA },
-		{ RGB10_A2UI	 , RGBA },
-		{ RGBA12			 , RGBA },
-		{ RGBA16			 , RGBA },
-		{ SRGB8	       , RGB  },
-		{ SRGB8_ALPHA8	 , RGBA },
-		{ R16F	       , Red  },
-		{ RG16F	       , RG	  },
-		{ RGB16F			 , RGB  },
-		{ RGBA16F	    , RGBA },
-		{ R32F	       , Red  },
-		{ RG32F	       , RG	  },
-		{ RGB32F			 , RGB  },
-		{ RGBA32F	    , RGBA },
-		{ R11F_G11F_B10F, RGB  },
-		{ RGB9_E5	    , RGB  },
-		{ R8I				 , RedInt  },
-		{ R8UI	       , RedInt  },
-		{ R16I	       , RedInt  },
-		{ R16UI	       , RedInt  },
-		{ R32I	       , RedInt  },
-		{ R32UI	       , RedInt  },
-		{ RG8I	       , RGInt   },
-		{ RG8UI	       , RGInt   },
-		{ RG16I	       , RGInt   },
-		{ RG16UI			 , RGInt   },
-		{ RG32I	       , RGInt   },
-		{ RG32UI			 , RGInt   },
-		{ RGB8I	       , RGBInt  },
-		{ RGB8UI			 , RGBInt  },
-		{ RGB16I			 , RGBInt  },
-		{ RGB16UI	    , RGBInt  },
-		{ RGB32I			 , RGBInt  },
-		{ RGB32UI	    , RGBInt  },
-		{ RGBA8I			 , RGBAInt },
-		{ RGBA8UI	    , RGBAInt },
-		{ RGBA16I	    , RGBAInt },
-		{ RGBA16UI	    , RGBAInt },
-		{ RGBA32I	    , RGBAInt },
-		{ RGBA32UI	    , RGBAInt },
+	{ DepthStencil  , DepthStencil   },
+	{ Red           , Red            },
+	{ RG	          , RG	            },
+	{ RGB	          , RGB	         },
+	{ RGBA          , RGBA           },
+
+	{ R8	          , Red  },
+	{ R8_SNORM	    , Red  },
+	{ R16				 , Red  },
+	{ R16_SNORM		 , Red  },
+	{ RG8				 , RG   },
+	{ RG8_SNORM		 , RG   },
+	{ RG16	       , RG   },
+	{ RG16_SNORM	 , RG   },
+	{ R3_G3_B2	    , RGB  },
+	{ RGB4	       , RGB  },
+	{ RGB5	       , RGB  },
+	{ RGB8	       , RGB  },
+	{ RGB8_SNORM	 , RGB  },
+	{ RGB10	       , RGB  },
+	{ RGB12	       , RGB  },
+	{ RGB16_SNORM	 , RGB  },
+	{ RGBA2	       , RGB  },
+	{ RGBA4	       , RGB  },
+	{ RGB5_A1	    , RGBA },
+	{ RGBA8	       , RGBA },
+	{ RGBA8_SNORM	 , RGBA },
+	{ RGB10_A2	    , RGBA },
+	{ RGB10_A2UI	 , RGBA },
+	{ RGBA12			 , RGBA },
+	{ RGBA16			 , RGBA },
+	{ SRGB8	       , RGB  },
+	{ SRGB8_ALPHA8	 , RGBA },
+	{ R16F	       , Red  },
+	{ RG16F	       , RG	  },
+	{ RGB16F			 , RGB  },
+	{ RGBA16F	    , RGBA },
+	{ R32F	       , Red  },
+	{ RG32F	       , RG	  },
+	{ RGB32F			 , RGB  },
+	{ RGBA32F	    , RGBA },
+	{ R11F_G11F_B10F, RGB  },
+	{ RGB9_E5	    , RGB  },
+	{ R8I				 , RedInt  },
+	{ R8UI	       , RedInt  },
+	{ R16I	       , RedInt  },
+	{ R16UI	       , RedInt  },
+	{ R32I	       , RedInt  },
+	{ R32UI	       , RedInt  },
+	{ RG8I	       , RGInt   },
+	{ RG8UI	       , RGInt   },
+	{ RG16I	       , RGInt   },
+	{ RG16UI			 , RGInt   },
+	{ RG32I	       , RGInt   },
+	{ RG32UI			 , RGInt   },
+	{ RGB8I	       , RGBInt  },
+	{ RGB8UI			 , RGBInt  },
+	{ RGB16I			 , RGBInt  },
+	{ RGB16UI	    , RGBInt  },
+	{ RGB32I			 , RGBInt  },
+	{ RGB32UI	    , RGBInt  },
+	{ RGBA8I			 , RGBAInt },
+	{ RGBA8UI	    , RGBAInt },
+	{ RGBA16I	    , RGBAInt },
+	{ RGBA16UI	    , RGBAInt },
+	{ RGBA32I	    , RGBAInt },
+	{ RGBA32UI	    , RGBAInt },
 	};
 
 	static std::unordered_map<uint, uint> texToBinding =
 	{
 		{ GL_TEXTURE_1D, GL_TEXTURE_BINDING_1D },
-		{ GL_TEXTURE_2D, GL_TEXTURE_BINDING_1D },
-		{ GL_TEXTURE_3D, GL_TEXTURE_BINDING_1D },
-		{ GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BINDING_CUBE_MAP },
+	{ GL_TEXTURE_2D, GL_TEXTURE_BINDING_1D },
+	{ GL_TEXTURE_3D, GL_TEXTURE_BINDING_1D },
+	{ GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BINDING_CUBE_MAP },
 	};
 
 	void Tex::Gen(uint type)
@@ -268,13 +268,6 @@ namespace GL
 		PopBind();
 	}
 
-	void Tex1D::setup(std::unordered_set<Rscs::FileRef> &files)
-	{
-		assert(files.size() == 1, "A Tex1D can only be constructed with a single image.");
-		Setup()
-	}
-
-
 	void Tex2D::Setup(int w, int h, Channel format, void *data)
 	{
 		Size = iVec2(w, h);
@@ -321,7 +314,7 @@ namespace GL
 		//Load texture
 		int nrChannels;
 		uchar *texData = Load(path.c_str(), &Size.x, &Size.y, &nrChannels, forcedNrChannels);
-			
+
 		int maxSize = GL::TextureMaxSize();
 		if(Size.x > maxSize || Size.y > maxSize)
 		{
@@ -352,7 +345,6 @@ namespace GL
 
 		PopBind();
 	}
-
 
 	void Tex3D::Setup(int w, int h, int depth, Channel format, void *data)
 	{
@@ -477,11 +469,11 @@ namespace GL
 	std::unordered_map<Framebuffer::Format, Channel> formatToAttachment =
 	{
 		{ Framebuffer::DepthComponent16 , DepthComponent },
-		{ Framebuffer::DepthComponent24 , DepthComponent },
-		{ Framebuffer::DepthComponent32f, DepthComponent },
-		{ Framebuffer::Depth24Stencil8  , DepthStencil   },
-		{ Framebuffer::Depth32fStencil8 , DepthStencil   },
-		{ Framebuffer::StencilIndex8    , Stencil	 	    },
+	{ Framebuffer::DepthComponent24 , DepthComponent },
+	{ Framebuffer::DepthComponent32f, DepthComponent },
+	{ Framebuffer::Depth24Stencil8  , DepthStencil   },
+	{ Framebuffer::Depth32fStencil8 , DepthStencil   },
+	{ Framebuffer::StencilIndex8    , Stencil	 	    },
 	};
 
 	Framebuffer::Framebuffer(int width, int height, Channel colorFormat, Format depthStencilFormat, const Tex2DRef colorBuffer)

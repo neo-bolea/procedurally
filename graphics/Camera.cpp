@@ -3,7 +3,7 @@
 #include "GL.h"
 #include "MathExt.h"
 #include "MathGL.h"
-#include "Time.h"
+#include "GameTime.h"
 
 #include "GL/glew.h"
 
