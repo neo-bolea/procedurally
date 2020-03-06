@@ -1,21 +1,8 @@
-GetCFiles(Core)
-set(Core_LINKS Common Graphics Math)
-
-LibStandard(Core ${Core_LINKS})
+LibStandard(Core Common Graphics Math)
 #add_executable(Core ${Core_SRCS} ${Core_PRIV_HEADERS} ${Core_PUB_HEADERS})
+
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Core)
 set_target_properties(Core PROPERTIES OUTPUT_NAME "Procedurally")
-
-foreach(project ${ALL_PROJECTS})
-    # Generate include files
-    add_custom_command(
-        TARGET Core
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/${project}/*.h"
-        "${CMAKE_SOURCE_DIR}/build/include/${project}"
-    )
-endforeach()
 
 ##Copy SDL
 #add_custom_command(
