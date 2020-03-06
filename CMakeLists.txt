@@ -58,21 +58,15 @@ else() # GCC or Clang
     add_definitions(-include "${CMAKE_SOURCE_DIR}/common/include/Common.h")
 endif()
 
+set(ALL_PROJECTS Common Graphics Core Math)
+
 add_subdirectory(common)
 add_subdirectory(math)
 add_subdirectory(graphics)
 add_subdirectory(core)
 add_subdirectory(tests)
 
-
-set_target_properties(Core
-    PROPERTIES
-    #ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-    #RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
-set(ALL_PROJECTS Common Graphics Core Math)
+set_target_properties(Core PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${PLATFORM}/${CONFIG}/$<$<CONFIG:Debug>:>")
 
 foreach(project ${ALL_PROJECTS})
     set_target_properties(${project} PROPERTIES CXX_STANDARD 17)
