@@ -1,4 +1,6 @@
-LibStandard(Core Common Graphics Math)
+LibStandard(Core 
+#Common Graphics Math
+)
 #add_executable(Core ${Core_SRCS} ${Core_PRIV_HEADERS} ${Core_PUB_HEADERS})
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Core)
