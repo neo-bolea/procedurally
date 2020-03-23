@@ -1,7 +1,7 @@
 #include "MathTests.h"
 
-#include "Mat.h"
-#include "Vec.h"
+#include "Math/Mat.h"
+#include "Common/Vec.h"
 
 #include "catch.hpp"
 

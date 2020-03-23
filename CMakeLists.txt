@@ -54,18 +54,18 @@ if(${PLATFORM} EQUAL x64 OR ${PLATFORM} EQUAL Win32)
 endif()
 
 # Force include the Common header to all files.
+#TODO
 if(MSVC) # VS
-    add_definitions(/FI"${CMAKE_SOURCE_DIR}/common/include/Common.h")
+    add_definitions(/FI"${CMAKE_SOURCE_DIR}/core/include/Common/Common.h")
 else() # GCC or Clang
-    add_definitions(-include "${CMAKE_SOURCE_DIR}/common/include/Common.h")
+    add_definitions(-include "${CMAKE_SOURCE_DIR}/core/include/Common/Common.h")
 endif()
 
-set(ALL_PROJECTS Common Graphics Core Math)
+set(ALL_PROJECTS Core
+#Graphics Common Math
+)
 
 # Initialize all projects
-add_subdirectory(common)
-add_subdirectory(math)
-add_subdirectory(graphics)
 add_subdirectory(core)
 add_subdirectory(tests)
 
@@ -82,6 +82,8 @@ foreach(project ${ALL_PROJECTS})
     
     # Copy all public headers to a final include folder.
     file(GLOB_RECURSE PUB_HEADERS_TO_COPY "${CMAKE_SOURCE_DIR}/${project}/include/*.h")
+    file(GLOB_RECURSE PUB_INCS_TO_COPY "${CMAKE_SOURCE_DIR}/${project}/include/*.inc")
+    set(PUB_HEADERS_TO_COPY ${PUB_HEADERS_TO_COPY} ${PUB_INCS_TO_COPY})
 
     # For each file to be copied...
     foreach(PUB_HEADER_TO_COPY ${PUB_HEADERS_TO_COPY})
@@ -90,8 +92,8 @@ foreach(project ${ALL_PROJECTS})
         # ...strip the name of the file off of it's path,
         get_filename_component(PUB_HEADER_TO_COPY_REL ${PUB_HEADER_TO_COPY_REL} DIRECTORY)
         # ...so as to copy the file to the final include folder for the project, with it's relative path preserved.
-        file(COPY ${PUB_HEADER_TO_COPY} DESTINATION "${PROCEDURALLY_INCLUDE_DIR}/${project}/${PUB_HEADER_TO_COPY_REL}")
-        message(STATUS "${PROCEDURALLY_INCLUDE_DIR}/${project}/${PUB_HEADER_TO_COPY_REL}")
+        file(COPY ${PUB_HEADER_TO_COPY} DESTINATION "${PROCEDURALLY_INCLUDE_DIR}/${PUB_HEADER_TO_COPY_REL}")
+        message(STATUS "${PROCEDURALLY_INCLUDE_DIR}/${PUB_HEADER_TO_COPY_REL}")
         # Example: -common/include/Systems/Locator.h => build/include/common/Systems/Locator.h
         # -graphics/include/Camera.h => build/graphics/include/Camera.h
     endforeach()

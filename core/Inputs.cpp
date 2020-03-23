@@ -1,7 +1,7 @@
-#include "Systems/Inputs.h"
+#include "Common/Systems/Inputs.h"
 
-#include "Debug.h"
-#include "MathExt.h"
+#include "Common/Debug.h"
+#include "Math/MathExt.h"
 
 #include <iostream>
 

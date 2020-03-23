@@ -1,7 +1,7 @@
 #include "CommonTests.h"
 
-#include "Hash.h"
-#include "StringUtils.h"
+#include "Common/Hash.h"
+#include "Common/StringUtils.h"
 
 #include "catch.hpp"
 

@@ -1,1 +1,0 @@
-LibStandard(Graphics Common Math)
