@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Preprocessor.h"
+#include "Common/Templates.h"
 
 #include <array>
 #include <numeric>
@@ -105,6 +106,7 @@ struct Vec : public VecData<T, N>
 	constexpr operator VecData<T, N>();
 
 	//// Operators ////
+	constexpr Vec<T, N> operator -();
 	constexpr void operator =(const Vec<T, N> &other);
 	constexpr T operator [](size_t i) const;
 	constexpr T& operator [](size_t i);
@@ -124,6 +126,12 @@ struct Vec : public VecData<T, N>
 	static constexpr Vec<T, N> Cross(const Vec<T, N> &a, const Vec<T, N> &b);
 	static constexpr Vec<T, N> Lerp(const Vec<T, N> &a, const Vec<T, N>& b, T t);
 	constexpr Vec<T, N> Normalize() const;
+
+	static constexpr Vec<T, N> Clamp(const Vec<T, N> &v,
+		const Vec<T, N> &min, const Vec<T, N> &max);
+	constexpr bool InRange(const Vec<T, N> &min, const Vec<T, N> &max) const;
+
+	void ForAll(function_view<void(size_t)> func) const;
 };
 
 

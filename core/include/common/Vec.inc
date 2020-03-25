@@ -193,6 +193,9 @@ constexpr Vec<T, N> operator -(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N>
+constexpr Vec<T, N> Vec<T, N>::operator -() { return *this * -1; }
+
+template<typename T, size_t N>
 constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
 {
 	Vec<T, N> result;
@@ -336,10 +339,32 @@ constexpr Vec<T, N> Vec<T, N>::Lerp(const Vec<T, N> &a, const Vec<T, N> &b, T t)
 		"Lerping is undefined for non-arithmetic types.");
 
 	Vec<T, N> result;
-	for (size_t i = 0; i < N; i++) { result[i] = Math::Lerp(a[i], b[i], t); }
+	for(size_t i = 0; i < N; i++) { result[i] = Math::Lerp(a[i], b[i], t); }
 	return result;
 }
 
 template<typename T, size_t N>
 constexpr Vec<T, N> Vec<T, N>::Normalize() const
 { return Vec<T, N>(&e[0]) / Len(); }
+
+template<typename T, size_t N>
+constexpr Vec<T, N> Vec<T, N>::Clamp(const Vec<T, N> &v,
+	const Vec<T, N> &min, const Vec<T, N> &max)
+{
+	Vec<T, N> result;
+	for(size_t i = 0; i < N; i++) { result[i] = Math::Clamp(v[i], min[i], max[i]); }
+	return result;
+}
+
+template<typename T, size_t N>
+constexpr bool Vec<T, N>::InRange(const Vec<T, N> &min, const Vec<T, N> &max) const
+{
+	for(size_t i = 0; i < N; i++) { if(!Math::InRange(e[i], min[i], max[i])) return false; }
+	return true;
+}
+
+template<typename T, size_t N>
+void Vec<T, N>::ForAll(function_view<void(size_t)> func) const
+{
+	for(size_t i = 0; i < N; i++) { func(i); }
+}
