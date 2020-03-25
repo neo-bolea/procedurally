@@ -49,7 +49,7 @@ namespace GL
 			UniformID uniformID = GetID(propIter.first);
 			{
 				UniformInfo unifInfo = UniformInfo(propIter.first, uniformID, propIter.second);
-				DataInfo dataInfo = DataInfo{ propIter.second, UniformValue() };
+				DataInfo dataInfo = DataInfo{ propIter.second };
 				properties.emplace(unifInfo, dataInfo);
 			}
 		}
@@ -149,15 +149,15 @@ namespace GL
 	std::unordered_map<DataType, DataClass> DataClasses =
 	{
 		{ DataType::Float, Number },
-	{ DataType::Vec2, Vector },
-	{ DataType::Vec3, Vector },
-	{ DataType::Vec4, Vector },
-	{ DataType::Int, Number },
-	{ DataType::UInt, Number },
-	{ DataType::Bool, Number },
-	{ DataType::Mat2, Matrix },
-	{ DataType::Mat3, Matrix },
-	{ DataType::Mat4, Matrix },
+		{ DataType::Vec2, Vector },
+		{ DataType::Vec3, Vector },
+		{ DataType::Vec4, Vector },
+		{ DataType::Int, Number },
+		{ DataType::UInt, Number },
+		{ DataType::Bool, Number },
+		{ DataType::Mat2, Matrix },
+		{ DataType::Mat3, Matrix },
+		{ DataType::Mat4, Matrix },
 	};
 
 	void Program::Set(const std::string &name, UniformValue &&value) const
@@ -190,6 +190,10 @@ namespace GL
 				Debug::Error, { "Graphics", "Shader" });
 			return;
 		}
+
+#ifdef _DEBUG
+		properties[unif].Value = value;
+#endif
 
 		switch (unif.Type)
 		{
