@@ -31,6 +31,12 @@ namespace Math
 	}
 
 	template<typename T>
+	constexpr bool InRange(T n, T min, T max)
+	{
+		return (n >= min && n <= max);
+	}
+
+	template<typename T>
 	constexpr T Lerp(T start, T end, T t)
 	{
 		return start + (end - start) * t;

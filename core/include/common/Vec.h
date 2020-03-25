@@ -1,7 +1,10 @@
 #pragma once
 
 #include "Common/Preprocessor.h"
+<<<<<<< HEAD:core/include/common/Vec.h
 #include "Common/Templates.h"
+=======
+>>>>>>> master:common/include/Vec.h
 
 #include <array>
 #include <numeric>

@@ -49,7 +49,7 @@ namespace GL
 			UniformID uniformID = GetID(propIter.first);
 			{
 				UniformInfo unifInfo = UniformInfo(propIter.first, uniformID, propIter.second);
-				DataInfo dataInfo = DataInfo{ propIter.second, UniformValue() };
+				DataInfo dataInfo = DataInfo{ propIter.second };
 				properties.emplace(unifInfo, dataInfo);
 			}
 		}
@@ -190,6 +190,10 @@ namespace GL
 				Debug::Error, { "Graphics", "Shader" });
 			return;
 		}
+
+#ifdef _DEBUG
+		properties[unif].Value = value;
+#endif
 
 		switch (unif.Type)
 		{

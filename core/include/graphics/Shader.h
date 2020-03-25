@@ -113,7 +113,11 @@ namespace GL
 	inline ProgRef ActiveProgram() { return activeProgram; }
 
 	typedef std::unordered_map<std::string, DataType> PropertyMap;
+#ifdef _DEBUG
 	struct DataInfo { DataType Type; UniformValue Value; };
+#else
+	struct DataInfo { DataType Type; };
+#endif
 
 	class Program : UniqueMessageRaiser, public Rscs::ResourceBase
 	{

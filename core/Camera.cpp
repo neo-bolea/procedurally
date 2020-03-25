@@ -13,14 +13,19 @@
 Camera2D::Camera2D(float screenRatio) : Ratio(screenRatio)
 {
 	ubo = GLHelper::CreateUBO(0, (16 * sizeof(float)) * 3);
+	Update();
 }
 
 void Camera2D::Update(fVec2 movement, float dt)
 {
-	Pos += (fVec3)movement * Speed * VertSize * dt;
-	Pos.z = 1.f;
+	Pos += movement * Speed * VertSize * dt;
+	Update();
+}
 
-	view = Math::GL::LookAt(Pos, Pos - fVec3::Forward);
+void Camera2D::Update()
+{
+	fVec3 finalPos(Pos.x, Pos.y, 1.f);
+	view = Math::GL::LookAt(finalPos, finalPos - fVec3::Forward);
 	proj = Math::GL::Orthographic(-VertSize * Ratio, VertSize * Ratio, -VertSize, VertSize, Near, Far);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
