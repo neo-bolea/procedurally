@@ -5,5 +5,6 @@
 
 namespace Graphics
 {
-	void DrawCube(fVec2 pos, fVec2 size, fVec3 color, GL::Tex2DRef &texture = GL::Tex2DRef());
+	void DrawRect(fVec2 pos, fVec2 size, fVec3 color, int depth = 0, GL::Tex2DRef &texture = GL::Tex2DRef());
+	void DrawRect(fVec2 pos, fVec2 size, fVec4 color, int depth = 0, GL::Tex2DRef &texture = GL::Tex2DRef());
 }

@@ -34,6 +34,8 @@ namespace GL
 
 				uniform sampler2D uTex;
 				uniform vec4 uColor;
+				uniform bool uUseTex;
+				uniform float uDepth;
 				
 				out vec4 FragColor;
 				
@@ -41,11 +43,8 @@ namespace GL
 				
 				void main()
 				{
-				    FragColor = texture(uTex, fTexCoords) * vec4(1.f);
-				    FragColor.a = 1.f;
-				    FragColor.rg = fTexCoords + 1.f;
-				    //FragColor.r = float(fTexCoords.x < 1022.f);
-				    //FragColor.g = float(fTexCoords.y < 1022.f);
+					 gl_FragDepth = uDepth;
+				    FragColor = (uUseTex ? texture(uTex, fTexCoords) : vec4(1.f)) * uColor;
 				}
 			)";
 	}
