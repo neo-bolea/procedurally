@@ -1,0 +1,12 @@
+ResourceManager: Cache paths (so each resource doesn't have to save all it's dependencies).
+ResourceManager: Add option to make files temporary or permanent (whether to unload them with 0 refs).
+Locator: Change name
+Locator: Make "update" work with optional ticks / time intervals (e.g. for ResourceManager).
+Shader: Keep values for uniforms when updating shader (in setup()).
+
+Move standard Procedurally functions (start and update) into an interface (instead of having to write all input management in each game)
+Copy include files after every build
+(Finished?) Add resource manager (and integrate through Locator with LoadMesh) 
+Change to pitchfork layout
+Remove row/column-major option to matrix (or integrate it fully) 
+Modify CMakeLists.txt to work with external libraries (SDL/glew) 
