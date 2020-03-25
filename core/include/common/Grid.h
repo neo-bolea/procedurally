@@ -18,6 +18,8 @@ using IntVector2 = iVec2;
 #define GRID_TEMPLATE_SIGNATURE template<typename T, size_t N, BorderPolicy Policy>
 #define GRID_SGN Grid<T, N, Policy>
 
+//TODO: Allow [] operator to work with vectors.
+//TODO: Add Fill function (and possibly other utility functions).
 //TODO: Make Proxy more readably by using decltype(auto) (remember how it returned all arguments as references...).
 
 enum class BorderPolicy
