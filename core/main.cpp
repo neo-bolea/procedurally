@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
 		{
 			for(float y = -tileSize.y / 2.f; y <= tileSize.y / 2.f; y++)
 			{
-				Graphics::DrawCube(fVec2(x, y), fVec2::One*0.1f, fVec3(1.f, 0.f, 0.f));
+				Graphics::DrawRect(fVec2(x, y), fVec2::One * 0.1f, fVec3(1.f, 0.f, 0.f), 0.f);
 			}
 		}
 
