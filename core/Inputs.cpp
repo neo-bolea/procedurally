@@ -5,12 +5,13 @@
 
 #include <iostream>
 
-Inputs::Inputs() : logger(new Logger(*this)), recorder(new Recorder(*this))
+Inputs::Inputs() 
+	: logger(std::make_unique<Logger>(*this)), recorder(std::make_unique<Recorder>(*this))
 { 
 	for(size_t i = 0; i < keyStates.size(); i++) { keyStates[i] = Free; }
 	for(size_t i = 0; i < buttonStates.size(); i++) { buttonStates[i] = Free; }
 
-	tree =
+	inputFuncsTree =
 	(
 		CNSTART "Inputs", 
 		Locator::CmdNode("SetKey", this, &Inputs::setKey),
@@ -25,14 +26,18 @@ Inputs::Inputs() : logger(new Logger(*this)), recorder(new Recorder(*this))
 		CNEND
 	);
 
-	Locator::Add(tree);		
+	Locator::Add(inputFuncsTree);		
 
-	Locator::Add(Locator::CmdNode{ "Update", this, &Inputs::update });
+	pollFuncTree = Locator::CmdNode{ "Update", this, &Inputs::update };
+	Locator::Add(pollFuncTree);
 
 	isIgnored = false;
 }
 
-Inputs::~Inputs() { delete logger; delete recorder; }
+Inputs::~Inputs() 
+{
+	Locator::Remove(pollFuncTree);
+}
 
 void Inputs::StartDebug() { logger->start(); }
 void Inputs::StopDebug() { logger->stop(); }
@@ -47,13 +52,13 @@ void Inputs::ignoreInputs(bool ignore)
 {
 	if(ignore && !isIgnored)
 	{
-		Locator::Remove(tree);
+		Locator::Remove(inputFuncsTree);
 		isIgnored = true;
 	}
 
 	if(!ignore && isIgnored)
 	{
-		Locator::Add(tree);
+		Locator::Add(inputFuncsTree);
 		isIgnored = false;
 	}
 }
@@ -145,7 +150,8 @@ void Inputs::setMouseButton(SDL_Event &event)
 	if (button.button <= 0)
 	{
 		Debug::Log("Pressed button was outside the range \
-			(1, " + std::to_string(buttonStates.size()) + "):" + std::to_string(button.button), Debug::Info);
+			(1, " + std::to_string(buttonStates.size()) + "):" + std::to_string(button.button),
+			Debug::Info);
 		return;
 	}
 	State &state = buttonStates[button.button - 1];
@@ -207,7 +213,8 @@ void Inputs::update()
 		else { negVal = IsMouseButtonDown(std::get<Button>(axis.negative.value)); }
 
 		axis.value = posVal - negVal;
-		axis.smoothValue = Math::TimedExpEase(axis.smoothValue, axis.value, smoothAxisSharpness, Time::DeltaTime());
+		axis.smoothValue 
+			= Math::TimedExpEase(axis.smoothValue, axis.value, smoothAxisSharpness, Time::DeltaTime());
 	}
 
 	mouseMove = dVec2(0.0); 

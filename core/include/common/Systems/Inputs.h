@@ -15,8 +15,8 @@ class Inputs
 private:
 	class Logger;
 	class Recorder;
-	Logger *logger;
-	Recorder *recorder;
+	std::unique_ptr<Logger> logger;
+	std::unique_ptr<Recorder> recorder;
 
 	enum NewState
 	{
@@ -371,7 +371,7 @@ private:
 	dVec2 mouseWheelMove;
 	bool isIgnored;
 
-	Locator::CmdNode tree;
+	Locator::CmdNode inputFuncsTree, pollFuncTree;
 
 	std::unordered_map<stringHash, AxisInfo> axes;
 	const double smoothAxisSharpness = 0.99875;
@@ -399,10 +399,11 @@ struct Inputs::AxisInfo
 
 class Inputs::Logger
 {
+public:
+	Logger(Inputs &inputs);
+
 private:
 	friend Inputs;
-
-	Logger(Inputs &inputs);
 
 	void start(), stop();
 
@@ -411,17 +412,18 @@ private:
 	void setMousePos(SDL_Event &);
 	void setMouseWheel(SDL_Event &);
 
-private:
+
 	Locator::CmdNode tree;
 	Inputs &inputs;
 };
 
 class Inputs::Recorder
 {
+public:
+	Recorder(Inputs &inputs);
+
 private:
 	friend Inputs;
-
-	Recorder(Inputs &inputs);
 
 	void startRecording(), stopRecording();
 	void startReplaying(), stopReplaying();
@@ -431,7 +433,7 @@ private:
 
 	void simulateNextInput();
 
-private:
+
 	struct InputInfo { Time::TimePoint Time; SDL_EventType Type; std::any Value; };
 	std::vector<InputInfo> recordedInputs;
 
