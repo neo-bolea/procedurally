@@ -119,8 +119,7 @@ struct Vec : public VecData<T, N>
 	constexpr void operator =(const __m128 &n);
 
 	//// Functions ////
-	constexpr std::string ToString() const;
-
+	std::string Vec<T, N>::ToString() const;
 	constexpr T Len() const;
 	constexpr T LenSqr() const;
 	static constexpr T Dot(const Vec<T, N> &a, const Vec<T, N> &b);
@@ -149,6 +148,12 @@ constexpr bool operator ==(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
 
 template<typename T, size_t N>
 constexpr bool operator !=(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
+
+template<typename T, size_t N>
+std::ostream &operator<<(std::ostream &os, const Vec<T, N> &v);
+
+template<typename T, size_t N>
+std::istream &operator>>(std::istream &is, Vec<T, N> &v);
 
 
 //// Arithmetic operators ////

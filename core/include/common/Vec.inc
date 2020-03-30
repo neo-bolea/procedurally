@@ -158,6 +158,31 @@ template<typename T, size_t N>
 constexpr bool operator !=(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
 { return !(lhs == rhs); }
 
+
+template<typename T, size_t N>
+std::ostream &operator<<(std::ostream &os, const Vec<T, N> &v)
+{
+	os << v.ToString();
+	return os;
+}
+
+template<typename T, size_t N>
+std::istream &operator>>(std::istream &is, Vec<T, N> &v)
+{
+	if(is.peek() == '(')
+	{
+		is.get();
+		for(size_t i = 0; i < N; i++)
+		{
+			is >> v[i];
+			is.get();
+		}
+	}
+
+	return is;
+}
+
+
 template<typename T, size_t N>
 template<typename>
 constexpr Vec<T, N>::operator __m128() const
@@ -284,17 +309,17 @@ constexpr Vec<T, N> &operator /=(Vec<T, N> &lhs, const U &rhs)
 
 //// Functions ////
 template<typename T, size_t N>
-constexpr std::string Vec<T, N>::ToString() const
+std::string Vec<T, N>::ToString() const
 {
-	std::stringstream ss;
-	ss << "(";
+	std::string result = '(';
+	result.reserve(N * 4 + 1);
 
 	for(size_t i = 0; i < N - 1; i++)
-	{ ss << this->e[i] << ", "; }
+	{ result += v.e[i] + ','; }
 
-	ss << this->e[N - 1] << ")";
-
-	return ss.str();
+	result += v.e[N - 1] + ')';
+	result.shrink_to_fit();
+	return result;
 }
 
 template<typename T, size_t N>

@@ -45,6 +45,7 @@ find_package(OpenGL REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}${OPENGL_INCLUDE_DIRS})
 link_libraries(${OPENGL_LIBRARIES})
 
+
 # Other external includes
 include_directories("${CMAKE_SOURCE_DIR}/external")
 
@@ -93,7 +94,6 @@ foreach(project ${ALL_PROJECTS})
         get_filename_component(PUB_HEADER_TO_COPY_REL ${PUB_HEADER_TO_COPY_REL} DIRECTORY)
         # ...so as to copy the file to the final include folder for the project, with it's relative path preserved.
         file(COPY ${PUB_HEADER_TO_COPY} DESTINATION "${PROCEDURALLY_INCLUDE_DIR}/${PUB_HEADER_TO_COPY_REL}")
-        message(STATUS "${PROCEDURALLY_INCLUDE_DIR}/${PUB_HEADER_TO_COPY_REL}")
         # Example: -common/include/Systems/Locator.h => build/include/common/Systems/Locator.h
         # -graphics/include/Camera.h => build/graphics/include/Camera.h
     endforeach()
