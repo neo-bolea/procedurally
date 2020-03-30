@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Common/Preprocessor.h"
-#include "Common/Vec.h"
 
 #include <type_traits>
 
@@ -59,6 +58,12 @@ namespace Math
 		return (f - minFrom) / (maxFrom - minFrom) * (maxTo - minTo) + minTo;
 	}
 
+	template<typename T>
+	T PositiveMod(T n, T m)
+	{
+		return (n % m + m) % m;
+	}
+
 	constexpr int NextPowerOfTwo(int x) 
 	{
 		x--;
@@ -90,24 +95,5 @@ namespace Math
 	{
 		T blend = 1.f - std::powf(1.f - sharpness, (float)deltaTime);
 		return Lerp(a, b, blend);
-	}
-
-	template<typename T>
-	constexpr Vec2<T> DegToVect(float deg)
-	{
-		float rad = deg * Deg2Rad;
-		return Vec2<T>(std::cos(rad), std::sin(rad));
-	}
-
-	template<typename T>
-	constexpr T VectToDeg(Vec2<T> v) { return std::atan2(v.y, v.x) * Rad2Deg; }
-
-	template<typename T>
-	constexpr Vec2<T> Rotate(Vec2<T> v, T d)
-	{
-		T r = Math::Deg2Rad * d;
-		T sinr = sin(r), cosr = cos(r);
-
-		return Vec2<T>(v.x * cosr - v.y * sinr, v.x * sinr + v.y * cosr);
 	}
 }
