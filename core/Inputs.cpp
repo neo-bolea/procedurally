@@ -1,8 +1,10 @@
 #include "Common/Systems/Inputs.h"
 
 #include "Common/Debug.h"
+#include "common/Serialization.h"
 #include "Math/MathExt.h"
 
+#include <fstream>
 #include <iostream>
 
 Inputs::Inputs() 
@@ -39,14 +41,17 @@ Inputs::~Inputs()
 	Locator::Remove(pollFuncTree);
 }
 
-void Inputs::StartDebug() { logger->start(); }
-void Inputs::StopDebug() { logger->stop(); }
+void Inputs::StartLogging() { logger->StartLogging(); }
+void Inputs::StopLogging() { logger->StopLogging(); }
 
-void Inputs::StartRecording() { recorder->startRecording(); }
-void Inputs::StopRecording() { recorder->stopRecording(); }
+void Inputs::StartRecording() { recorder->StartRecording(); }
+void Inputs::StopRecording() { recorder->StopRecording(); }
 
-void Inputs::StartReplaying() { recorder->startReplaying(); }
-void Inputs::StopReplaying() { recorder->stopReplaying(); }
+void Inputs::StartReplaying() { recorder->StartReplaying(); }
+void Inputs::StopReplaying() { recorder->StopReplaying(); }
+
+void Inputs::SaveRecording(const std::string &filename) { recorder->SaveRecording(filename); }
+void Inputs::LoadRecording(const std::string &filename) { recorder->LoadRecording(filename); }
 
 void Inputs::ignoreInputs(bool ignore)
 {
@@ -55,7 +60,7 @@ void Inputs::ignoreInputs(bool ignore)
 		Locator::Remove(inputFuncsTree);
 		isIgnored = true;
 	}
-
+	
 	if(!ignore && isIgnored)
 	{
 		Locator::Add(inputFuncsTree);
@@ -134,11 +139,11 @@ void Inputs::setKey(SDL_Event &event)
 	SDL_KeyboardEvent key = event.key;
 	State &state = keyStates[key.keysym.scancode];
 
-	if(key.state == WasPressed)
+	if(event.type == SDL_KEYDOWN)
 	{
 		if(state == Free || state == Released) { state = Pressed; }
 	}
-	else if(key.state == WasReleased)
+	else if(event.type == SDL_KEYUP)
 	{ 
 		if(state == Pressed || state == Held) { state = Released; }
 	}
@@ -156,11 +161,11 @@ void Inputs::setMouseButton(SDL_Event &event)
 	}
 	State &state = buttonStates[button.button - 1];
 
-	if(button.state == WasPressed)
+	if(event.type == SDL_MOUSEBUTTONDOWN)
 	{
 		if(state == Free || state == Released) { state = Pressed; }
 	}
-	else if(button.state == WasReleased)
+	else if(event.type == SDL_MOUSEBUTTONUP)
 	{ 
 		if(state == Pressed || state == Held) { state = Released; }
 	}
@@ -266,16 +271,33 @@ Inputs::Logger::Logger(Inputs &inputs) : inputs(inputs)
 	);
 }
 
-void Inputs::Logger::start()
+void Inputs::Logger::StartLogging()
 { Locator::Add(tree); }
 
-void Inputs::Logger::stop()
+void Inputs::Logger::StopLogging()
 { Locator::Remove(tree); }
 
 void Inputs::Logger::setKey(SDL_Event &event)
-{ std::cout << "Key changed: " << event.key.keysym.scancode << std::endl; }
+{ 
+	std::string eventStr;
+	switch (event.type)
+	{
+	case SDL_KEYUP: eventStr = "Key up: "; break;
+	case SDL_KEYDOWN: eventStr = "Key down: "; break;
+	}
+
+	std::cout << eventStr << event.key.keysym.scancode << std::endl;
+}
 void Inputs::Logger::setMouseButton(SDL_Event &event)
-{ std::cout << "Button changed: " << (int)event.button.button << std::endl; }
+{ 
+	std::string eventStr;
+	switch (event.type)
+	{
+	case SDL_MOUSEBUTTONUP: eventStr = "Mouse button up: "; break;
+	case SDL_MOUSEBUTTONDOWN: eventStr = "Mouse button down: "; break;
+	}
+	std::cout << eventStr << (int)event.button.button << std::endl;
+}
 void Inputs::Logger::setMousePos(SDL_Event &event)
 { std::cout << "Mouse moved: (" << event.motion.x << ", " << event.motion.y << ")" << std::endl; }
 void Inputs::Logger::setMouseWheel(SDL_Event &event)
@@ -296,9 +318,9 @@ Inputs::Recorder::Recorder(Inputs &inputs) : inputs(inputs)
 	replayTree = Locator::CmdNode("Update", this, &Recorder::whileReplaying);
 }
 
-void Inputs::Recorder::startRecording()
+void Inputs::Recorder::StartRecording()
 { 
-	if(isRecording) { stopRecording(); }
+	if(isRecording) { StopRecording(); }
 
 	Locator::Add(recordTree); 
 
@@ -306,20 +328,18 @@ void Inputs::Recorder::startRecording()
 	isRecording = true;
 }
 
-void Inputs::Recorder::stopRecording()
+void Inputs::Recorder::StopRecording()
 { 
-	if(isReplaying) { stopReplaying(); }
+	if(isReplaying) { StopReplaying(); }
 
 	Locator::Remove(recordTree);
 	isRecording = false;
 }
 
-void Inputs::Recorder::startReplaying()
+void Inputs::Recorder::StartReplaying()
 {
-	inputs.ignoreInputs(true);
-
-	if(isReplaying) { stopReplaying(); }
-	if(isRecording) { stopRecording(); }
+	if(isReplaying) { StopReplaying(); }
+	if(isRecording) { StopRecording(); }
 
 	Locator::Add(replayTree); 
 
@@ -328,12 +348,10 @@ void Inputs::Recorder::startReplaying()
 	isReplaying = true;
 }
 
-void Inputs::Recorder::stopReplaying()
+void Inputs::Recorder::StopReplaying()
 {
-	inputs.ignoreInputs(false);
-
 	if(isRecording)
-	{ stopRecording(); }
+	{ StopRecording(); }
 
 	Locator::Remove(replayTree);
 	isReplaying = false;
@@ -349,11 +367,11 @@ void Inputs::Recorder::whileRecording(SDL_Event &event)
 	{
 	case SDL_KEYUP:
 	case SDL_KEYDOWN:
-	{ info.Value = event.key.keysym.scancode; } break;
+	{ info.Value = static_cast<Inputs::Key>(event.key.keysym.scancode); } break;
 
 	case SDL_MOUSEBUTTONUP:
 	case SDL_MOUSEBUTTONDOWN:
-	{ info.Value = event.button.button; } break;
+	{ info.Value = static_cast<Uint8>(event.button.button); } break;
 
 	case SDL_MOUSEMOTION:
 	{ info.Value = dVec2(event.motion.x, event.motion.y); } break;
@@ -363,12 +381,12 @@ void Inputs::Recorder::whileRecording(SDL_Event &event)
 	}
 	recordedInputs.push_back(info);
 }
-
+// TODO: Use relative timing (instead of Time::ProgramTime()).
 void Inputs::Recorder::whileReplaying()
 { 
 	if(replayCurrentInput >= recordedInputs.size())
 	{
-		stopReplaying();
+		StopReplaying();
 		return;
 	}
 
@@ -379,7 +397,7 @@ void Inputs::Recorder::whileReplaying()
 		replayCurrentInput++;
 		if(replayCurrentInput >= recordedInputs.size())
 		{
-			stopReplaying();
+			StopReplaying();
 			return;
 		}
 	}
@@ -388,31 +406,59 @@ void Inputs::Recorder::whileReplaying()
 void Inputs::Recorder::simulateNextInput()
 {
 	InputInfo nextInput = recordedInputs[replayCurrentInput];
-	SDL_Event event = {};
-	event.type = nextInput.Type;
+	SDL_Event *event = new SDL_Event();
+	event->type = nextInput.Type;
 	
 	switch(nextInput.Type)
 	{
 	case SDL_KEYUP:
 	case SDL_KEYDOWN:
-	{ event.key.keysym.sym = static_cast<SDL_Keycode>(std::any_cast<Key>(nextInput.Value)); } break;
+	{ event->key.keysym.scancode = static_cast<SDL_Scancode>(std::get<Key>(nextInput.Value)); } break;
 	
 	case SDL_MOUSEBUTTONUP:
 	case SDL_MOUSEBUTTONDOWN:
-	{ event.button.button = std::any_cast<Uint8>(nextInput.Value); } break;
+	{ event->button.button = std::get<Uint8>(nextInput.Value); } break;
 	
 	case SDL_MOUSEMOTION:
 	{ 
-		event.motion.x = static_cast<Sint32>(std::any_cast<dVec2>(nextInput.Value).x);
-		event.motion.y = static_cast<Sint32>(std::any_cast<dVec2>(nextInput.Value).y);
+		event->motion.x = static_cast<Sint32>(std::get<dVec2>(nextInput.Value).x);
+		event->motion.y = static_cast<Sint32>(std::get<dVec2>(nextInput.Value).y);
 	} break;
 	
 	case SDL_MOUSEWHEEL:
 	{
-		event.wheel.x = static_cast<Sint32>(std::any_cast<dVec2>(nextInput.Value).x);
-		event.wheel.y = static_cast<Sint32>(std::any_cast<dVec2>(nextInput.Value).y);
+		event->wheel.x = static_cast<Sint32>(std::get<dVec2>(nextInput.Value).x);
+		event->wheel.y = static_cast<Sint32>(std::get<dVec2>(nextInput.Value).y);
 	} break;
 	}
 	
-	SDL_PushEvent(&event);
+	SDL_PushEvent(event);
 } 
+
+void Inputs::Recorder::SaveRecording(const std::string &filename)
+{
+	if(isRecording) { StopRecording(); }
+
+	std::ofstream stream;
+	stream.open(filename, std::ios::out);
+	stream << recordedInputs;
+	stream.close();
+	//std::ofstream stream(filename);
+	//cereal::JSONOutputArchive archive(stream);
+	//InputInfo inputs;
+	//std::variant<Inputs::Key, Uint8, dVec2> time;
+	//archive(inputs);
+}
+
+void Inputs::Recorder::LoadRecording(const std::string &filename)
+{
+	if(isRecording) { StopRecording(); }
+	if(isReplaying) { StopReplaying(); }
+
+	std::ifstream stream;
+	stream.open(filename, std::ios::in);
+	stream >> recordedInputs;
+	//std::ifstream stream(filename);
+	//cereal::JSONInputArchive archive(stream);
+	//archive(recordedInputs);
+}
