@@ -18,20 +18,6 @@ std::ostream &operator<<(std::ostream &os, const std::vector<Type, Alloc> &v)
 template<typename Type, typename Alloc>
 std::istream &operator>>(std::istream &is, std::vector<Type, Alloc> &v)
 { 
-	//do
-	//{
-	//	if (std::isdigit(is.peek()))
-	//	{
-	//		int i;
-	//		is >> i;
-	//		std::cout << i;
-	//	}
-	//	else
-	//	{
-	//		is.get();
-	//	}
-	//} while(is.peek() != ']');
-
 	std::stringstream ss;
 	ss << is.rdbuf();    
 

@@ -10,6 +10,7 @@ public:
 
 	Time();
 
+	// TODO: Stop time from continuing when application is stopped (e.g. while debugging).
 	static double ProgramTime();
 	static double DeltaTime();
 
