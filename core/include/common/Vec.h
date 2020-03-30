@@ -1,10 +1,8 @@
 #pragma once
 
 #include "Common/Preprocessor.h"
-<<<<<<< HEAD:core/include/common/Vec.h
 #include "Common/Templates.h"
-=======
->>>>>>> master:common/include/Vec.h
+#include "math/MathExt.h"
 
 #include <array>
 #include <numeric>
@@ -134,6 +132,13 @@ struct Vec : public VecData<T, N>
 		const Vec<T, N> &min, const Vec<T, N> &max);
 	constexpr bool InRange(const Vec<T, N> &min, const Vec<T, N> &max) const;
 
+	template<REQUIRES(N == 2)>
+	constexpr T ToDegree();
+	template<REQUIRES(N == 2)>
+	constexpr Vec<T, N> Rotate(Vec<T, N> v, T d);
+	template<REQUIRES(N == 2)>
+	constexpr Vec<T, N> FromDegree(float deg);
+
 	void ForAll(function_view<void(size_t)> func) const;
 };
 
@@ -157,13 +162,13 @@ template<typename T, size_t N>
 constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs);
 
 template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
-constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs);
+constexpr auto operator *(const Vec<T, N> &lhs, const U &rhs);
 
 template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
-constexpr Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs);
+constexpr auto operator *(const U &lhs, const Vec<T, N> &rhs);
 
 template<typename T, size_t N, typename U, REQUIRES(std::is_arithmetic_v<U>)>
-constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs);
+constexpr auto operator /(const Vec<T, N> &lhs, const U &rhs);
 
 
 template<typename T, size_t N>

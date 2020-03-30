@@ -193,7 +193,7 @@ constexpr Vec<T, N> operator -(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N>
-constexpr Vec<T, N> Vec<T, N>::operator -() { return *this * -1; }
+constexpr Vec<T, N> Vec<T, N>::operator -() { return *this * static_cast<T>(-1); }
 
 template<typename T, size_t N>
 constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs) 
@@ -207,18 +207,19 @@ constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N, typename U, typename>
-constexpr Vec<T, N> operator *(const Vec<T, N> &lhs, const U &rhs)
+constexpr auto operator *(const Vec<T, N> &lhs, const U &rhs)
 {
-	Vec<T, N> result;
-	if constexpr(Vec<T, N>::SIMDReady)
+	using result_type = decltype(T() * U());
+	Vec<result_type, N> result;
+	if constexpr(Vec<result_type, N>::SIMDReady)
 	{ result = _mm_mul_ps(lhs, _mm_set1_ps(rhs)); }
 	else
-	{ for(size_t i = 0; i < N; i++) { result[i] = static_cast<T>(lhs[i] * rhs); } }
+	{ for(size_t i = 0; i < N; i++) { result[i] = static_cast<result_type>(lhs[i] * rhs); } }
 	return result;
 }
 
 template<typename T, size_t N, typename U, typename>
-constexpr Vec<T, N> operator *(const U &lhs, const Vec<T, N> &rhs)
+constexpr auto operator *(const U &lhs, const Vec<T, N> &rhs)
 { return rhs * lhs; }
 
 template<typename T, size_t N>
@@ -233,13 +234,14 @@ constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const Vec<T, N> &rhs)
 }
 
 template<typename T, size_t N, typename U, typename>
-constexpr Vec<T, N> operator /(const Vec<T, N> &lhs, const U &rhs)
+constexpr auto operator /(const Vec<T, N> &lhs, const U &rhs)
 {
-	Vec<T, N> result;
-	if constexpr(Vec<T, N>::SIMDReady)
+	using result_type = decltype(T() / U());
+	Vec<result_type, N> result;
+	if constexpr(Vec<result_type, N>::SIMDReady)
 	{ result = _mm_div_ps(lhs, _mm_set1_ps(rhs)); }
 	else
-	{ for(size_t i = 0; i < N; i++) { result[i] = static_cast<T>(lhs[i] / rhs); } }
+	{ for(size_t i = 0; i < N; i++) { result[i] = static_cast<result_type>(lhs[i] / rhs); } }
 	return result;
 }
 
@@ -363,8 +365,25 @@ constexpr bool Vec<T, N>::InRange(const Vec<T, N> &min, const Vec<T, N> &max) co
 	return true;
 }
 
+
 template<typename T, size_t N>
-void Vec<T, N>::ForAll(function_view<void(size_t)> func) const
+template<typename>
+constexpr T Vec<T, N>::ToDegree() { return std::atan2(v.y, v.x) * Math::Rad2Deg; }
+
+template<typename T, size_t N>
+template<typename>
+constexpr Vec<T, N> Vec<T, N>::Rotate(Vec<T, N> v, T d)
 {
-	for(size_t i = 0; i < N; i++) { func(i); }
+	T r = Math::Deg2Rad * d;
+	T sinr = sin(r), cosr = cos(r);
+
+	return Vec<T, N>(v.x * cosr - v.y * sinr, v.x * sinr + v.y * cosr);
+}
+
+template<typename T, size_t N>
+template<typename>
+constexpr Vec<T, N> Vec<T, N>::FromDegree(float deg)
+{
+	float rad = deg * Math::Deg2Rad;
+	return Vec<T, N>(std::cos(rad), std::sin(rad));
 }
