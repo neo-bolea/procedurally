@@ -53,17 +53,10 @@ if(${PLATFORM} EQUAL x64 OR ${PLATFORM} EQUAL Win32)
     add_definitions(-DWINDOWS)
 endif()
 
-<<<<<<< HEAD
 # Force include the Common header to all files and add debug information to the lib.
 if(MSVC) # VS
     add_definitions(/FI"${CMAKE_SOURCE_DIR}/core/include/Common/Common.h")
     add_definitions(/Z7)
-=======
-# Force include the Common header to all files.
-#TODO
-if(MSVC) # VS
-    add_definitions(/FI"${CMAKE_SOURCE_DIR}/core/include/Common/Common.h")
->>>>>>> master
 else() # GCC or Clang
     add_definitions(-include "${CMAKE_SOURCE_DIR}/core/include/Common/Common.h")
 endif()
@@ -74,7 +67,7 @@ set(ALL_PROJECTS Core
 
 # Initialize all projects
 add_subdirectory(core)
-add_subdirectory(tests)
+# add_subdirectory(tests)
 
 # Configure the output directory for the project.
 set_target_properties(Core PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${PLATFORM}/${CONFIG}/$<$<CONFIG:Debug>:>")
