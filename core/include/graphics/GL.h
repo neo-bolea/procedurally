@@ -10,7 +10,6 @@
 
 #include <string>
 
-//TODO: Add a texture manager with global references to all of the elements by an identifier (pointer, int, hash, path, etc.).	
 #define GLDEFINED
 namespace GL
 {

@@ -229,12 +229,6 @@ Grid<float, 2, BorderPolicy::Clamp> Caves(1024, 1024);
 GL::Mesh CaveMesh;
 
 
-//TODO: ResourceManager: Cache paths (so each resource doesn't have to save all it's dependencies).
-//TODO: ResourceManager: Add option to make files temporary or permanent (whether to unload them with 0 refs).
-//TODO: Locator: Change name
-//TODO: Locator: Make "update" work with optional ticks / time intervals (e.g. for ResourceManager).
-//TODO: Shader: Keep values for uniforms when updating shader (in setup()).
-
 uint CreateMesh(int pyrW, int pyrH, 
 	std::shared_ptr<GL::StorageBuffer> &vertBuffer)
 {
