@@ -12,6 +12,52 @@
 #include <optional>
 #include <variant>
 
+//template<typename Type, template<typename> class Pointer, typename ...Args>
+//class initializer_ptr
+//{
+//public:
+//	initializer_ptr(Args &...args) : args(new std::tuple<Args...>(std::forward<Args>(args)...)) {}
+//
+//	auto operator->()
+//	{
+//		static bool initialized = false;
+//		if (!initialized)
+//		{
+//			initialized = true;
+//			ptr = std::make_from_tuple<Type, Args...>(*args);
+//		}
+//		return ptr.operator->();
+//	}
+//
+//private:
+//	Pointer<Type> ptr;
+//	std::unique_ptr<std::tuple<Args...>> args;
+//};
+//
+////template<typename Type, template<typename> class Pointer>
+////class initializer_ptr 
+////{
+////public:
+////	initializer_ptr_impl_base<Type, Pointer> *impl;
+////
+////	template<typename ...Args>
+////	initializer_ptr(Args &&...args)
+////	{
+////		impl = dynamic_cast<decltype(impl)&>(new initializer_ptr_impl<Type, Pointer, Args...>(args));
+////	}
+////
+////	auto operator->()
+////	{
+////		static bool initialized = false;
+////		if (!initialized)
+////		{
+////			initialized = true;
+////			Pointer<Type>
+////		}
+////		return Pointer<Type>::operator->();
+////	}
+////};
+
 class LoggerBase
 {
 	virtual void StartLogging() = 0, StopLogging() = 0;
@@ -22,16 +68,17 @@ class RecorderBase
 public:
 	virtual void StartRecording() = 0, StopRecording() = 0;
 	virtual void StartReplaying() = 0, StopReplaying() = 0;
-	virtual void SaveRecording(const std::string &filename) = 0;
-	virtual void LoadRecording(const std::string &filename) = 0;
+	virtual void SaveRecording(std::ostream &os) = 0;
+	virtual void LoadRecording(std::istream &is) = 0;
 };
 
-// TODO: Make Logger and Recorder only be created if used.
 class Inputs : public LoggerBase, public RecorderBase
 {
-private:
+public:
 	class Logger;
 	class Recorder;
+
+private:
 	std::unique_ptr<Logger> logger;
 	std::unique_ptr<Recorder> recorder;
 
@@ -338,8 +385,8 @@ public:
 	void StartLogging(), StopLogging();
 	void StartRecording(), StopRecording();
 	void StartReplaying(), StopReplaying();
-	void SaveRecording(const std::string &filename);
-	void LoadRecording(const std::string &filename);
+	void SaveRecording(std::ostream &os);
+	void LoadRecording(std::istream &is);
 
 
 	State GetKey(Key code);
@@ -439,6 +486,16 @@ private:
 class Inputs::Recorder : private RecorderBase
 {
 public:
+	struct InputInfo
+	{
+		Time::TimePoint Time;
+		SDL_EventType Type; 
+		std::variant<Key, Uint8, dVec2> Value; 
+
+		friend std::ostream &operator<<(std::ostream &os, const Inputs::Recorder::InputInfo &info);
+		friend std::istream &operator>>(std::istream &is, Inputs::Recorder::InputInfo &info);
+	};
+
 	Recorder(Inputs &inputs);
 
 private:
@@ -446,91 +503,13 @@ private:
 
 	void StartRecording(), StopRecording();
 	void StartReplaying(), StopReplaying();
-	void SaveRecording(const std::string &filename), LoadRecording(const std::string &filename);
+	void SaveRecording(std::ostream &os);
+	void LoadRecording(std::istream &is);
 
 	void whileRecording(SDL_Event &);
 	void whileReplaying();
 
 	void simulateNextInput();
-
-	struct InputInfo
-	{
-		Time::TimePoint Time;
-		SDL_EventType Type; 
-		std::variant<Key, Uint8, dVec2> Value; 
-
-	//template<class Archive>
-	//void serialize(Archive &archive)
-	//{
-	//	//archive((int)Type); 
-	//}
-
-		
-		friend std::ostream &operator<<(std::ostream &os, const Inputs::Recorder::InputInfo &info)
-		{ 
-			os << '(' << std::to_string(info.Time) << ',' << std::to_string(info.Type) << ',';
-			os << '<' << info.Value.index() << ',';
-			switch (info.Value.index())
-			{
-			case 0: { os << std::to_string(std::get<Key>(info.Value)); } break;
-			case 1: { os << std::to_string(std::get<Uint8>(info.Value)); } break;
-			case 2: { os << std::get<dVec2>(info.Value); } break;
-			}
-			os << '>';
-
-			os << ')';
-
-			return os;
-		}
-
-		friend std::istream &operator>>(std::istream &is, Inputs::Recorder::InputInfo &info)
-		{
-			if(is.peek() == '(')
-			{
-				int variantIndex;
-				double time;
-				int eventType;
-
-				is.get(); // (
-				is >> time;
-				info.Time = time;
-				is.get(); // ,
-				is >> eventType;
-				info.Type = static_cast<SDL_EventType>(eventType);
-				is.get(); // ,
-				is.get(); // <
-				is >> variantIndex;
-				is.get(); // ,
-
-				switch (variantIndex)
-				{
-				case 0: 
-				{ 
-					int key;
-					is >> key;
-					info.Value = static_cast<Inputs::Key>(key);
-				} break;
-				case 1: 
-				{ 
-					int n;
-					is >> n;
-					info.Value = static_cast<Uint8>(n);
-				} break;
-				case 2: 
-				{ 
-					dVec2 v;
-					is >> v;
-					info.Value = v;
-				} break;
-				}
-
-				is.get(); // >
-				is.get(); // )
-			}
-
-			return is;
-		}
-	};
 
 private:
 	std::vector<InputInfo> recordedInputs;
@@ -544,74 +523,68 @@ private:
 	Inputs &inputs;
 };
 
-template<class Archive>
-void save(Archive &archive, 
-	std::variant<Inputs::Key, Uint8, dVec2> const &var)
+//// Serialization ////
+std::ostream &operator<<(std::ostream &os, const Inputs::Recorder::InputInfo &info)
 { 
-	switch (var.index())
+	os << '(' << std::to_string(info.Time) << ',' << std::to_string(info.Type) << ',';
+	os << '<' << info.Value.index() << ',';
+	switch (info.Value.index())
 	{
-	case 0: { archive(var.index(), static_cast<int>(std::get<Inputs::Key>(var))); } break;
-	case 1: { archive(var.index(), std::get<Uint8>(var)); } break;
-	case 2: { archive(var.index(), std::get<dVec2>(var)); } break;
+	case 0: { os << std::to_string(std::get<Inputs::Key>(info.Value)); } break;
+	case 1: { os << std::to_string(std::get<Uint8>(info.Value)); } break;
+	case 2: { os << std::get<dVec2>(info.Value); } break;
 	}
+	os << '>';
+
+	os << ')';
+
+	return os;
 }
 
-template<class Archive>
-void load(Archive &archive, 
-	std::variant<Inputs::Key, Uint8, dVec2> &var)
-{ 
-	switch (var.index())
+std::istream &operator>>(std::istream &is, Inputs::Recorder::InputInfo &info)
+{
+	if(is.peek() == '(')
 	{
-	case 0: { archive(var.index(), static_cast<int>(std::get<Inputs::Key>(var))); } break;
-	case 1: { archive(var.index(), std::get<Uint8>(var)); } break;
-	case 2: { archive(var.index(), std::get<dVec2>(var)); } break;
-	}
-}
+		int variantIndex;
+		double time;
+		int eventType;
 
-//friend std::istream &operator>>(std::istream &is, Inputs::Recorder::InputInfo &info)
-//{
-//	if(is.peek() == '(')
-//	{
-//		int variantIndex;
-//		double time;
-//		int eventType;
-//
-//		is.get(); // (
-//		is >> time;
-//		info.Time = time;
-//		is.get(); // ,
-//		is >> eventType;
-//		info.Type = static_cast<SDL_EventType>(eventType);
-//		is.get(); // ,
-//		is.get(); // <
-//		is >> variantIndex;
-//		is.get(); // ,
-//
-//		switch (variantIndex)
-//		{
-//		case 0: 
-//		{ 
-//			int key;
-//			is >> key;
-//			info.Value = static_cast<Inputs::Key>(key);
-//		} break;
-//		case 1: 
-//		{ 
-//			Uint8 n;
-//			is >> n;
-//			info.Value = n;
-//		} break;
-//		case 2: 
-//		{ 
-//			dVec2 v;
-//			is >> v;
-//			info.Value = v;
-//		} break;
-//		}
-//
-//		is.get(); // >
-//		is.get(); // )
-//	}
-//
-//	return is;
-//}
+		is.get(); // (
+		is >> time;
+		info.Time = time;
+		is.get(); // ,
+		is >> eventType;
+		info.Type = static_cast<SDL_EventType>(eventType);
+		is.get(); // ,
+		is.get(); // <
+		is >> variantIndex;
+		is.get(); // ,
+
+		switch (variantIndex)
+		{
+		case 0: 
+		{ 
+			int key;
+			is >> key;
+			info.Value = static_cast<Inputs::Key>(key);
+		} break;
+		case 1: 
+		{ 
+			int n;
+			is >> n;
+			info.Value = static_cast<Uint8>(n);
+		} break;
+		case 2: 
+		{ 
+			dVec2 v;
+			is >> v;
+			info.Value = v;
+		} break;
+		}
+
+		is.get(); // >
+		is.get(); // )
+	}
+
+	return is;
+}
