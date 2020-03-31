@@ -311,13 +311,13 @@ constexpr Vec<T, N> &operator /=(Vec<T, N> &lhs, const U &rhs)
 template<typename T, size_t N>
 std::string Vec<T, N>::ToString() const
 {
-	std::string result = '(';
+	std::string result = "(";
 	result.reserve(N * 4 + 1);
 
 	for(size_t i = 0; i < N - 1; i++)
-	{ result += v.e[i] + ','; }
+	{ result += this->e[i] + ','; }
 
-	result += v.e[N - 1] + ')';
+	result += this->e[N - 1] + ')';
 	result.shrink_to_fit();
 	return result;
 }
