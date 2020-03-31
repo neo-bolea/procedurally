@@ -50,8 +50,8 @@ void Inputs::StopRecording() { recorder->StopRecording(); }
 void Inputs::StartReplaying() { recorder->StartReplaying(); }
 void Inputs::StopReplaying() { recorder->StopReplaying(); }
 
-void Inputs::SaveRecording(const std::string &filename) { recorder->SaveRecording(filename); }
-void Inputs::LoadRecording(const std::string &filename) { recorder->LoadRecording(filename); }
+void Inputs::SaveRecording(std::ostream &os) { recorder->SaveRecording(os); }
+void Inputs::LoadRecording(std::istream &is) { recorder->LoadRecording(is); }
 
 void Inputs::ignoreInputs(bool ignore)
 {
@@ -381,7 +381,7 @@ void Inputs::Recorder::whileRecording(SDL_Event &event)
 	}
 	recordedInputs.push_back(info);
 }
-// TODO: Use relative timing (instead of Time::ProgramTime()).
+
 void Inputs::Recorder::whileReplaying()
 { 
 	if(replayCurrentInput >= recordedInputs.size())
@@ -435,30 +435,18 @@ void Inputs::Recorder::simulateNextInput()
 	SDL_PushEvent(event);
 } 
 
-void Inputs::Recorder::SaveRecording(const std::string &filename)
+
+void Inputs::Recorder::SaveRecording(std::ostream &os)
 {
 	if(isRecording) { StopRecording(); }
 
-	std::ofstream stream;
-	stream.open(filename, std::ios::out);
-	stream << recordedInputs;
-	stream.close();
-	//std::ofstream stream(filename);
-	//cereal::JSONOutputArchive archive(stream);
-	//InputInfo inputs;
-	//std::variant<Inputs::Key, Uint8, dVec2> time;
-	//archive(inputs);
+	os << recordedInputs;
 }
 
-void Inputs::Recorder::LoadRecording(const std::string &filename)
+void Inputs::Recorder::LoadRecording(std::istream &is)
 {
 	if(isRecording) { StopRecording(); }
 	if(isReplaying) { StopReplaying(); }
 
-	std::ifstream stream;
-	stream.open(filename, std::ios::in);
-	stream >> recordedInputs;
-	//std::ifstream stream(filename);
-	//cereal::JSONInputArchive archive(stream);
-	//archive(recordedInputs);
+	is >> recordedInputs;
 }

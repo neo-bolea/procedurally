@@ -1,6 +1,3 @@
-# TODO:
-# Include *.inc in source files OR structure by actual file structure
-
 cmake_minimum_required(VERSION 3.14.4)
 
 include(cmake/extras.cmake)
@@ -62,13 +59,15 @@ else() # GCC or Clang
     add_definitions(-include "${CMAKE_SOURCE_DIR}/core/include/Common/Common.h")
 endif()
 
-set(ALL_PROJECTS Core
-#Graphics Common Math
-)
+set(ALL_PROJECTS Core)
 
 # Initialize all projects
 add_subdirectory(core)
-# add_subdirectory(tests)
+
+# Set the default startup project for VS projects
+if(MSVC)
+    set(VS_STARTUP_PROJECT core)  
+endif()
 
 # Configure the output directory for the project.
 set_target_properties(Core PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${PLATFORM}/${CONFIG}/$<$<CONFIG:Debug>:>")
