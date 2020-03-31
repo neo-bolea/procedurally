@@ -66,7 +66,7 @@ add_subdirectory(core)
 
 # Set the default startup project for VS projects
 if(MSVC)
-    set(VS_STARTUP_PROJECT core)  
+    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Core)
 endif()
 
 # Configure the output directory for the project.
