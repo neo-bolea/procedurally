@@ -13,22 +13,24 @@ public:
 
 	void Start(), Stop();
 
-	TimeType Time(), TimeTotal(), TimeAvg();
+	template<typename F, typename ...Args>
+	TimeType Measure(F &&func, Args &&...args);
 
+	TimeType Time(), TimeTotal(), TimeAvg();
 	std::string sTime(), sTimeTotal(), sTimeAvg();
 	void ClearPrev();
 
+	Format Format_;
 private:
 	using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
 	TimeType cast(TimeType d);
 	TimePoint getTime();
-	std::string toStr(TimeType t);
+	std::string toString(TimeType t);
 
 	static const TimeType dur[4];
 	static const std::string formatStr[4];
 
-	Format format;
 	TimePoint start;
 	bool started = false;
 	TimeType diff = 0; 

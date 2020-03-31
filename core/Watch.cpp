@@ -1,6 +1,6 @@
 #include "Common/Watch.h"
 
-Watch::Watch(Format format) : format(format) {}
+Watch::Watch(Format format) : Format_(format) {}
 void Watch::Start() 
 { 
 	start = getTime(); 
@@ -22,20 +22,29 @@ void Watch::Stop()
 	started = false; 
 }
 
+template<typename F, typename ...Args>
+Watch::TimeType Watch::Measure(F &&func, Args &&...args)
+{
+	Start();
+	std::forward<decltype(func)>(func)(std::forward<Args>(args)...);
+	Stop();
+	return Time();
+}
+
 Watch::TimeType Watch::Time() { return cast(diff); }
 Watch::TimeType Watch::TimeTotal() { return cast(total); }
 Watch::TimeType Watch::TimeAvg() { return cast(counter ? (total / counter) : 0); }
 
-std::string Watch::sTime()      { return toStr(Time()); }
-std::string Watch::sTimeTotal() { return toStr(TimeTotal()); }
-std::string Watch::sTimeAvg()   { return toStr(TimeAvg()); }
+std::string Watch::sTime()      { return toString(Time()); }
+std::string Watch::sTimeTotal() { return toString(TimeTotal()); }
+std::string Watch::sTimeAvg()   { return toString(TimeAvg()); }
 void Watch::ClearPrev() { total = 0; counter = 0; }
 
 Watch::TimeType Watch::cast(TimeType d)
-{ return d / dur[format]; }
+{ return d / dur[Format_]; }
 
-std::string Watch::toStr(TimeType t) 
-{ return std::to_string(t) + formatStr[format]; }
+std::string Watch::toString(TimeType t) 
+{ return std::to_string(t) + formatStr[Format_]; }
 
 Watch::TimePoint Watch::getTime()
 { return std::chrono::high_resolution_clock::now(); }
