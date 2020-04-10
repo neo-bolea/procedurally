@@ -1,8 +1,14 @@
 #include "Common/Systems/Inputs.h"
 
 #include "Common/Debug.h"
-#include "common/Serialization.h"
 #include "Math/MathExt.h"
+
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/variant.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -12,10 +18,10 @@ Inputs::Inputs()
 { 
 	for(size_t i = 0; i < keyStates.size(); i++) { keyStates[i] = Free; }
 	for(size_t i = 0; i < buttonStates.size(); i++) { buttonStates[i] = Free; }
-
+	
 	inputFuncsTree =
 	(
-		CNSTART "Inputs", 
+		CNSTART("Inputs")
 		Locator::CmdNode("SetKey", this, &Inputs::setKey),
 		Locator::CmdNode("GetKey", this, &Inputs::GetKey_),
 		Locator::CmdNode("SetMouseButton", this, &Inputs::setMouseButton),
@@ -25,7 +31,7 @@ Inputs::Inputs()
 		Locator::CmdNode("GetMouseMove", this, &Inputs::GetMouseMove_),
 		Locator::CmdNode("SetMouseWheel", this, &Inputs::setMouseWheel),
 		Locator::CmdNode("GetMouseWheel", this, &Inputs::GetMouseWheel_),
-		CNEND
+		CNEND()
 	);
 
 	Locator::Add(inputFuncsTree);		
@@ -50,8 +56,10 @@ void Inputs::StopRecording() { recorder->StopRecording(); }
 void Inputs::StartReplaying() { recorder->StartReplaying(); }
 void Inputs::StopReplaying() { recorder->StopReplaying(); }
 
-void Inputs::SaveRecording(std::ostream &os) { recorder->SaveRecording(os); }
-void Inputs::LoadRecording(std::istream &is) { recorder->LoadRecording(is); }
+template<typename Archive> void Inputs::SaveRecording(std::ostream &os) 
+{ recorder->SaveRecording<Archive>(os, binary); }
+template<typename Archive> void Inputs::LoadRecording(std::istream &is) 
+{ recorder->LoadRecording<Archive>(is, binary); }
 
 void Inputs::ignoreInputs(bool ignore)
 {
@@ -262,12 +270,12 @@ Inputs::Logger::Logger(Inputs &inputs) : inputs(inputs)
 {
 	tree =
 	(
-		CNSTART "Inputs", 
+		CNSTART("Inputs")
 		Locator::CmdNode("SetKey", this, &Logger::setKey),
 		Locator::CmdNode("SetMouseButton", this, &Logger::setMouseButton),
 		Locator::CmdNode("SetMousePos", this, &Logger::setMousePos),
 		Locator::CmdNode("SetMouseWheel", this, &Logger::setMouseWheel),
-		CNEND
+		CNEND()
 	);
 }
 
@@ -307,12 +315,12 @@ Inputs::Recorder::Recorder(Inputs &inputs) : inputs(inputs)
 {
 	recordTree =
 	(
-		CNSTART "Inputs", 
+		CNSTART("Inputs")
 		Locator::CmdNode("SetKey", this, &Recorder::whileRecording),
 		Locator::CmdNode("SetMouseButton", this, &Recorder::whileRecording),
 		Locator::CmdNode("SetMousePos", this, &Recorder::whileRecording),
 		Locator::CmdNode("SetMouseWheel", this, &Recorder::whileRecording),
-		CNEND
+		CNEND()
 	);
 
 	replayTree = Locator::CmdNode("Update", this, &Recorder::whileReplaying);
@@ -413,22 +421,22 @@ void Inputs::Recorder::simulateNextInput()
 	{
 	case SDL_KEYUP:
 	case SDL_KEYDOWN:
-	{ event->key.keysym.scancode = static_cast<SDL_Scancode>(std::get<Key>(nextInput.Value)); } break;
+	{ event->key.keysym.scancode = static_cast<SDL_Scancode>(boost::get<Key>(nextInput.Value)); } break;
 	
 	case SDL_MOUSEBUTTONUP:
 	case SDL_MOUSEBUTTONDOWN:
-	{ event->button.button = std::get<Uint8>(nextInput.Value); } break;
+	{ event->button.button = boost::get<Uint8>(nextInput.Value); } break;
 	
 	case SDL_MOUSEMOTION:
 	{ 
-		event->motion.x = static_cast<Sint32>(std::get<dVec2>(nextInput.Value).x);
-		event->motion.y = static_cast<Sint32>(std::get<dVec2>(nextInput.Value).y);
+		event->motion.x = static_cast<Sint32>(boost::get<dVec2>(nextInput.Value).x);
+		event->motion.y = static_cast<Sint32>(boost::get<dVec2>(nextInput.Value).y);
 	} break;
 	
 	case SDL_MOUSEWHEEL:
 	{
-		event->wheel.x = static_cast<Sint32>(std::get<dVec2>(nextInput.Value).x);
-		event->wheel.y = static_cast<Sint32>(std::get<dVec2>(nextInput.Value).y);
+		event->wheel.x = static_cast<Sint32>(boost::get<dVec2>(nextInput.Value).x);
+		event->wheel.y = static_cast<Sint32>(boost::get<dVec2>(nextInput.Value).y);
 	} break;
 	}
 	
@@ -436,17 +444,21 @@ void Inputs::Recorder::simulateNextInput()
 } 
 
 
+template<typename Archive>
 void Inputs::Recorder::SaveRecording(std::ostream &os)
 {
 	if(isRecording) { StopRecording(); }
 
-	os << recordedInputs;
+	Archive oa(os);
+	oa << recordedInputs;
 }
 
+template<typename Archive>
 void Inputs::Recorder::LoadRecording(std::istream &is)
 {
 	if(isRecording) { StopRecording(); }
 	if(isReplaying) { StopReplaying(); }
 
-	is >> recordedInputs;
+	Archive ia(is);
+	ia >> recordedInputs;
 }

@@ -2,6 +2,7 @@
 
 #include "Graphics/GLTypes.h"
 
+#include <boost/container/flat_map.hpp>
 #include <fstream>
 #include <stack>
 
@@ -146,18 +147,18 @@ namespace GL
 	}
 
 	enum DataClass { Number, Vector, Matrix };
-	std::unordered_map<DataType, DataClass> DataClasses =
+	boost::container::flat_map<DataType, DataClass> DataClasses =
 	{
 		{ DataType::Float, Number },
-	{ DataType::Vec2, Vector },
-	{ DataType::Vec3, Vector },
-	{ DataType::Vec4, Vector },
-	{ DataType::Int, Number },
-	{ DataType::UInt, Number },
-	{ DataType::Bool, Number },
-	{ DataType::Mat2, Matrix },
-	{ DataType::Mat3, Matrix },
-	{ DataType::Mat4, Matrix },
+		{ DataType::Vec2, Vector },
+		{ DataType::Vec3, Vector },
+		{ DataType::Vec4, Vector },
+		{ DataType::Int, Number },
+		{ DataType::UInt, Number },
+		{ DataType::Bool, Number },
+		{ DataType::Mat2, Matrix },
+		{ DataType::Mat3, Matrix },
+		{ DataType::Mat4, Matrix },
 	};
 
 	void Program::Set(const std::string &name, UniformValue &&value) const

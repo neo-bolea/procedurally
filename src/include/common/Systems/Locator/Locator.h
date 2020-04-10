@@ -61,9 +61,9 @@ private:
 	// Erase all functions that where noted down by Remove().
 	static void cleanRemoves();
 
-	static int callStackSize;
-	static std::unordered_multimap<locatorHasher::id, LeafFunc> cmds;
-	static std::vector<decltype(cmds)::iterator> cmdsToRemove;
+	inline static int callStackSize = 0;
+	inline static std::unordered_multimap<locatorHasher::id, LeafFunc> cmds;
+	inline static std::vector<decltype(cmds)::iterator> cmdsToRemove;
 };
 
 class Locator::LeafFunc

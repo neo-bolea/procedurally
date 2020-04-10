@@ -38,6 +38,8 @@
 #define HEIGHT (1080/2)
 #define ASPECT ((float)WIDTH / HEIGHT)
 
+//TODO: Priority queue for cmds in Locator.
+
 //TODO: ResourceManager: Cache paths (so each resource doesn't have to save all it's dependencies).
 //TODO: ResourceManager: Add option to make files temporary or permanent (whether to unload them with 0 refs).
 //TODO: Locator: Change name

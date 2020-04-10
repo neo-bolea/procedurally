@@ -8,55 +8,11 @@
 
 #include "SDL.h"
 
+#include <boost/serialization/access.hpp>
+#include <boost/variant.hpp>
 #include <memory>
 #include <optional>
 #include <variant>
-
-//template<typename Type, template<typename> class Pointer, typename ...Args>
-//class initializer_ptr
-//{
-//public:
-//	initializer_ptr(Args &...args) : args(new std::tuple<Args...>(std::forward<Args>(args)...)) {}
-//
-//	auto operator->()
-//	{
-//		static bool initialized = false;
-//		if (!initialized)
-//		{
-//			initialized = true;
-//			ptr = std::make_from_tuple<Type, Args...>(*args);
-//		}
-//		return ptr.operator->();
-//	}
-//
-//private:
-//	Pointer<Type> ptr;
-//	std::unique_ptr<std::tuple<Args...>> args;
-//};
-//
-////template<typename Type, template<typename> class Pointer>
-////class initializer_ptr 
-////{
-////public:
-////	initializer_ptr_impl_base<Type, Pointer> *impl;
-////
-////	template<typename ...Args>
-////	initializer_ptr(Args &&...args)
-////	{
-////		impl = dynamic_cast<decltype(impl)&>(new initializer_ptr_impl<Type, Pointer, Args...>(args));
-////	}
-////
-////	auto operator->()
-////	{
-////		static bool initialized = false;
-////		if (!initialized)
-////		{
-////			initialized = true;
-////			Pointer<Type>
-////		}
-////		return Pointer<Type>::operator->();
-////	}
-////};
 
 class LoggerBase
 {
@@ -68,8 +24,10 @@ class RecorderBase
 public:
 	virtual void StartRecording() = 0, StopRecording() = 0;
 	virtual void StartReplaying() = 0, StopReplaying() = 0;
-	virtual void SaveRecording(std::ostream &os) = 0;
-	virtual void LoadRecording(std::istream &is) = 0;
+	template<typename Archive>
+	void SaveRecording(std::ostream &os) {}
+	template<typename Archive>
+	void LoadRecording(std::istream &is) {}
 };
 
 class Inputs : public LoggerBase, public RecorderBase
@@ -385,7 +343,9 @@ public:
 	void StartLogging(), StopLogging();
 	void StartRecording(), StopRecording();
 	void StartReplaying(), StopReplaying();
+	template<typename Archive = boost::archive::binary_oarchive>
 	void SaveRecording(std::ostream &os);
+	template<typename Archive = boost::archive::binary_iarchive>
 	void LoadRecording(std::istream &is);
 
 
@@ -490,10 +450,7 @@ public:
 	{
 		Time::TimePoint Time;
 		SDL_EventType Type; 
-		std::variant<Key, Uint8, dVec2> Value; 
-
-		friend std::ostream &operator<<(std::ostream &os, const Inputs::Recorder::InputInfo &info);
-		friend std::istream &operator>>(std::istream &is, Inputs::Recorder::InputInfo &info);
+		boost::variant<Key, Uint8, dVec2> Value;
 	};
 
 	Recorder(Inputs &inputs);
@@ -503,7 +460,9 @@ private:
 
 	void StartRecording(), StopRecording();
 	void StartReplaying(), StopReplaying();
+	template<typename Archive>
 	void SaveRecording(std::ostream &os);
+	template<typename Archive>
 	void LoadRecording(std::istream &is);
 
 	void whileRecording(SDL_Event &);
@@ -524,67 +483,16 @@ private:
 };
 
 //// Serialization ////
-std::ostream &operator<<(std::ostream &os, const Inputs::Recorder::InputInfo &info)
-{ 
-	os << '(' << std::to_string(info.Time) << ',' << std::to_string(info.Type) << ',';
-	os << '<' << info.Value.index() << ',';
-	switch (info.Value.index())
-	{
-	case 0: { os << std::to_string(std::get<Inputs::Key>(info.Value)); } break;
-	case 1: { os << std::to_string(std::get<Uint8>(info.Value)); } break;
-	case 2: { os << std::get<dVec2>(info.Value); } break;
-	}
-	os << '>';
-
-	os << ')';
-
-	return os;
-}
-
-std::istream &operator>>(std::istream &is, Inputs::Recorder::InputInfo &info)
+namespace boost 
 {
-	if(is.peek() == '(')
+	namespace serialization
 	{
-		int variantIndex;
-		double time;
-		int eventType;
-
-		is.get(); // (
-		is >> time;
-		info.Time = time;
-		is.get(); // ,
-		is >> eventType;
-		info.Type = static_cast<SDL_EventType>(eventType);
-		is.get(); // ,
-		is.get(); // <
-		is >> variantIndex;
-		is.get(); // ,
-
-		switch (variantIndex)
+		template<class Archive>
+		void serialize(Archive &ar, Inputs::Recorder::InputInfo &i, const uint version)
 		{
-		case 0: 
-		{ 
-			int key;
-			is >> key;
-			info.Value = static_cast<Inputs::Key>(key);
-		} break;
-		case 1: 
-		{ 
-			int n;
-			is >> n;
-			info.Value = static_cast<Uint8>(n);
-		} break;
-		case 2: 
-		{ 
-			dVec2 v;
-			is >> v;
-			info.Value = v;
-		} break;
+			ar & i.Time;
+			ar & i.Type;
+			ar & i.Value;
 		}
-
-		is.get(); // >
-		is.get(); // )
 	}
-
-	return is;
 }

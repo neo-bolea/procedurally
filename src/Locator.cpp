@@ -10,6 +10,12 @@ Locator::CmdNode::CmdNode() {}
 Locator::CmdNode::CmdNode(const char *cmd, const CmdNode &inner) : levelKey(cmd)
 { nodes.push_back(inner); }
 
+Locator::CmdNode::CmdNode(const char *cmd, const std::initializer_list<CmdNode> &inners) : levelKey(cmd)
+{
+	std::vector<CmdNode> innersV = { inners };
+	for(size_t i = 0; i < innersV.size(); i++)
+	{ nodes.push_back(innersV[i]); }
+}
 
 struct Locator::CmdNode::nodePath
 {
@@ -43,10 +49,6 @@ std::vector<Locator::CmdNode::nodePath> Locator::CmdNode::dissectTree() const
 
 	return cmdPaths;
 }
-
-int Locator::callStackSize = 0;
-std::unordered_multimap<locatorHasher::id, Locator::LeafFunc> Locator::cmds;
-std::vector<decltype(Locator::cmds)::iterator> Locator::cmdsToRemove;
 
 void Locator::Add(const CmdNode &tree)
 {

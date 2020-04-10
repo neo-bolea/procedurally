@@ -81,8 +81,9 @@ private:
 	TReturn (*_erased_fn)(void *, TArgs...);
 
 public:
-	template <typename T>
-		function_view(T &&x) : _ptr{ (void *)std::addressof(x) }
+	function_view() {}
+
+	template<typename T> function_view(T &&x) : _ptr{ (void *)std::addressof(x) }
 	{
 		_erased_fn = [](void *ptr, TArgs... xs) -> TReturn {
 			return (*reinterpret_cast<std::add_pointer_t<T>>(ptr))(

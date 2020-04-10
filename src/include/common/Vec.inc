@@ -1,3 +1,5 @@
+#include <boost/serialization/array.hpp>
+
 //// Constants ////
 template<typename T, size_t N>
 const Vec<T, N> VecData<T, N, std::enable_if_t<N == 2>>::Up{ 0, 1 };
@@ -411,4 +413,18 @@ constexpr Vec<T, N> Vec<T, N>::FromDegree(float deg)
 {
 	float rad = deg * Math::Deg2Rad;
 	return Vec<T, N>(std::cos(rad), std::sin(rad));
+}
+
+
+//// Serialization ////
+namespace boost 
+{
+	namespace serialization
+	{
+		template<class Archive, typename T, size_t N>
+		void serialize(Archive &ar, Vec<T, N> &v, const uint version)
+		{
+			ar & v.e;
+		}
+	}
 }

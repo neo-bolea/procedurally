@@ -16,12 +16,20 @@ public:
 	CmdNode(const char *cmd, const CmdNode &inner);
 
 	// Nest multiple objects inside this one
-	template<typename ...Args>
+	CmdNode(const char *cmd, const std::initializer_list<CmdNode> &inners);
+	
+	// Link a free function to this object
+	template<typename ...FuncArgs>
+	CmdNode(const char *cmd, void(*cb)(FuncArgs...));
+
+	
+	/*template<typename ...Args>
 	CmdNode(const char *cmd, const Args &...inners);
 
 	// Link a free function to this object
 	template<typename ...FuncArgs>
-	CmdNode(const char *cmd, void(*cb)(FuncArgs...));
+	CmdNode(const char *cmd, void(*cb)(FuncArgs...));*/
+	
 
 	// Link a member function to this object
 	template<typename ToBind, typename ...FuncArgs>
@@ -51,7 +59,10 @@ private:
 };
 
 // Makes the interface for creating trees look more pleasant.
-#define CNSTART Locator::CmdNode {
-#define CNEND }
+//#define CNSTART(Name) Locator::CmdNode { ##Name, {
+//#define CNEND() }}
+
+#define CNSTART(Name) Locator::CmdNode { ##Name,  {
+#define CNEND() }}
 
 #include "cmdNode.inc"

@@ -6,7 +6,7 @@
 
 static class CRC32
 {
-private:
+public:
 	static constexpr uint32 Polynomial = 0xEDB88320;
 
 	template<size_t idx>
@@ -27,7 +27,11 @@ private:
 
 public:
 	template<size_t ARG_I>
-	static constexpr uint32 GetConst(const char (&str)[ARG_I])
+	static constexpr uint32 GetLiteral(const char (&str)[ARG_I])
+	{ return ~crcouter<ARG_I>(str); }
+
+	template<size_t ARG_I>
+	static constexpr uint32 GetConst(const char *str)
 	{ return ~crcouter<ARG_I>(str); }
 
 	// See https://create.stephan-brumme.com/crc32/ for more information.
