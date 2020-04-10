@@ -5,6 +5,9 @@ include(cmake/extras.cmake)
 # Main Project
 project(Procedurally)
 
+# Stop ZERO_CHECK project from being generated.
+set(CMAKE_SUPPRESS_REGENERATION true)
+
 # Defines
 set(CMAKE_INSTALL_PREFIX "C:/")
 set(MSVC on)
@@ -24,13 +27,13 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/CMake")
 
-# SDL
+### SDL ###
 set(SDL2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/SDL2")
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIRS})
 link_libraries(${SDL2_LIBRARIES})
 
-# OpenGL/glew
+### OpenGL/glew ###
 set(GLEW_LIBRARIES "/external/glew/lib/${PLATFORM}/${CONFIG}/glew32s.lib;")
 set(GLEW_INCLUDE_DIR "/external/glew/include")
 set(GLEW_USE_STATIC_LIBS ON)
@@ -41,6 +44,13 @@ link_libraries(${CMAKE_SOURCE_DIR}${GLEW_LIBRARIES})
 find_package(OpenGL REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}${OPENGL_INCLUDE_DIRS})
 link_libraries(${OPENGL_LIBRARIES})
+
+### Boost ###
+set(BOOST_INCLUDE_DIR "/external/Boost")
+set(BOOST_LIBRARY_DIR "/external/Boost/stage/lib")
+file(GLOB BOOST_LIBRARIES "${CMAKE_SOURCE_DIR}${BOOST_LIBRARY_DIR}/*.lib")
+
+include_directories(${CMAKE_SOURCE_DIR}${BOOST_INCLUDE_DIR})
 
 
 # Other external includes
@@ -53,48 +63,38 @@ endif()
 
 # Force include the Common header to all files and add debug information to the lib.
 if(MSVC) # VS
-    add_definitions(/FI"${CMAKE_SOURCE_DIR}/core/include/Common/Common.h")
+    add_definitions(/FI"${CMAKE_SOURCE_DIR}/src/include/Common/Common.h")
     add_definitions(/Z7)
 else() # GCC or Clang
-    add_definitions(-include "${CMAKE_SOURCE_DIR}/core/include/Common/Common.h")
+    add_definitions(-include "${CMAKE_SOURCE_DIR}/src/include/Common/Common.h")
 endif()
 
-set(ALL_PROJECTS Core)
-
 # Initialize all projects
-add_subdirectory(core)
+add_subdirectory(src)
+
+
+### Boost ###
+# Separate all Boost libraries between Debug and Release libraries.
+GetBoostLibraries()
+
+# Link different Boost libraries depending on whether the Game is in Debug or Release mode.
+# The function has to be called again for every single library, so a loop is used.
+foreach(Library ${BOOST_LIBRARIES_RELEASE})
+    target_link_libraries(Game optimized ${Library})
+endforeach()
+
+foreach(Library ${BOOST_LIBRARIES_DEBUG})
+    target_link_libraries(Game debug ${Library})
+endforeach()
+
 
 # Set the default startup project for VS projects
 if(MSVC)
-    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT Core)
+    set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ProcedurallyCore)
 endif()
 
 # Configure the output directory for the project.
-set_target_properties(Core PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${PLATFORM}/${CONFIG}/$<$<CONFIG:Debug>:>")
+set_target_properties(ProcedurallyCore PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${PLATFORM}/${CONFIG}/$<$<CONFIG:Debug>:>")
 
-# Delete previous include folder (in case any headers are newly deleted).
-set(PROCEDURALLY_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/build/include")
-file(REMOVE "${PROCEDURALLY_INCLUDE_DIR}")
-
-foreach(project ${ALL_PROJECTS})
-    # Set default language settings.
-    set_target_properties(${project} PROPERTIES CXX_STANDARD 17)
-    
-    # Copy all public headers to a final include folder.
-    file(GLOB_RECURSE PUB_HEADERS_TO_COPY "${CMAKE_SOURCE_DIR}/${project}/include/*.h")
-    file(GLOB_RECURSE PUB_INCS_TO_COPY "${CMAKE_SOURCE_DIR}/${project}/include/*.inc")
-    set(PUB_HEADERS_TO_COPY ${PUB_HEADERS_TO_COPY} ${PUB_INCS_TO_COPY})
-
-    # For each file to be copied...
-    foreach(PUB_HEADER_TO_COPY ${PUB_HEADERS_TO_COPY})
-        # ...get the path of the file relative to it's include folder,
-        file(RELATIVE_PATH PUB_HEADER_TO_COPY_REL "${CMAKE_SOURCE_DIR}/${project}/include" ${PUB_HEADER_TO_COPY})
-        # ...strip the name of the file off of it's path,
-        get_filename_component(PUB_HEADER_TO_COPY_REL ${PUB_HEADER_TO_COPY_REL} DIRECTORY)
-        # ...so as to copy the file to the final include folder for the project, with it's relative path preserved.
-        file(COPY ${PUB_HEADER_TO_COPY} DESTINATION "${PROCEDURALLY_INCLUDE_DIR}/${PUB_HEADER_TO_COPY_REL}")
-        # Example: -common/include/Systems/Locator.h => build/include/common/Systems/Locator.h
-        # -graphics/include/Camera.h => build/graphics/include/Camera.h
-    endforeach()
-
-endforeach()
+# Set the C++ version.
+set_target_properties(ProcedurallyCore PROPERTIES CXX_STANDARD 17)

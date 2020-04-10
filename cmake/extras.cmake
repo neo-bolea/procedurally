@@ -19,3 +19,16 @@ macro(LibStandard LIB_NAME)
         target_compile_options(${LIB_NAME} PRIVATE "/MP")
     endif()
 endmacro(LibStandard)
+
+macro(GetBoostLibraries)
+    # Separate all Boost libraries between Debug and Release libraries.
+    foreach(Library ${BOOST_LIBRARIES})
+        # Debug libraries are tagged with gd, so that's how we can identify whether they are for Debug mode.
+        string(FIND ${Library} "gd" found)
+        if(${found} EQUAL "-1")
+            list(APPEND BOOST_LIBRARIES_RELEASE "${Library}\;")
+        else()
+            list(APPEND BOOST_LIBRARIES_DEBUG "${Library}\;")
+        endif()
+    endforeach()
+endmacro(GetBoostLibraries)
