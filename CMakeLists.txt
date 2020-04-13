@@ -80,11 +80,11 @@ GetBoostLibraries()
 # Link different Boost libraries depending on whether the Game is in Debug or Release mode.
 # The function has to be called again for every single library, so a loop is used.
 foreach(Library ${BOOST_LIBRARIES_RELEASE})
-    target_link_libraries(Game optimized ${Library})
+    target_link_libraries(ProcedurallyCore optimized ${Library})
 endforeach()
 
 foreach(Library ${BOOST_LIBRARIES_DEBUG})
-    target_link_libraries(Game debug ${Library})
+    target_link_libraries(ProcedurallyCore debug ${Library})
 endforeach()
 
 
