@@ -1,96 +1,75 @@
-#include "Graphics/GLTypes.h"
+#include "graphics/Mesh.h"
 
-#include "Common/Debug.h"
-#include "Graphics/GL.h"
+#include "graphics/Shader.h"
 
-//TODO: Change draw type!
+#include "GL/glew.h"
+
+#include <utility>
+
 namespace GL
 {
-	void Mesh::Setup()
+	Mesh::Mesh(Mesh &&other) 
 	{
-		glGenVertexArrays(1, &VAO);
-		glGenBuffers(5, &VBO[0]);
-		glGenBuffers(1, &EBO);
-
-		glBindVertexArray(VAO);
-
-		{
-			glBindBuffer(GL::ArrBuffer, VBO[0]);
-			glBufferData(GL::ArrBuffer, Pos.size() * sizeof(Vector3), Pos.data(), GL::StaticDraw);
-
-			glVertexAttribPointer(0, 3, GL::Float, false, sizeof(Vector3), 0);
-			glEnableVertexAttribArray(0);
-		}
-
-		if(!Norms.empty())
-		{
-			glBindBuffer(GL::ArrBuffer, VBO[1]);
-			glBufferData(GL::ArrBuffer, Norms.size() * sizeof(Vector3), Norms.data(), GL::StaticDraw);
-
-			glVertexAttribPointer(1, 3, GL::Float, false, sizeof(Vector3), 0);
-			glEnableVertexAttribArray(1);
-		}
-
-		if(!UVs.empty())
-		{
-			glBindBuffer(GL::ArrBuffer, VBO[2]);
-			glBufferData(GL::ArrBuffer, UVs.size() * sizeof(Vector2), UVs.data(), GL::StaticDraw);
-
-			glVertexAttribPointer(2, 2, GL::Float, false, sizeof(Vector2), 0);
-			glEnableVertexAttribArray(2);
-		}
-
-		if(!Tans.empty())
-		{
-			glBindBuffer(GL::ArrBuffer, VBO[3]);
-			glBufferData(GL::ArrBuffer, Tans.size() * sizeof(Vector3), Tans.data(), GL::StaticDraw);
-
-			glVertexAttribPointer(3, 3, GL::Float, false, sizeof(Vector3), 0);
-			glEnableVertexAttribArray(3);
-		}
-
-		if(!Bitans.empty())
-		{
-			glBindBuffer(GL::ArrBuffer, VBO[4]);
-			glBufferData(GL::ArrBuffer, Bitans.size() * sizeof(Vector3), Bitans.data(), GL::StaticDraw);
-
-			glVertexAttribPointer(4, 3, GL::Float, false, sizeof(Vector3), 0);
-			glEnableVertexAttribArray(4);
-		}
-
-		if(!Indices.empty())
-		{
-			glBindBuffer(GL::ElemArrBuffer, EBO);
-			glBufferData(GL::ElemArrBuffer, Indices.size() * sizeof(uint), Indices.data(), GL::StaticDraw); 
-		}
-
-		glBindBuffer(GL::ArrBuffer, 0);
+		this->operator=(std::move(other));
 	}
 
-	void Mesh::Draw()
+	Mesh &Mesh::operator=(Mesh &&other) 
 	{
-		int number;
-		int typeCounts[TexUse::MAX] = {};
-		GL::TexUse type;
-		for(uint i = 0; i < Texs.size(); i++)
+		std::swap(VAO, other.VAO);
+		VBOs.swap(other.VBOs);
+
+		return *this;
+	}
+
+	Mesh::~Mesh()
+	{
+		if(VAO) { glDeleteVertexArrays(1, &VAO); }
+		if(EBO) { glDeleteBuffers(1, &EBO); }
+		for(auto &vbo : VBOs)
 		{
-			glActiveTexture(GL::Texture0 + i);
+			glDeleteBuffers(1, &vbo.second);
+		}
+	}
 
-			type = Texs[i].Type_;
-			number = typeCounts[type];
-			std::string propString = "uMaterial." + TexTypeStrs[type] + std::to_string(number);
+	template<typename Arr>
+	void Mesh::SetIndices(
+		const Arr &data,
+		uint dataSize,
+		uint index, 
+		uint drawType,
+		uint dataType,
+		bool normalized)
+	{
+		using T = typename Arr::value_type;
 
-			typeCounts[type]++;
-
-			Program::SetGlobal(propString.c_str(), i);
-			glBindTexture(GL_TEXTURE_2D, Texs[i].Ref.ID);
+		if(!EBO)
+		{
+			glGenBuffers(1, &EBO);
 		}
 
-		glBindVertexArray(VAO);
-		if(Indices.empty())
-		{ glDrawArrays(GL::Triangles, 0, (GLsizei)Pos.size()); }
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), drawType);
+	}
+
+	//TODO: Should count be cached? How to cache it (check for the largest/smallest buffer?)?
+	void Mesh::Use(uint count, GL::PrimType mode)
+	{
+		if(!GL::ActiveProgram()) 
+		{
+			log("A mesh cannot be used without an active program.",
+				Debug::Error, { "Graphics", "Shader" });
+			return;
+		}
+
+		if(EBO)
+		{
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+			glDrawElements(mode, count, GL::UInt, 0);
+		}
 		else
-		{ glDrawElements(GL::Triangles, (GLsizei)Indices.size(), GL::UInt, 0); }
-		glBindVertexArray(0);
+		{
+			glBindVertexArray(VAO);
+			glDrawArrays(mode, 0, count);
+		}
 	}
 }

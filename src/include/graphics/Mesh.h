@@ -1,42 +1,51 @@
 #pragma once
 
-#include "Graphics/Texture.h"
+#include "common/Debug.h"
+#include "graphics/GLTypes.h"
+
+#include <unordered_map>
 
 namespace GL
 {
-	struct MatTex
-	{
-		Tex2D Ref;
-		TexUse Type_;
-	};
-
-	struct Mesh
-	{
-		void Setup(), Draw();
-
-		std::vector<Vector3> Pos;
-		std::vector<Vector2> UVs;
-		std::vector<Vector3> Norms;
-		std::vector<Vector3> Tans;
-		std::vector<Vector3> Bitans;
-
-		std::vector<MatTex> Texs;
-		std::vector<uint> Indices;
-
-	private:
-		uint VAO, VBO[5], EBO;
-	};
-
-	struct Model
+	class Mesh : UniqueMessageRaiser
 	{
 	public:
-		std::vector<Mesh> meshes;
-	private:
-		void setup() { for(auto &mesh : meshes) { mesh.Setup(); } }
-	public:
-		Model() {}
-		Model(std::vector<Mesh> meshes) : meshes(meshes) { setup(); }
+		Mesh() {}
 
-		void Draw() { for(auto &mesh : meshes) { mesh.Draw(); } }
+		Mesh(const Mesh &other) = delete;
+		Mesh &operator=(const Mesh &other) = delete;
+
+		Mesh(Mesh &&other);
+		Mesh &operator=(Mesh &&other);
+
+		~Mesh();
+
+
+		template<typename Arr>
+		void SetIndices(
+			const Arr &data,
+			uint dataSize,
+			uint index, 
+			uint drawType = GL_STATIC_DRAW,
+			uint dataType = GL_FLOAT,
+			bool normalized = false);
+
+		template<typename Arr>
+		void SetVertexAttribute(
+			const Arr &data,
+			uint dataSize,
+			uint index, 
+			uint drawType = GL_STATIC_DRAW,
+			uint dataType = GL_FLOAT,
+			bool normalized = false);
+
+		//TODO: Should count be cached? How to cache it (check for the largest/smallest buffer?)?
+		void Use(uint count, GL::PrimType mode = GL::Triangles);
+		bool Initialized() { return VAO; }
+
+		std::unordered_map<uint, uint> VBOs;
+		uint VAO = 0, EBO = 0;
 	};
 }
+
+#include "Mesh.inc"

@@ -2,7 +2,6 @@
 #define SDL_MAIN_HANDLED
 #include "Math/Bezier.h"
 #include "Graphics/Camera.h"
-#include "Core.h"
 #include "Graphics/GL.h"
 #include "Graphics/GLTypes.h"
 #include "Graphics/GPUGrid.h"
