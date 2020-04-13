@@ -74,8 +74,6 @@ template<typename T, size_t N>
 template<typename U>
 constexpr Vec<T, N>::Vec(U n) 
 { 
-	static_assert(std::is_arithmetic_v<U>, 
-		"The given data type cannot be used as vector constructor.");
 	for(size_t i = 0; i < N; i++) { this->e[i] = static_cast<T>(n); } 
 }
 
@@ -83,8 +81,6 @@ template<typename T, size_t N>
 template<typename U>
 constexpr Vec<T, N>::Vec(const U *d)
 { 
-	static_assert(std::is_arithmetic_v<U>, 
-		"The given data type cannot be used as vector constructor.");
 	for(size_t i = 0; i < N; i++) { this->e[i] = static_cast<T>(d[i]); } 
 }
 
