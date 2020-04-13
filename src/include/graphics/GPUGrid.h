@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Graphics/GL.h"
-#include "Math/MathExt.h"
 #include "Common/Resources/ResourceManager.h"
 #include "Common/Vec.h"
+#include "Graphics/GL.h"
+#include "Graphics/Texture.h"
+#include "Math/MathExt.h"
 
 #include <GL/glew.h>
 #include <random>
@@ -63,8 +64,8 @@ namespace Compute
 		{
 			permTex.Filter = GL::Nearest;
 			perm12Tex.Filter = GL::Nearest;
-			permTex.Setup(512, GL::R8UI, m_perm  );
-			perm12Tex.Setup(512, GL::R8UI, m_perm12);
+			permTex = GL::Tex1D(512, GL::R8UI, m_perm);
+			perm12Tex = GL::Tex1D(512, GL::R8UI, m_perm12);
 		}
 
 		void bindSeedTexture()
