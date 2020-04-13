@@ -51,7 +51,6 @@ namespace GL
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), drawType);
 	}
 
-	//TODO: Should count be cached? How to cache it (check for the largest/smallest buffer?)?
 	void Mesh::Use(uint count, GL::PrimType mode)
 	{
 		if(!GL::ActiveProgram()) 
