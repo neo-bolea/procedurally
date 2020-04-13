@@ -1,10 +1,5 @@
 #pragma once
 
-#include "resourceTypes.h"
-#include "resource.h"
-#include "resourceLoader.h"
-#include "resourceMonitor.h"
-
 #include "Common/Debug.h"
 #include "Common/Util.h"
 #include "Common/Hash.h"
