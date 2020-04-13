@@ -178,8 +178,9 @@ namespace GL
 	class Tex1D : public Tex
 	{
 	public:
-		void Setup(int w, Channel format, void *data = NULL);
-		void Setup(const std::string &path);
+		Tex1D() {}
+		Tex1D(int w, Channel format, void *data = NULL);
+		Tex1D(const std::string &path);
 
 		int Size;
 	};
@@ -188,8 +189,9 @@ namespace GL
 	class Tex2D : public Tex
 	{
 	public:
-		void Setup(int w, int h, Channel format, void *data = NULL);
-		void Setup(const std::string &path, const uint forcedNrChannels = 0, const Channel forcedFormat = (Channel)0);
+		Tex2D() {}
+		Tex2D(int w, int h, Channel format, void *data = NULL);
+		Tex2D(const std::string &path, const uint forcedNrChannels = 0, const Channel forcedFormat = (Channel)0);
 
 		inline float Ratio() { return (float)Size.x / Size.y; }
 
@@ -203,7 +205,8 @@ namespace GL
 	class Tex3D : public Tex
 	{
 	public:
-		void Setup(int w, int h, int depth, Channel format, void *data = NULL);
+		Tex3D() {}
+		Tex3D(int w, int h, int depth, Channel format, void *data = NULL);
 
 		iVec3 Size;
 	};
@@ -212,13 +215,16 @@ namespace GL
 	class Cubemap : public Tex
 	{
 	public:
-		void Setup(int w, int h, Channel format, void *data = NULL);
-		void Setup(const std::array<std::string, 6> &faces, const uint forcedNrChannels = 0, const Channel forcedFormat = (Channel)0);
+		Cubemap() {}
+		Cubemap(int w, int h, Channel format, void *data = NULL);
+		Cubemap(const std::array<std::string, 6> &faces, const uint forcedNrChannels = 0, const Channel forcedFormat = (Channel)0);
 
 		iVec2 Size;
 	};
 	typedef std::shared_ptr<Cubemap> CubemapRef;
 }
+
+//TODO: Add Renderbuffer class
 
 //Frame Buffer
 namespace GL
@@ -238,7 +244,8 @@ namespace GL
 			StencilIndex8     = GL_STENCIL_INDEX8    ,
 		};
 
-		Framebuffer(int width, int height, Channel colorFormat, Format depthStencilFormat, const Tex2DRef colorBuffer);
+		Framebuffer() {}
+		Framebuffer(int width, int height, Channel colorFormat, Format depthStencilFormat, const Tex2D &colorBuffer);
 		void Release();
 
 		uint ID;
