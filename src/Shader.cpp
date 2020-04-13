@@ -10,6 +10,7 @@
 namespace GL
 {
 	ProgRef activeProgram;
+	const ProgRef ActiveProgram() { return activeProgram; }
 
 	Program::Program(const Program &other)
 		: ID(other.ID), properties(other.properties)
@@ -125,7 +126,7 @@ namespace GL
 		else
 		{
 			log("The property " + std::string(name)
-				+ " is not part of the shader's uniforms!", Debug::Error, { "Graphics", "Shader" });
+				+ " is not part of the shader's uniforms.", Debug::Error, { "Graphics", "Shader" });
 			return (DataType)-1;
 		}
 	}
@@ -178,9 +179,17 @@ namespace GL
 
 	void Program::Set(const UniformInfo &unif, UniformValue &&value) const
 	{
+		if(unif.ID == -1)
+		{
+			log("The given uniform info (" + unif.Name + ") is not valid.", 
+				Debug::Error, { "Graphics", "Shader" });
+			return;
+		}
+
 		if(DataClasses[unif.Type] != DataClasses[value.Type])
 		{
-			log("The given uniform value is not of the same type as the uniform with the ID "
+			log("The given uniform (" + unif.Name 
+				+ ") value is not of the same type as the uniform with the ID "
 				+ std::to_string(unif.ID) + ".", Debug::Error, { "Graphics", "Shader" });
 			return;
 		}

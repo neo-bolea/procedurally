@@ -35,6 +35,7 @@ namespace GL
 		DataType Type;
 		UniformID ID;
 
+		UniformInfo() {}
 		UniformInfo(const std::string &name, UniformID id) : Name(name), ID(id) {}
 		UniformInfo(const std::string &name, UniformID id, const DataType &type) 
 			: Name(name), ID(id), Type(type) {}
@@ -109,8 +110,7 @@ namespace GL
 	typedef std::shared_ptr<Program> ProgRef;
 	typedef std::shared_ptr<const Program> ProgConstRef;
 
-	extern ProgRef activeProgram;
-	inline ProgRef ActiveProgram() { return activeProgram; }
+	const ProgRef ActiveProgram();
 
 	typedef std::unordered_map<std::string, DataType> PropertyMap;
 #ifdef _DEBUG
