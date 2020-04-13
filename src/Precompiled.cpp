@@ -4,6 +4,26 @@ namespace GL
 {
 	namespace Shaders
 	{
+		const char *ScreenTexVert = 
+			R"(
+				#version 330 core
+				layout (location = 0) in vec2 vPos;
+				layout (location = 1) in vec2 vUVs;
+				
+				out vec2 fTexCoords;
+				
+				void main()
+				{
+				    gl_Position = vec4(vPos.x, vPos.y, 0.f, 1.f);
+				    fTexCoords = vUVs;
+				}
+			)";
+
+		const char *ScreenTexFrag = TexFrag;
+	}
+
+	namespace Shaders
+	{
 		const char *TexVert = 
 			R"(
 				#version 330 core
@@ -33,9 +53,9 @@ namespace GL
 				#version 330 core
 
 				uniform sampler2D uTex;
-				uniform vec4 uColor;
-				uniform bool uUseTex;
-				uniform float uDepth;
+				uniform vec4 uColor = ivec4(1.f);
+				uniform bool uUseTex = true;
+				uniform float uDepth = 0;
 				
 				out vec4 FragColor;
 				
@@ -44,27 +64,46 @@ namespace GL
 				void main()
 				{
 					 gl_FragDepth = uDepth;
-				    FragColor = (uUseTex ? texture(uTex, fTexCoords) : vec4(1.f)) * uColor;
+				    FragColor = (uUseTex ? vec4(texture(uTex, fTexCoords).xyz, 1.f) : vec4(1.f)) * uColor;
 				}
 			)";
 	}
 
 	namespace Programs
 	{
-		GL::Program program;
+		GL::Program screenTex2DProg;
+		const GL::Program &ScreenTex2D()
+		{
+			static bool once = false;
+			if(!once)
+			{
+				once = true;
+				screenTex2DProg.Setup(std::vector<ShaderInfo>{
+					{ Shaders::ScreenTexVert, ShaderType::Vertex },
+					{ Shaders::ScreenTexFrag, ShaderType::Fragment } 
+				});
+			}
+
+			return screenTex2DProg;
+		}
+	}
+
+	namespace Programs
+	{
+		GL::Program tex2DProg;
 		const GL::Program &Tex2D()
 		{
 			static bool once = false;
 			if(!once)
 			{
 				once = true;
-				program.Setup(std::vector<ShaderInfo>{
+				tex2DProg.Setup(std::vector<ShaderInfo>{
 					{ Shaders::TexVert, ShaderType::Vertex },
 					{ Shaders::TexFrag, ShaderType::Fragment } 
 				});
 			}
 
-			return program;
+			return tex2DProg;
 		}
 	}
 
