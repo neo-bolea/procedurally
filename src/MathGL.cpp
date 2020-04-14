@@ -123,27 +123,30 @@ namespace Math
 
 	Mat4 GL::Rotate(const Mat4& m, float angle, const Vector3& v)
 	{
-		float const a = angle, cosa = cos(a), sina = sin(a);
+		float a = angle;
+		float c = cos(a);
+		float s = sin(a);
 
-		Vector3 axis = v.Normalize();
-		Vector3 temp = (1.f - cosa) * axis;
+		fVec3 axis(v.Normalize());
+		fVec3 temp((1.f - c) * axis);
 
-		Mat4 rotate;
-		rotate[0][0] = cosa + temp.x * axis.x;
-		rotate[1][0] = temp.x * axis.y + sina * axis.z;
-		rotate[2][0] = temp.x * axis.z - sina * axis.y;
+		Mat4 Rotate;
+		Rotate[0][0] = c + temp[0] * axis[0];
+		Rotate[0][1] = temp[0] * axis[1] + s * axis[2];
+		Rotate[0][2] = temp[0] * axis[2] - s * axis[1];
 
-		rotate[0][1] = temp.y * axis.x - sina * axis.z;
-		rotate[1][1] = cosa + temp.y * axis.y;
-		rotate[2][1] = temp.y * axis.z + sina * axis.x;
+		Rotate[1][0] = temp[1] * axis[0] - s * axis[2];
+		Rotate[1][1] = c + temp[1] * axis[1];
+		Rotate[1][2] = temp[1] * axis[2] + s * axis[0];
 
-		rotate[0][2] = temp.z * axis.x + sina * axis.y;
-		rotate[1][2] = temp.z * axis.y - sina * axis.x;
-		rotate[2][2] = cosa + temp.z * axis.z;
+		Rotate[2][0] = temp[2] * axis[0] + s * axis[1];
+		Rotate[2][1] = temp[2] * axis[1] - s * axis[0];
+		Rotate[2][2] = c + temp[2] * axis[2];
 
-		Vector4 result0(m.vecs[0] * rotate[0][0] + m.vecs[1] * rotate[0][1] + m.vecs[2] * rotate[0][2]);
-		Vector4 result1(m.vecs[0] * rotate[1][0] + m.vecs[1] * rotate[1][1] + m.vecs[2] * rotate[1][2]);
-		Vector4 result2(m.vecs[0] * rotate[2][0] + m.vecs[1] * rotate[2][1] + m.vecs[2] * rotate[2][2]);
+		Mat4 Result;
+		Vector4 result0 = m.vecs[0] * Rotate[0][0] + m.vecs[1] * Rotate[0][1] + m.vecs[2] * Rotate[0][2];
+		Vector4 result1 = m.vecs[0] * Rotate[1][0] + m.vecs[1] * Rotate[1][1] + m.vecs[2] * Rotate[1][2];
+		Vector4 result2 = m.vecs[0] * Rotate[2][0] + m.vecs[1] * Rotate[2][1] + m.vecs[2] * Rotate[2][2];
 
 		Mat4 result;
 		result.v =
