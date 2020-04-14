@@ -132,11 +132,11 @@ TEST_CASE("Matrix", "[math][matrix]")
 	SECTION("Matrices can be accessed with [][]")
 	{
 		CHECK(m1[0][0] == 2_a);
-		CHECK(m1[0][1] == 1_a);
-		CHECK(m1[0][2] == 4_a);
-		CHECK(m1[1][0] == 0_a);
+		CHECK(m1[1][0] == 1_a);
+		CHECK(m1[2][0] == 4_a);
+		CHECK(m1[0][1] == 0_a);
 		CHECK(m1[1][1] == 1_a);
-		CHECK(m1[1][2] == 1_a);
+		CHECK(m1[2][1] == 1_a);
 	}
 	
 	

@@ -16,7 +16,7 @@ TEST_CASE("CRC32 Hash", "[common][hash][crc]")
 
 	SECTION("Compile time and runtime CRC32 have consistent results")
 	{
-		CHECK(CRC32::Get(ca1, 9) == CRC32::GetConst(ca1));
-		CHECK(CRC32::Get(ca2, 8) == CRC32::GetConst(ca2));
+		CHECK(CRC32::Get(ca1, 9) == CRC32::GetLiteral("TestHash"));
+		CHECK(CRC32::Get(ca2, 8) == CRC32::GetLiteral("Another"));
 	}
 }

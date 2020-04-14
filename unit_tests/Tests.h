@@ -1,4 +1,3 @@
-#ifdef MATH_TESTS
 #include "CommonTests.h"
+#include "GraphicsTests.h"
 #include "MathTests.h"
-#endif
