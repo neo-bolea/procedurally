@@ -4,7 +4,7 @@ constexpr const T& Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i) const
 #ifdef ROW_MAJOR
 	return ptr[i];
 #elif defined COLUMN_MAJOR
-	return ptr[i * ROWS];
+	return ptr[i * COLS];
 #endif
 }
 
@@ -14,7 +14,7 @@ constexpr T& Mat<T, ROWS, COLS>::MatProxy::operator [](size_t i)
 #ifdef ROW_MAJOR
 	return ptr[i];
 #elif defined COLUMN_MAJOR
-	return ptr[i * ROWS];
+	return ptr[i * COLS];
 #endif
 }
 
@@ -141,15 +141,12 @@ constexpr Mat<T, N, O> operator *(const Mat<T, N, M>& lhs, const Mat<T, M, O>& r
 	{
 		for (size_t j = 0; j < O; j++)
 		{
-			T sum = T(0.f);
+			T sum = T(0);
 			for (size_t k = 0; k < M; k++)
 			{
-				auto v1 = lhs[i];
-				T first = v1[k];
-				T sec = rhs[k][j];
-				sum += first * sec;
+				sum += lhs[k][i] * rhs[j][k];
 			}
-			result[i][j] = sum;
+			result[j][i] = sum;
 		}
 	}
 
