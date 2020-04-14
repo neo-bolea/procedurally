@@ -70,7 +70,10 @@ else() # GCC or Clang
 endif()
 
 # Initialize all projects
+set(PROJECTS ProcedurallyCore UnitTests)
+
 add_subdirectory(src)
+add_subdirectory(unit_tests)
 
 
 ### Boost ###
@@ -97,4 +100,6 @@ endif()
 set_target_properties(ProcedurallyCore PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${PLATFORM}/${CONFIG}/$<$<CONFIG:Debug>:>")
 
 # Set the C++ version.
-set_target_properties(ProcedurallyCore PROPERTIES CXX_STANDARD 17)
+set_property(TARGET ${PROJECTS} PROPERTY CXX_STANDARD 17)
+
+add_dependencies(UnitTests ProcedurallyCore)
