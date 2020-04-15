@@ -3,9 +3,9 @@
 #include "graphics/MathGL.h"
 #include "math/Mat.h"
 
+#include "glm/gtc/epsilon.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
-#include "glm/gtc/epsilon.hpp"
 #include "glm/matrix.hpp"
 
 #include "catch.hpp"
@@ -26,25 +26,25 @@ TEST_CASE("Matrix Transformations", "[graphics][math][matrix][transformation]")
 {
 	SECTION("Inverse")
 	{
-		Math::fMat4 m(1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f);
-		glm::mat4 mg(1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f, 10.f, 11.f, 12.f, 13.f, 14.f, 15.f, 16.f);
+		Math::fMat4 m(4.f, 2.f, 7.f, 6.f, 5.f, 3.f, -0.324f, 0.2f, 213.f, 43.f, 2.f, 5.f, 2.f, 1.f, 6.f, 3.f);
+		glm::mat4 mg(4.f, 2.f, 7.f, 6.f, 5.f, 3.f, -0.324f, 0.2f, 213.f, 43.f, 2.f, 5.f, 2.f, 1.f, 6.f, 3.f);
 		m = Math::GL::Inverse(m);
 		mg = glm::inverse(mg);
-		CHECK(glm::make_mat4((float *)&m.e) == mg);
+		CHECK(glmMatEqual(glm::make_mat4((float *)&m.e), mg));
 	}
 
 	SECTION("Look At")
 	{
 		Math::fMat4 m = Math::GL::LookAt(fVec3(32.f, 0.432f, -23.f), fVec3(645.f, -0.43f, 2.2f), fVec3(0.34f, 32.f, 543.f));
 		glm::mat4 mg = glm::lookAt(glm::vec3(32.f, 0.432f, -23.f), glm::vec3(645.f, -0.43f, 2.2f), glm::vec3(0.34f, 32.f, 543.f));
-		CHECK(glm::make_mat4((float *)&m.e) == mg);
+		CHECK(glmMatEqual(glm::make_mat4((float *)&m.e), mg));
 	}
 
 	SECTION("Orthographic Transformation")
 	{
 		Math::fMat4 m = Math::GL::Orthographic(-2.f, 3.f, -5.f, 6.f, 0.0432f, 987.f);
 		glm::mat4 mg = glm::ortho(-2.f, 3.f, -5.f, 6.f, 0.0432f, 987.f);
-		CHECK(glm::make_mat4((float *)&m.e) == mg);
+		CHECK(glmMatEqual(glm::make_mat4((float *)&m.e), mg));
 	}
 
 	SECTION("Perspective Transformation")
