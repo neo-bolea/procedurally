@@ -10,6 +10,8 @@
 
 #include <string>
 
+//TODO: Add a GLObject class for representing any OpenGL objects with an ID.
+
 #define GLDEFINED
 namespace GL
 {

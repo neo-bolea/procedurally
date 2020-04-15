@@ -104,6 +104,7 @@ namespace GL
 	};
 }
 
+//TODO: Add intermediary object for saving Set() commands (e.g. Set("uTex", 1)) into a class, which can act as both a cache and for ease of use.
 namespace GL
 {
 	class Program;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Math/Mat.h"
 #include "Common/Vec.h"
+#include "Math/Mat.h"
 
 class Camera2D
 {

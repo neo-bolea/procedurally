@@ -1,5 +1,7 @@
 #include "Common/Watch.h"
 
+//TODO: Make it so the watch doesnt have to be stopped for it to be read from.
+
 Watch::Watch(Format format) : Format_(format) {}
 void Watch::Start() 
 { 
