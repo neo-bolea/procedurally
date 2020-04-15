@@ -141,10 +141,12 @@ constexpr Mat<T, N, O> operator *(const Mat<T, N, M>& lhs, const Mat<T, M, O>& r
 	{
 		for (size_t j = 0; j < O; j++)
 		{
-			T sum = T(0);
+			T sum = T(0.f);
 			for (size_t k = 0; k < M; k++)
 			{
-				sum += lhs[k][i] * rhs[j][k];
+				T first = lhs[i][k];
+				T second = rhs[k][j];
+				sum += first * second;
 			}
 			result[j][i] = sum;
 		}
@@ -166,9 +168,8 @@ constexpr Vec<T, ROWS> operator *(const Mat<T, ROWS, COLS>& lhs, const Vec<T, CO
 		T sum = T(0.f);
 		for (size_t k = 0; k < COLS; k++)
 		{
-			auto v1 = lhs[i];
-			T first = v1[k];
-			T sec = rhs[k];
+			T first = lhs[i][k];
+			T sec = rhs[k][j];
 			sum += first * sec;
 		}
 		result[i] = sum;
