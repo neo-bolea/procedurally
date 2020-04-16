@@ -144,8 +144,8 @@ constexpr Mat<T, N, O> operator *(const Mat<T, N, M>& lhs, const Mat<T, M, O>& r
 			T sum = T(0.f);
 			for (size_t k = 0; k < M; k++)
 			{
-				T first = lhs[i][k];
-				T second = rhs[k][j];
+				T first = lhs[k][i];
+				T second = rhs[j][k];
 				sum += first * second;
 			}
 			result[j][i] = sum;
