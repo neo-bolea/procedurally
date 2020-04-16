@@ -148,8 +148,7 @@ namespace Math
 		Vector4 result1 = m.vecs[0] * Rotate[1][0] + m.vecs[1] * Rotate[1][1] + m.vecs[2] * Rotate[1][2];
 		Vector4 result2 = m.vecs[0] * Rotate[2][0] + m.vecs[1] * Rotate[2][1] + m.vecs[2] * Rotate[2][2];
 
-		Mat4 result;
-		result.v =
+		Mat4 result = Mat4
 		{
 			result0.x, result0.y, result0.z, result0.w,
 			result1.x, result1.y, result1.z, result1.w,
@@ -162,8 +161,7 @@ namespace Math
 
 	Mat4 GL::Scale(const Mat4 &m, const Vector3 &v)
 	{
-		Mat4 result;
-		result.v =
+		Mat4 result = Mat4
 		{
 			m[0][0] * v.x, m[1][0] * v.x, m[2][0] * v.x, m[3][0],
 			m[0][1] * v.y, m[1][1] * v.y, m[2][1] * v.y, m[3][1],
@@ -174,17 +172,16 @@ namespace Math
 		return result;
 	}
 
-	Mat4 GL::Translate(const Mat4 &m, const Vector3 &v)
+	Mat4 GL::Translate(Mat4 m, const Vector3 &v)
 	{
-		Mat4 Result(m);
 		Vector4 vec = Vector4(m[0][0], m[1][0], m[2][0], m[3][0]) * v.x
 			+ Vector4(m[0][1], m[1][1], m[2][1], m[3][1]) * v.y
 			+ Vector4(m[0][2], m[1][2], m[2][2], m[3][2]) * v.z
 			+ Vector4(m[0][3], m[1][3], m[2][3], m[3][3]);
-		Result[0][3] = vec.x;
-		Result[1][3] = vec.y;
-		Result[2][3] = vec.z;
-		Result[3][3] = vec.w;
-		return Result;
+		m[0][3] = vec.x;
+		m[1][3] = vec.y;
+		m[2][3] = vec.z;
+		m[3][3] = vec.w;
+		return m;
 	}
 }
