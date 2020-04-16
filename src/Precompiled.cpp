@@ -132,6 +132,40 @@ namespace GL
 				fVec2{ 1.f, 1.f },
 				fVec2{ 0.f, 1.f },
 			};
+
+			GL::Mesh mesh;
+			const GL::Mesh &Get()
+			{
+				static bool once = false;
+				if(!once)
+				{
+					once = true;
+					mesh.SetVertexAttribute(Verts, 2, 0);
+					mesh.SetVertexAttribute(UVs, 2, 1);
+				}
+
+				return mesh;
+			}
+		}
+
+		namespace ScreenSquare2D
+		{
+			GL::Mesh mesh;
+			const GL::Mesh &Get()
+			{
+				static bool once = false;
+				if(!once)
+				{
+					once = true;
+
+					auto verts = Square2D::Verts;
+					for(auto &v : verts) { v *= 2.f; }
+					mesh.SetVertexAttribute(verts, 2, 0);
+					mesh.SetVertexAttribute(Square2D::UVs, 2, 1);
+				}
+
+				return mesh;
+			}
 		}
 	}
 }

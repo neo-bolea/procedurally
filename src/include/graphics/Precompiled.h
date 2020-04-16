@@ -25,6 +25,13 @@ namespace GL
 		{
 			extern const std::array<fVec2, 6> Verts;
 			extern const std::array<fVec2, 6> UVs;
+
+			const GL::Mesh &Get();
+		}
+
+		namespace ScreenSquare2D
+		{
+			const GL::Mesh &Get();
 		}
 	}
 }
