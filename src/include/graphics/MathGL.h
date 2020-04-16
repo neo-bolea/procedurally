@@ -13,6 +13,6 @@ namespace Math
 		Mat4 Perspective(float fovy, float aspect, float zNear, float zFar);
 		Mat4 Rotate(const Mat4 &m, float angle, const Vector3 &v);
 		Mat4 Scale(const Mat4 &m, const Vector3 &v);
-		Mat4 Translate(const Mat4 &m, const Vector3 &v);
+		Mat4 Translate(Mat4 m, const Vector3 &v);
 	}
 }
