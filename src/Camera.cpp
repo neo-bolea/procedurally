@@ -20,7 +20,7 @@ void Camera2D::Update(fVec2 movement, float dt)
 
 void Camera2D::Update()
 {
-	fVec3 finalPos(Pos.x, Pos.y, 1.f);
+	fVec3 finalPos(Pos.x, Pos.y, -1.f);
 	view = Math::GL::LookAt(finalPos, finalPos - fVec3::Forward);
 	proj = Math::GL::Orthographic(-VertSize * Ratio, VertSize * Ratio, -VertSize, VertSize, Near, Far);
 
