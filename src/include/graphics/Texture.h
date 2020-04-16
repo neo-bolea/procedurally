@@ -2,6 +2,7 @@
 
 #include "Graphics/GLTypes.h"
 #include "Graphics/MathGL.h"
+#include "Graphics/Precompiled.h"
 #include "Graphics/Shader.h"
 
 #include "GL/glew.h"
@@ -100,6 +101,14 @@ namespace GL
 		Linear  = GL_LINEAR,
 	};
 
+	enum TexType
+	{
+		Tex1D_e = GL_TEXTURE_1D,
+		Tex2D_e = GL_TEXTURE_2D,
+		Tex3D_e = GL_TEXTURE_3D,
+		Cubemap_e = GL_TEXTURE_CUBE_MAP,
+	};
+
 	//enum TexSwizzle
 	//{
 	//	SwizzleR = GL_TEXTURE_SWIZZLE_R,
@@ -127,12 +136,24 @@ namespace GL
 	public:
 		~Tex() { Release(); }
 
+		static void Bind(TexType type, uint ID) 
+		{ 
+			glBindTexture(type, ID);
+			activeTex = ID;
+		}
 
-		void Bind() const { glBindTexture(type, ID); }
-		void Unbind() const { glBindTexture(type, 0); }
+		void Bind() const 
+		{ 
+			glBindTexture(type, ID);
+			activeTex = ID;
+		}
+		void Unbind() const
+		{ 
+			glBindTexture(type, 0); 
+			activeTex = 0;
+		}
 
 		void Release() const { if (ID != 0) { glDeleteTextures(1, &ID); } }
-
 
 		uint ID = 0;
 
@@ -147,8 +168,7 @@ namespace GL
 		int MipmapMaxLevel = 1000;
 
 	protected:
-		void Gen(uint type), InitFormat(Channel format);
-		void PushBind(), PopBind();
+		void Gen(TexType type), InitFormat(Channel format);
 
 
 		uchar *Load(const char *path, int *width, int *height, int *nrChannels, int forcedNrChannels = 0)
@@ -168,6 +188,8 @@ namespace GL
 			stbi_image_free(data);
 		}
 
+		inline static uint activeTex;
+
 		uint type;
 		Channel basedFormat;
 
@@ -182,9 +204,12 @@ namespace GL
 		Tex1D(int w, Channel format, void *data = NULL);
 		Tex1D(const std::string &path);
 
+		TexType Type() { return TexType::Tex1D_e; }
+
 		int Size;
 	};
-	typedef std::shared_ptr<Tex1D> Tex1DRef;
+	using Tex1DRef = std::shared_ptr<Tex1D>;
+
 	//TODO: Add option to make multisampled Tex2D
 	class Tex2D : public Tex
 	{
@@ -194,13 +219,14 @@ namespace GL
 		Tex2D(const std::string &path, const uint forcedNrChannels = 0, const Channel forcedFormat = (Channel)0);
 
 		inline float Ratio() { return (float)Size.x / Size.y; }
+		TexType Type() { return TexType::Tex2D_e; }
 
 		iVec2 Size;
 
 		bool Multisamples = false;
 		uint Samples = 4;
 	};
-	typedef std::shared_ptr<Tex2D> Tex2DRef;
+	using Tex2DRef = std::shared_ptr<Tex2D>;
 
 	class Tex3D : public Tex
 	{
@@ -208,9 +234,11 @@ namespace GL
 		Tex3D() {}
 		Tex3D(int w, int h, int depth, Channel format, void *data = NULL);
 
+		TexType Type() { return TexType::Tex3D_e; }
+
 		iVec3 Size;
 	};
-	typedef std::shared_ptr<Tex3D> Tex3DRef;
+	using Tex3DRef = std::shared_ptr<Tex3D>;
 
 	class Cubemap : public Tex
 	{
@@ -219,9 +247,11 @@ namespace GL
 		Cubemap(int w, int h, Channel format, void *data = NULL);
 		Cubemap(const std::array<std::string, 6> &faces, const uint forcedNrChannels = 0, const Channel forcedFormat = (Channel)0);
 
+		TexType Type() { return TexType::Cubemap_e; }
+
 		iVec2 Size;
 	};
-	typedef std::shared_ptr<Cubemap> CubemapRef;
+	using CubemapRef = std::shared_ptr<Cubemap>;
 }
 
 //TODO: Add Renderbuffer class
@@ -245,14 +275,33 @@ namespace GL
 		};
 
 		Framebuffer() {}
-		Framebuffer(int width, int height, Channel colorFormat, Format depthStencilFormat, const Tex2D &colorBuffer);
-		void Release();
+		Framebuffer(int width, int height, Channel colorFormat, Format depthStencilFormat, 
+			Tex2D *colorBuffer = nullptr);
+
+		Framebuffer(const Framebuffer &other) = delete;
+		Framebuffer &operator=(const Framebuffer &other) = delete;
+
+		Framebuffer(Framebuffer &&other);
+		Framebuffer &operator=(Framebuffer &&other);
+
+		~Framebuffer();
+
+
+		void Bind(), Use();
+		void Copy(Framebuffer &other, const GL::Program *program = nullptr);
+
+
+		static Framebuffer Default;
 
 		uint ID;
 		Tex2DRef Tex;
 		uint RBO;
-	};
 
-	typedef Framebuffer *FBRef;
-	void Blit(Tex2DRef src, uint fbo, ProgRef program);
+		fVec4 BackgroundColor;
+
+	private:
+		Framebuffer(uint ID) : ID(ID) {}
+};
+
+	using FramebufferRef = Framebuffer *;
 }

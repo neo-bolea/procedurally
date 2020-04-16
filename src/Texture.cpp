@@ -99,15 +99,15 @@ namespace GL
 		{ RGBA32UI	    , RGBAInt },
 	};
 
-	static std::unordered_map<uint, uint> texToBinding =
+	static std::unordered_map<TexType, uint> texToBinding =
 	{
-		{ GL_TEXTURE_1D, GL_TEXTURE_BINDING_1D },
-	{ GL_TEXTURE_2D, GL_TEXTURE_BINDING_1D },
-	{ GL_TEXTURE_3D, GL_TEXTURE_BINDING_1D },
-	{ GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BINDING_CUBE_MAP },
+		{ TexType::Tex1D_e, GL_TEXTURE_BINDING_1D },
+		{ TexType::Tex2D_e, GL_TEXTURE_BINDING_1D },
+		{ TexType::Tex3D_e, GL_TEXTURE_BINDING_1D },
+		{ TexType::Cubemap_e, GL_TEXTURE_BINDING_CUBE_MAP },
 	};
 
-	void Tex::Gen(uint type)
+	void Tex::Gen(TexType type)
 	{
 		glGenTextures(1, &ID);
 		this->type = type;
@@ -137,23 +137,6 @@ namespace GL
 			basedFormat = iter->second;
 			NrChannels = channelToNr[basedFormat];
 		}
-	}
-
-	//<Texture Type, ID>
-	std::stack<std::tuple<uint, uint>> bindStack;
-	void Tex::PushBind()
-	{
-		int texPrior;
-		glGetIntegerv(bindingType, &texPrior);
-		bindStack.push(std::tuple(type, texPrior));
-
-		glBindTexture(type, ID);
-	}
-
-	void Tex::PopBind()
-	{
-		auto[type, id] = bindStack.top();
-		glBindTexture(type, id);
 	}
 
 	//void Tex::Copy(const Tex &src)
@@ -196,10 +179,11 @@ namespace GL
 	{
 		Size = w;
 
-		Gen(GL_TEXTURE_1D);
+		Gen(Type());
 		InitFormat(format);
 
-		PushBind();
+		uint curTex = activeTex;
+		Bind();
 
 		//Generate texture
 		glTexImage1D(type, 0, format, w, 0, basedFormat, (GLenum)Data, data);
@@ -218,15 +202,14 @@ namespace GL
 		//Filter mode	 
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, Filter);
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, Filter);
-
-		PopBind();
 	}
 
 	Tex1D::Tex1D(const std::string &path)
 	{
-		Gen(GL_TEXTURE_1D);
+		Gen(Type());
 
-		PushBind();
+		uint curTex = activeTex;
+		Bind();
 
 		//Load texture
 		int nrChannels, height;
@@ -268,8 +251,6 @@ namespace GL
 		//Filter mode	 
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, Filter);
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, Filter);
-
-		PopBind();
 	}
 
 	Tex2D::Tex2D(int w, int h, Channel format, void *data)
@@ -283,10 +264,11 @@ namespace GL
 			return;
 		}
 
-		Gen(GL_TEXTURE_2D);
+		Gen(Type());
 		InitFormat(format);
 
-		PushBind();
+		uint curTex = activeTex;
+		Bind();
 
 		//Generate texture
 		glTexImage2D(type, 0, Format, w, h, 0, basedFormat, (GLenum)Data, data);
@@ -306,16 +288,15 @@ namespace GL
 		//Filter mode
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, Filter);
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, Filter);
-
-		PopBind();
 	}
 
 	Tex2D::Tex2D(const std::string &path, 
 		const uint forcedNrChannels, const Channel forcedFormat)
 	{
-		Gen(GL_TEXTURE_2D);
+		Gen(Type());
 
-		PushBind();
+		uint curTex = activeTex;
+		Bind();
 
 		//Load texture
 		int nrChannels;
@@ -350,8 +331,6 @@ namespace GL
 		//Filter mode
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, Filter);
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, Filter);
-
-		PopBind();
 	}
 
 	Tex3D::Tex3D(int w, int h, int depth, Channel format, void *data)
@@ -365,10 +344,11 @@ namespace GL
 			return;
 		}
 
-		Gen(GL_TEXTURE_3D);
+		Gen(Type());
 		InitFormat(format);
 
-		PushBind();
+		uint curTex = activeTex;
+		Bind();
 
 		//Generate texture
 		glTexImage3D(type, 0, format, w, h, depth, 0, basedFormat, (GLenum)Data, data);
@@ -389,8 +369,6 @@ namespace GL
 		//Filter mode
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, Filter);
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, Filter);
-
-		PopBind();
 	}
 
 	Cubemap::Cubemap(int w, int h, Channel format, void *data)
@@ -404,10 +382,11 @@ namespace GL
 			return;
 		}
 
-		Gen(GL_TEXTURE_CUBE_MAP);
+		Gen(Type());
 		InitFormat(format);
 
-		PushBind();
+		uint curTex = activeTex;
+		Bind();
 
 		for(uint i = 0; i < 6; i++)
 		{ 
@@ -423,15 +402,15 @@ namespace GL
 		//Filter mode
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, Filter);
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, Filter);
-
-		PopBind();
 	}
 
 	Cubemap::Cubemap(const std::array<std::string, 6> &faces, 
 		const uint forcedNrChannels, const Channel forcedFormat)
 	{
-		Gen(GL_TEXTURE_CUBE_MAP);
-		PushBind();
+		Gen(Type());
+
+		uint curTex = activeTex;
+		Bind();
 
 		int width, height, origWidth, origHeight, nrChannels;
 		for(uint i = 0; i < 6; i++)
@@ -474,13 +453,13 @@ namespace GL
 		//Filter mode
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, Filter);
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, Filter);
-
-		PopBind();
 	}
 }
 
 namespace GL
 {
+	Framebuffer Framebuffer::Default = Framebuffer(0);
+
 	std::unordered_map<Framebuffer::Format, Channel> formatToAttachment =
 	{
 		{ Framebuffer::DepthComponent16 , DepthComponent },
@@ -492,14 +471,23 @@ namespace GL
 	};
 
 	Framebuffer::Framebuffer(int width, int height,
-		Channel colorFormat, Format depthStencilFormat, const Tex2D &colorBuffer)
+		Channel colorFormat, Format depthStencilFormat, Tex2D *colorBuffer)
 	{
 		glGenFramebuffers(1, &ID);
 		glBindFramebuffer(GL_FRAMEBUFFER, ID);  
 
+		if (colorBuffer)
+		{
+			Tex = Tex2DRef(colorBuffer);
+		} 
+		else
+		{
+			Tex = std::make_shared<Tex2D>(width, height, colorFormat);
+		}
+
 		//Generate & attach the color buffer.
 		glFramebufferTexture2D(
-			GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer.ID, 0); 
+			GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer->ID, 0); 
 
 		if(depthStencilFormat != Format::None)
 		{
@@ -522,23 +510,55 @@ namespace GL
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);  
 	}
 
-	void Framebuffer::Release()
-	{ glDeleteFramebuffers(1, &ID); }
-
-	void Blit(Tex2DRef src, uint fbo, ProgRef program)
+	Framebuffer::Framebuffer(Framebuffer &&other) 
 	{
-		program->Use();
+		this->operator=(std::move(other));
+	}
 
-		//glViewport(0, 0, Screen::Width, Screen::Height);
+	Framebuffer &Framebuffer::operator=(Framebuffer &&other) 
+	{
+		std::swap(ID, other.ID);
+		std::swap(Tex, other.Tex);
+		std::swap(RBO, other.RBO);
+
+		return *this;
+	}
+
+	Framebuffer::~Framebuffer()
+	{
+		if(RBO) { glDeleteRenderbuffers(1, &RBO); }
+		glDeleteFramebuffers(1, &ID);
+	}
+
+	void Framebuffer::Bind()
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, ID);
+	}
+
+	void Framebuffer::Use()
+	{
+		Bind();
+		glEnable(GL_DEPTH_TEST); 
+
+		glClearColor(BackgroundColor.x, BackgroundColor.y, BackgroundColor.z, BackgroundColor.w);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
+
+	//TODO: Add option for transparent copy
+	void Framebuffer::Copy(Framebuffer &other, const GL::Program *program)
+	{
+		static const GL::Mesh &copyQuad = GL::Models::ScreenSquare2D::Get();
+		static const GL::Program &copyProgram = GL::Programs::ScreenTex2D();
+
 		glActiveTexture(GL::Texture0);
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		glBindTexture(GL_TEXTURE_2D, src->ID);
+		glBindFramebuffer(GL_FRAMEBUFFER, other.ID);
+		glClearColor(1.f, 0.f, 1.f, 0.f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glDisable(GL_DEPTH_TEST);
-		//Quad::Draw();
-		glEnable(GL_DEPTH_TEST);
+		if(program) { program->Use(); }
+		else { copyProgram.Use(); }
+		Tex->Bind();
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glViewport(0, 0, src->Size.x, src->Size.y);
+		copyQuad.Use(GL::Models::Square2D::Verts.size());
 	}
 }
