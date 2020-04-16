@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/Debug.h"
+#include "common/Templates.h"
 #include "graphics/GLTypes.h"
 
 #include <unordered_map>
@@ -40,10 +41,10 @@ namespace GL
 			bool normalized = false);
 
 		//TODO: Should count be cached? How to cache it (check for the largest/smallest buffer?)?
-		void Use(uint count, GL::PrimType mode = GL::Triangles);
-		bool Initialized() { return VAO; }
+		void Use(uint count, GL::PrimType mode = GL::Triangles) const;
+		bool Initialized() const { return VAO; }
 
-		std::unordered_map<uint, uint> VBOs;
+		std::unordered_map<uint, uint, PassHasher<uint, uint>> VBOs;
 		uint VAO = 0, EBO = 0;
 	};
 }

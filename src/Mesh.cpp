@@ -51,7 +51,7 @@ namespace GL
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(T), data.data(), drawType);
 	}
 
-	void Mesh::Use(uint count, GL::PrimType mode)
+	void Mesh::Use(uint count, GL::PrimType mode) const
 	{
 		if(!GL::ActiveProgram()) 
 		{
