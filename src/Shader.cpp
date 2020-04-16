@@ -218,11 +218,11 @@ namespace GL
 		case DataType::UInt: { auto v = value.Uint_; glUniform1ui(unif.ID, v); break; }
 		case DataType::Bool: { auto v = value.Bool_; glUniform1i(unif.ID, v); break; }
 		case DataType::Mat2: { auto v = value.Mat2; 
-			glUniformMatrix2fv(unif.ID, 1, false, &v->v[0]); break; }
+			glUniformMatrix2fv(unif.ID, 1, false, reinterpret_cast<const GLfloat *>(v)); break; }
 		case DataType::Mat3: { auto v = value.Mat3; 
-			glUniformMatrix3fv(unif.ID, 1, false, &v->v[0]); break; }
+			glUniformMatrix3fv(unif.ID, 1, false, reinterpret_cast<const GLfloat *>(v)); break; }
 		case DataType::Mat4: { auto v = value.Mat4; 
-			glUniformMatrix4fv(unif.ID, 1, false, &v->v[0]); break; }
+			glUniformMatrix4fv(unif.ID, 1, false, reinterpret_cast<const GLfloat *>(v)); break; }
 		default: UNDEFINED_CODE_PATH
 		}
 	}
